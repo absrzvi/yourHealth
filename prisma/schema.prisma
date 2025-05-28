@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reports   Report[]
+  insights  WeeklyInsight[]
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  userId    String
+  type      ReportType
+  fileName  String
+  filePath  String
+  parsedData Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model WeeklyInsight {
+  id                    String   @id @default(cuid())
+  userId                String
+  weekNumber            Int
+  year                  Int
+  cardiovascularScore   Float?
+  metabolicScore        Float?
+  inflammationScore     Float?
+  recommendations       Json
+  generatedAt           DateTime @default(now())
+  user                  User     @relation(fields: [userId], references: [id])
+}
+
+enum ReportType {
+  DNA
+  MICROBIOME
+  BLOOD_TEST
+}
