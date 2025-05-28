@@ -48,39 +48,76 @@ export default function DataSourcesPage() {
     <div className="max-w-xl mx-auto py-12">
       <h1 className="text-3xl font-bold mb-6">Data Sources</h1>
       <p className="mb-4 text-gray-700">Connect your health data. For now, you can manually upload health reports. Future: Apple Health, Oura, and more!</p>
-      <form onSubmit={handleUpload} className="flex flex-col space-y-4 bg-white p-6 rounded shadow">
-        <select
-          value={reportType}
-          onChange={e => setReportType(e.target.value)}
-          className="border p-2 rounded"
-          required
-        >
-          <option value="" disabled>Select report type</option>
-          <option value="blood">Blood test report</option>
-          <option value="dna">DNA Report</option>
-          <option value="microbiome">Microbiome Report</option>
-        </select>
-        <input ref={fileInputRef} type="file" accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls" className="border p-2 rounded" required />
-        <button type="submit" className="bg-blue-600 text-white py-2 rounded disabled:opacity-50" disabled={uploading}>
-          {uploading ? "Uploading..." : "Upload Report"}
-        </button>
-        {message && <div className="text-center text-sm mt-2">{message}</div>}
-      </form>
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Integrations</h2>
-        <div className="flex gap-4">
-          <div className="flex-1 bg-gray-100 rounded p-4 flex flex-col items-center border border-gray-200">
-            <span className="text-2xl mb-2">🍏</span>
-            <div className="font-semibold mb-1">Apple Health</div>
-            <div className="text-xs text-gray-500 mb-2">Coming Soon</div>
+      <div className="widget-card mb-8">
+        <div className="card-header">
+          <div className="card-icon" style={{ background: '#e0e7ff', color: '#3730a3' }}>📁</div>
+          <div className="card-title">Upload Health Report</div>
+        </div>
+        <form onSubmit={handleUpload} className="flex flex-col space-y-4 w-full">
+          <select
+            value={reportType}
+            onChange={e => setReportType(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            required
+          >
+            <option value="" disabled>Select report type</option>
+            <option value="blood">Blood test report</option>
+            <option value="dna">DNA Report</option>
+            <option value="microbiome">Microbiome Report</option>
+          </select>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls"
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            required
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            disabled={uploading}
+          >
+            {uploading ? "Uploading..." : "Upload Report"}
+          </button>
+          {message && <div className="text-center text-sm mt-2">{message}</div>}
+        </form>
+      </div>
+      <div className="content-section active">
+        <h2 className="text-2xl font-bold mb-4">Data Sources</h2>
+        <div className="dashboard-layout">
+          {/* Integration Cards */}
+          <div className="widget-card">
+            <div className="card-header">
+              <div className="card-icon" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>🍏</div>
+              <div className="card-title">Apple Health</div>
+            </div>
+            <div className="text-gray-500 mb-2">Integration coming soon.</div>
             <button disabled className="bg-gray-300 text-gray-600 py-1 px-3 rounded cursor-not-allowed">Connect</button>
           </div>
-          <div className="flex-1 bg-gray-100 rounded p-4 flex flex-col items-center border border-gray-200">
-            <span className="text-2xl mb-2">💍</span>
-            <div className="font-semibold mb-1">Oura Ring</div>
-            <div className="text-xs text-gray-500 mb-2">Coming Soon</div>
+          <div className="widget-card">
+            <div className="card-header">
+              <div className="card-icon" style={{ background: '#fef3c7', color: '#b45309' }}>💍</div>
+              <div className="card-title">Oura Ring</div>
+            </div>
+            <div className="text-gray-500 mb-2">Integration coming soon.</div>
             <button disabled className="bg-gray-300 text-gray-600 py-1 px-3 rounded cursor-not-allowed">Connect</button>
           </div>
+        </div>
+        {/* Upload Section Placeholder */}
+        <div className="widget-card mt-8">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#e0e7ff', color: '#3730a3' }}>📁</div>
+            <div className="card-title">Upload Health Report</div>
+          </div>
+          <div className="text-gray-500">Placeholder for upload functionality.</div>
+        </div>
+        {/* Connected Sources List Placeholder */}
+        <div className="widget-card mt-8">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>🔗</div>
+            <div className="card-title">Connected Sources</div>
+          </div>
+          <div className="text-gray-500">No sources connected yet.</div>
         </div>
       </div>
     </div>

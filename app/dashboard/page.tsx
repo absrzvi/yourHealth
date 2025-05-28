@@ -53,34 +53,44 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-12">
-      <h1 className="text-3xl font-bold mb-6">Your Dashboard</h1>
-      <h2 className="text-xl font-semibold mb-4">Uploaded Reports</h2>
-      {feedback && <div className="mb-2 text-center text-sm text-blue-700">{feedback}</div>}
-      {reports.length === 0 ? (
-        <div className="text-gray-500">No reports uploaded yet.</div>
-      ) : (
-        <ul className="space-y-4">
-          {reports.map(report => (
-            <li key={report.id} className="bg-white p-4 rounded shadow flex justify-between items-center">
-              <div>
-                <div className="font-medium">{report.fileName}</div>
-                <div className="text-xs text-gray-500">Type: {report.type} | Uploaded: {new Date(report.createdAt).toLocaleString()}</div>
-              </div>
-              <div className="flex gap-4 items-center">
-                <a href={report.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View</a>
-                <button
-                  className={`text-red-600 hover:underline disabled:opacity-50`}
-                  disabled={deletingId === report.id}
-                  onClick={() => handleDelete(report.id)}
-                >
-                  {deletingId === report.id ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="content-section active">
+      <div className="dashboard-layout">
+        {/* Quick Metrics Widget */}
+        <div className="widget-card">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#fef3c7', color: '#b45309' }}>⚡</div>
+            <div className="card-title">Quick Metrics</div>
+          </div>
+          <div className="metric-item"><span className="metric-label">Energy</span><span className="metric-value">68</span></div>
+          <div className="metric-item"><span className="metric-label">Inflammation</span><span className="metric-value">Low</span></div>
+          <div className="metric-item"><span className="metric-label">Sleep</span><span className="metric-value">7.2h</span></div>
+        </div>
+        {/* Chart Placeholder */}
+        <div className="widget-card">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>📈</div>
+            <div className="card-title">Charts</div>
+          </div>
+          <div className="mini-chart">[Chart Placeholder]</div>
+        </div>
+        {/* Insights Placeholder */}
+        <div className="widget-card">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>💡</div>
+            <div className="card-title">Insights</div>
+          </div>
+          <div className="insight-list">
+            <div className="insight-item">
+              <div className="insight-icon" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>🧬</div>
+              <div className="insight-text">Placeholder for personalized health insights.</div>
+            </div>
+            <div className="insight-item">
+              <div className="insight-icon" style={{ background: '#fef3c7', color: '#b45309' }}>🩸</div>
+              <div className="insight-text">Another insight placeholder.</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
