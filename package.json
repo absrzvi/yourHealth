@@ -7,7 +7,10 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
@@ -27,11 +30,18 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/papaparse": "^5.3.16",
     "@types/react": "19.1.6",
+    "@types/testing-library__jest-dom": "^5.14.9",
+    "@vitest/ui": "^3.1.4",
     "autoprefixer": "^10.4.14",
     "eslint": "9.27.0",
     "eslint-config-next": "15.3.2",
+    "papaparse": "^5.5.3",
     "postcss": "^8.4.21",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^3.1.4"
   }
 }
