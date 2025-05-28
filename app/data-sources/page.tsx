@@ -7,6 +7,7 @@ export default function DataSourcesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
+  const [reportType, setReportType] = useState("");
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,6 +16,11 @@ export default function DataSourcesPage() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
       setMessage("Please select a file");
+      setUploading(false);
+      return;
+    }
+    if (!reportType) {
+      setMessage("Please select a report type");
       setUploading(false);
       return;
     }
@@ -27,7 +33,7 @@ export default function DataSourcesPage() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("userId", session.user.id);
-    formData.append("type", "manual");
+    formData.append("type", reportType);
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json();
     if (data.success) setMessage("Upload successful!");
@@ -43,6 +49,17 @@ export default function DataSourcesPage() {
       <h1 className="text-3xl font-bold mb-6">Data Sources</h1>
       <p className="mb-4 text-gray-700">Connect your health data. For now, you can manually upload health reports. Future: Apple Health, Oura, and more!</p>
       <form onSubmit={handleUpload} className="flex flex-col space-y-4 bg-white p-6 rounded shadow">
+        <select
+          value={reportType}
+          onChange={e => setReportType(e.target.value)}
+          className="border p-2 rounded"
+          required
+        >
+          <option value="" disabled>Select report type</option>
+          <option value="blood">Blood test report</option>
+          <option value="dna">DNA Report</option>
+          <option value="microbiome">Microbiome Report</option>
+        </select>
         <input ref={fileInputRef} type="file" accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls" className="border p-2 rounded" required />
         <button type="submit" className="bg-blue-600 text-white py-2 rounded disabled:opacity-50" disabled={uploading}>
           {uploading ? "Uploading..." : "Upload Report"}
