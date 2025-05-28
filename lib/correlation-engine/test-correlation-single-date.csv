@@ -1,0 +1,4 @@
+name,value,unit,min,max,category,testDate,labName
+Glucose,80,mg/dL,70,99,metabolic,2025-05-01,LabCorp
+HbA1c,5.2,%,4,6,metabolic,2025-05-01,LabCorp
+Glucose,90,mg/dL,70,99,metabolic,2025-06-01,LabCorp
