@@ -10,22 +10,24 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "next": "14.1.0",
-    "react": "^18",
-    "react-dom": "^18",
-    "prisma": "^5.7.0",
     "@prisma/client": "^5.7.0",
+    "@shadcn/ui": "latest",
+    "bcryptjs": "^3.0.2",
+    "chart.js": "^4.4.1",
+    "next": "14.1.0",
     "next-auth": "^4.24.0",
     "openai": "^4.24.0",
+    "pdf-parse": "^1.1.1",
+    "prisma": "^5.7.0",
+    "react": "^18",
+    "react-dom": "^18",
     "react-dropzone": "^14.2.3",
     "recharts": "^2.10.0",
-    "chart.js": "^4.4.1",
     "tailwindcss": "^3.4.0",
-    "zustand": "^4.4.7",
-    "pdf-parse": "^1.1.1",
-    "@shadcn/ui": "latest"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@types/react": "19.1.6",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.21",
     "typescript": "^5.0.0"

@@ -10,6 +10,7 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  password  String
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -20,10 +21,10 @@ model User {
 model Report {
   id        String   @id @default(cuid())
   userId    String
-  type      ReportType
+  type      String
   fileName  String
   filePath  String
-  parsedData Json?
+  parsedData String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
 }
@@ -36,13 +37,9 @@ model WeeklyInsight {
   cardiovascularScore   Float?
   metabolicScore        Float?
   inflammationScore     Float?
-  recommendations       Json
+  recommendations       String?
   generatedAt           DateTime @default(now())
   user                  User     @relation(fields: [userId], references: [id])
 }
 
-enum ReportType {
-  DNA
-  MICROBIOME
-  BLOOD_TEST
-}
+
