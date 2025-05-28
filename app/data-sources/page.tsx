@@ -67,12 +67,21 @@ export default function DataSourcesPage() {
         {message && <div className="text-center text-sm mt-2">{message}</div>}
       </form>
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-2">Coming Soon</h2>
-        <ul className="list-disc pl-6 text-gray-500">
-          <li>Apple Health Integration</li>
-          <li>Oura Ring API</li>
-          <li>Other Health Platforms</li>
-        </ul>
+        <h2 className="text-xl font-semibold mb-4">Integrations</h2>
+        <div className="flex gap-4">
+          <div className="flex-1 bg-gray-100 rounded p-4 flex flex-col items-center border border-gray-200">
+            <span className="text-2xl mb-2">🍏</span>
+            <div className="font-semibold mb-1">Apple Health</div>
+            <div className="text-xs text-gray-500 mb-2">Coming Soon</div>
+            <button disabled className="bg-gray-300 text-gray-600 py-1 px-3 rounded cursor-not-allowed">Connect</button>
+          </div>
+          <div className="flex-1 bg-gray-100 rounded p-4 flex flex-col items-center border border-gray-200">
+            <span className="text-2xl mb-2">💍</span>
+            <div className="font-semibold mb-1">Oura Ring</div>
+            <div className="text-xs text-gray-500 mb-2">Coming Soon</div>
+            <button disabled className="bg-gray-300 text-gray-600 py-1 px-3 rounded cursor-not-allowed">Connect</button>
+          </div>
+        </div>
       </div>
     </div>
   );
