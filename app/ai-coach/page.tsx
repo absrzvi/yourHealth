@@ -1,3 +1,5 @@
+import ChatInterface from '../../components/ai-chat/ChatInterface';
+
 export default function AiCoachPage() {
   return (
     <div className="content-section active">
@@ -13,14 +15,9 @@ export default function AiCoachPage() {
               </div>
             </div>
           </div>
-          <div className="chat-messages">
-            <div className="message">
-              <div className="message-avatar ai-message-avatar">🤖</div>
-              <div className="message-content ai-message-content">
-                <div>Hi Sarah! 👋 I'm Dr. Anna, your AI Health Coach. This is a placeholder for your future AI chat experience.</div>
-                <div className="message-time">Just now</div>
-              </div>
-            </div>
+          {/* Real AI Health Coach chat interface */}
+          <div style={{ padding: '1rem 0' }}>
+            <ChatInterface />
           </div>
           <div className="chat-input-container">
             <div className="quick-prompts">
