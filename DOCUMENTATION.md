@@ -291,6 +291,111 @@ src/
 ✅ Correlation engine
 ✅ API endpoints
 
+## Setup and Installation
+
+### 1. Install Additional Dependencies
+
+```bash
+# Install new dependencies
+npm install react-dropzone papaparse csv-parse
+
+# Install types
+npm install -D @types/papaparse
+```
+
+### 2. Update Prisma Schema
+
+1. Copy the Prisma schema updates from the main documentation
+2. Run migrations:
+```bash
+npx prisma migrate dev --name add-correlation-engine
+npx prisma generate
+```
+
+### 3. Create Directory Structure
+
+```bash
+# Create necessary directories
+mkdir -p src/lib/parsers
+mkdir -p src/lib/correlations
+mkdir -p src/lib/test-samples
+mkdir -p src/components/correlations
+mkdir -p src/components/upload
+mkdir -p src/app/api/correlations
+mkdir -p src/app/dashboard/correlations
+mkdir -p uploads
+```
+
+### 4. Copy Implementation Files
+
+Copy all the implementation files from this documentation:
+1. Parser implementations (dna-parser.ts, microbiome-parser.ts, etc.)
+2. Correlation engine (correlation-engine.ts)
+3. API routes (updated upload route, new correlation routes)
+4. React components (CorrelationDashboard, EnhancedUploadZone)
+5. New pages (correlations page)
+
+### 5. Update Navigation
+
+Add the Correlations link to your navigation component:
+
+```typescript
+// In your navigation configuration
+const navigationItems = [
+  // ... existing items
+  {
+    name: 'Correlations',
+    href: '/dashboard/correlations',
+    icon: LinkIcon, // or any appropriate icon
+    description: 'View health correlations'
+  }
+];
+```
+
+### 6. Create Sample Test Files
+
+Create the sample test files in `src/lib/test-samples/`:
+- Copy the content from the artifacts created earlier
+- Save as: 23andme-sample.txt, viome-sample.json, dutch-sample.json, quest-sample.txt
+
+### 7. Update Environment Variables
+
+Add to your `.env.local`:
+```env
+# Existing variables...
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=10485760  # 10MB in bytes
+```
+
+### 8. Test the Implementation
+
+1. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+2. **Test file uploads:**
+   - Navigate to your upload page
+   - Upload each sample file type
+   - Verify successful parsing
+
+3. **Check correlations:**
+   - After uploading at least 2 different test types
+   - Navigate to /dashboard/correlations
+   - Verify correlations are displayed
+
+4. **Test error handling:**
+   - Try uploading invalid files
+   - Verify appropriate error messages
+
+## Troubleshooting Guide
+
+### Issue: Parser not detecting file type
+**Solution:**
+- Check file content matches expected format
+- Verify filename includes lab name
+- Add debug logging to detectTestType
+
 ## Parser Implementation Details
 
 ### Hormone Parser
