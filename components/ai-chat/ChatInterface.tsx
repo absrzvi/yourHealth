@@ -12,6 +12,32 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [provider, setProvider] = useState<'ollama' | 'openai' | 'anthropic'>('openai');
+  const [model, setModel] = useState<string>('gpt-3.5-turbo');
+
+  // Available models for each provider
+  const modelOptions: Record<string, string[]> = {
+    openai: [
+      'gpt-3.5-turbo',
+      'gpt-4',
+      'gpt-4-turbo'
+    ],
+    anthropic: [
+      'claude-3-haiku-20240307',
+      'claude-3-sonnet-20240229',
+      'claude-3-opus-20240229'
+    ],
+    ollama: [
+      'phi3:latest',
+      'llama3:latest',
+      'mistral:latest'
+    ]
+  };
+
+  // Update model when provider changes
+  useEffect(() => {
+    setModel(modelOptions[provider][0]);
+  }, [provider]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +57,7 @@ export default function ChatInterface() {
       const response = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.content }),
+        body: JSON.stringify({ message: userMessage.content, provider, model }),
       });
       if (!response.ok) throw new Error("Failed to get response");
       const data = await response.json();
@@ -107,8 +133,30 @@ export default function ChatInterface() {
           </div>
         )}
       </div>
-      <form onSubmit={handleSubmit} className="p-4 border-t">
-        <div className="flex space-x-2">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 mt-4">
+        <div className="flex gap-2">
+          <select
+            value={provider}
+            onChange={e => setProvider(e.target.value as 'ollama' | 'openai' | 'anthropic')}
+            className="p-2 border rounded-lg bg-white text-gray-700"
+            disabled={isLoading}
+            style={{ minWidth: 110 }}
+          >
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="ollama">Ollama (Local)</option>
+          </select>
+          <select
+            value={model}
+            onChange={e => setModel(e.target.value)}
+            className="p-2 border rounded-lg bg-white text-gray-700"
+            disabled={isLoading}
+            style={{ minWidth: 170 }}
+          >
+            {modelOptions[provider].map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
           <input
             type="text"
             value={input}

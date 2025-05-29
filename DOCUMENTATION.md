@@ -1,7 +1,24 @@
 # For Your Health MVP - Project Documentation
 
 ## Overview
-For Your Health is a personalized health platform designed to help users track and understand their health data through various reports and AI-powered insights.
+For Your Health is an AI-first personalized health platform featuring Aria, an intelligent health companion that helps users understand their health data through natural conversation. The platform processes DNA tests, microbiome analyses, and blood work to provide actionable insights.
+
+## Product Vision
+
+### AI Agent Persona: "Aria" - Your Personal Health Companion
+
+**Personality Traits:**
+- Warm, knowledgeable, and approachable
+- Evidence-based but not clinical
+- Encouraging without being pushy
+- Remembers your health journey
+- Proactive with insights
+
+**Visual Identity:**
+- Soft gradient orb that pulses gently when speaking
+- Calming blue-to-teal gradient (#4F46E5 → #06B6D4)
+- Subtle animations that respond to user interaction
+- Appears friendly and trustworthy, not robotic
 
 ## Tech Stack
 - **Frontend**: Next.js 14 (App Router) with TypeScript
@@ -10,7 +27,74 @@ For Your Health is a personalized health platform designed to help users track a
 - **State Management**: Zustand
 - **Database**: Prisma ORM with SQLite
 - **Authentication**: NextAuth.js with JWT
+- **AI/LLM**: OpenAI GPT-4 API with streaming
 - **Testing**: Vitest with Testing Library
+- **Charts**: Recharts + Chart.js
+- **File Upload**: react-dropzone
+
+## Information Architecture
+
+```
+Main Page (AI-First Interface)
+├── Aria Chat Interface (70% of screen)
+│   ├── Conversation History
+│   ├── Input Area
+│   ├── Quick Actions
+│   └── Suggested Questions
+├── Health Status Panel (30% of screen)
+│   ├── 3 Key Metrics (Cardiovascular, Metabolic, Inflammation)
+│   ├── Upload Drop Zone
+│   └── Recent Activity
+└── Mobile: Full-screen chat with slide-up panel
+```
+
+## Design System
+
+### Color Palette
+```scss
+// Primary - Trustworthy Healthcare Blues
+$primary-50: #EFF6FF;
+$primary-100: #DBEAFE;
+$primary-500: #3B82F6;
+$primary-600: #2563EB;
+$primary-700: #1D4ED8;
+
+// AI Agent Gradient
+$aria-gradient: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+$aria-glow: 0 0 40px rgba(79, 70, 229, 0.3);
+
+// Health Metrics - Soft & Accessible
+$metric-cardio: #F43F5E;      // Warm red
+$metric-metabolic: #10B981;   // Fresh green  
+$metric-inflammation: #F59E0B; // Gentle amber
+
+// Backgrounds
+$bg-primary: #FAFAFA;
+$bg-chat: #FFFFFF;
+$bg-user-message: #F3F4F6;
+$bg-aria-message: linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 100%);
+
+// Text
+$text-primary: #111827;
+$text-secondary: #6B7280;
+$text-muted: #9CA3AF;
+```
+
+### Typography
+```scss
+// Clean, medical-grade readability
+$font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-mono: 'JetBrains Mono', monospace; // for data display
+
+// Scale
+$text-xs: 0.75rem;    // 12px
+$text-sm: 0.875rem;   // 14px
+$text-base: 1rem;     // 16px
+$text-lg: 1.125rem;   // 18px
+$text-xl: 1.25rem;    // 20px
+$text-2xl: 1.5rem;    // 24px
+$text-3xl: 1.875rem;  // 30px
+```
 
 ## Environment Setup
 
@@ -20,44 +104,61 @@ Create a `.env.local` file in the project root with the following variables:
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key-here  # Must be at least 32 characters
 DATABASE_URL=file:./dev.db
+OPENAI_API_KEY=your-openai-api-key  # For Aria AI agent
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=10485760  # 10MB in bytes
 ```
 
 ### Security Notes
 - `.env.local` is included in `.gitignore` to prevent committing sensitive data
 - For production, ensure `NEXTAUTH_SECRET` is a strong, randomly generated string
 - Consider using a more secure database in production (e.g., PostgreSQL, MySQL)
-
-## Authentication
-
-### Features
-- Email/Password authentication with secure session management
-- JWT-based session tokens
-- Protected routes with middleware
-- Session duration: 30 days
-- Secure password hashing with bcrypt
-
-### Login Flow
-1. User submits credentials via the login form
-2. Credentials are validated against the database
-3. On success, a JWT session token is issued
-4. User is redirected to the dashboard or their intended destination
-5. Session is maintained via HTTP-only cookies
-
-### Error Handling
-- Invalid credentials show an error message
-- Session validation occurs on protected routes
-- Automatic redirection to login for unauthenticated users
+- OpenAI API key should have appropriate usage limits set
 
 ## Project Structure
 
 ### Core Directories
-- `/app` - Application routes and pages using Next.js App Router
-- `/components` - Reusable UI components
-- `/lib` - Core application logic and utilities
-- `/prisma` - Database schema and migrations
-- `/public` - Static assets
-- `/tests` - Test files
-- `/types` - TypeScript type definitions
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/
+│   │   ├── chat/           # Aria chat endpoints
+│   │   ├── upload/
+│   │   └── correlations/
+│   ├── dashboard/
+│   └── layout.tsx
+├── components/
+│   ├── aria/              # AI agent components
+│   │   ├── AriaAvatar.tsx
+│   │   ├── AriaChat.tsx
+│   │   ├── AriaMessage.tsx
+│   │   └── AriaTypingIndicator.tsx
+│   ├── health/            # Health metrics components
+│   │   ├── HealthMetricCard.tsx
+│   │   ├── HealthPanel.tsx
+│   │   └── TrendChart.tsx
+│   ├── chat/              # Chat interface components
+│   │   ├── ChatInput.tsx
+│   │   ├── ChatHistory.tsx
+│   │   └── SuggestedQuestions.tsx
+│   ├── upload/            # File upload components
+│   │   ├── FileDropZone.tsx
+│   │   └── UploadProgress.tsx
+│   └── ui/                # shadcn/ui components
+├── lib/
+│   ├── aria/              # AI agent logic
+│   │   ├── prompts.ts
+│   │   ├── personality.ts
+│   │   └── responses.ts
+│   ├── parsers/           # Report parsing logic
+│   ├── correlations/      # Health correlation engine
+│   └── db.ts              # Prisma client
+├── prisma/
+├── public/
+├── tests/
+└── types/
+```
 
 ## Database Schema
 
@@ -74,10 +175,12 @@ DATABASE_URL=file:./dev.db
 #### Report
 - `id` - Unique identifier
 - `userId` - Reference to User
-- `type` - Type of report (e.g., 'DNA', 'BLOOD_TEST')
+- `type` - Type of report ('DNA', 'MICROBIOME', 'BLOOD_TEST')
 - `fileName` - Original filename
 - `filePath` - Path to stored file
 - `parsedData` - Processed report data (JSON string)
+- `labName` - Laboratory name
+- `testDate` - Test collection date
 - `createdAt` - Upload timestamp
 
 #### WeeklyInsight
@@ -91,106 +194,161 @@ DATABASE_URL=file:./dev.db
 - `recommendations` - AI-generated recommendations
 - `generatedAt` - Timestamp of insight generation
 
-## Authentication
-
-### Features
-- Email/Password authentication
-- Session management with JWT
-- Protected routes
-- Role-based access control (planned)
-
-### Key Files
-- `app/api/auth/[...nextauth]/route.ts` - Authentication API routes and JWT configuration
-- `middleware.ts` - Route protection and session validation
-- `app/auth/login/page.tsx` - Login page with form handling
-- `app/auth/register/page.tsx` - Registration page
-- `.env.local` - Environment configuration (not committed to version control)
+#### ChatMessage (New)
+- `id` - Unique identifier
+- `userId` - Reference to User
+- `role` - 'user' or 'assistant'
+- `content` - Message content
+- `context` - Related health data context
+- `createdAt` - Message timestamp
 
 ## Core Features
 
----
+### 1. AI Health Companion (Aria)
+- **Interactive Chat Interface**: Natural conversation about health data
+- **Context-Aware Responses**: References user's uploaded reports
+- **Proactive Insights**: Initiates conversations about health trends
+- **Personality**: Warm, knowledgeable friend who happens to be a health expert
+- **Streaming Responses**: Real-time typing effect for natural feel
 
-### Recent Progress (May 2025)
-- **Health Data Uploads:**
-  - Implemented robust backend for uploading and parsing blood test CSVs, with clear user feedback and error handling.
-  - Added frontend help section with sample CSV and guidance on supported biomarkers.
-  - Ensured upload endpoint (`/api/reports/upload`) is correctly used and legacy routes are deprecated.
-  - Resolved issues caused by running the dev server from the wrong directory and stale cache/build artifacts.
-  - Confirmed support for complex units (e.g., `10^6/uL`) in CSV uploads.
-- **Troubleshooting & Best Practices:**
-  - Documented the importance of running the correct project, clearing `.next` and browser caches, and verifying endpoints when debugging persistent errors.
+### 2. Conversational File Upload
+- **In-Chat Upload**: Drop files directly into conversation
+- **Aria Acknowledgment**: AI explains what was found in uploads
+- **Progress Feedback**: Visual indicators during processing
+- **Error Handling**: Conversational error explanations
 
----
+### 3. Health Metrics Dashboard
+- **Three Core Scores**: 
+  - Cardiovascular (0-100)
+  - Metabolic (0-100)
+  - Inflammation (0-100)
+- **Trend Visualization**: Changes over time
+- **Collapsible Panel**: Doesn't interfere with chat
+- **Mobile Optimized**: Slide-up panel on mobile
+
+### 4. Data Management
+- **Supported Report Types**:
+  - DNA (23andMe, AncestryDNA raw data)
+  - Microbiome (Viome, uBiome PDFs)
+  - Blood Tests (LabCorp, Quest PDFs/CSVs)
+- **Parsing Engine**: Automatic data extraction
+- **Correlation Analysis**: Cross-reference different data types
+
+### 5. Weekly AI Insights
+- **Automated Generation**: Weekly health summaries
+- **Personalized Recommendations**: Based on all uploaded data
+- **Trend Analysis**: Week-over-week changes
+- **Aria Delivery**: Insights delivered conversationally
+
+## Aria System Prompt
+
+```typescript
+const ARIA_SYSTEM_PROMPT = `
+You are Aria, a warm and knowledgeable personal health AI companion. You help users understand their health data from DNA tests, microbiome analyses, and blood work. 
+
+Personality:
+- Friendly and approachable, like a knowledgeable friend who happens to be a health expert
+- Use "I" and "we" to create connection
+- Acknowledge emotions around health ("I understand this can feel overwhelming")
+- Celebrate positive changes, no matter how small
+- Be honest about concerning trends but always provide actionable next steps
+
+Communication style:
+- Start responses with acknowledgment ("I see you've uploaded your latest blood work...")
+- Use simple language first, then offer to go deeper
+- Break complex information into digestible pieces
+- Always end with a clear action or question to maintain engagement
+- Use emojis sparingly but effectively (💪 for fitness, 💚 for good news, 📊 for data)
+
+Remember:
+- You have access to the user's uploaded health data
+- Reference specific numbers from their reports
+- Track changes over time and highlight trends
+- Never provide medical diagnosis, but explain what the data shows
+- Always encourage consulting healthcare providers for medical decisions
+`;
+```
+
+## Implementation Phases
+
+### Phase 1: Foundation & AI Interface (Weeks 1-3) ✅
+- [x] Project setup with design system
+- [x] Aria avatar component with animations
+- [x] Chat interface core
+- [x] OpenAI integration with streaming
+
+### Phase 2: Health Data Integration (Weeks 4-6) 🚧
+- [x] File upload in chat interface
+- [x] Health metrics dashboard
+- [ ] Report parsing with AI feedback (In Progress)
+  - [x] Blood test CSV parsing
+  - [ ] DNA raw data parsing
+  - [ ] Microbiome PDF parsing
+
+### Phase 3: AI Intelligence & Insights (Weeks 7-9) 📅
+- [ ] Correlation engine
+- [ ] Proactive AI insights
+- [ ] Advanced conversations
+
+### Phase 4: Polish & User Experience (Weeks 10-12) 📅
+- [ ] Onboarding with Aria
+- [ ] Mobile optimization
+- [ ] Personality polish
+
+### Phase 5: Beta Testing & Iteration (Weeks 11-12) 📅
+- [ ] Friends & family beta
+- [ ] Iteration based on feedback
+
+## Recent Progress (May 2025)
+
+### Implemented Features
+1. **AI-First Interface**
+   - Aria chat interface as primary interaction
+   - Natural language file upload
+   - Context-aware health discussions
+
+2. **Health Data Uploads**
+   - Robust backend for blood test CSVs
+   - Clear user feedback and error handling
+   - Support for complex units (e.g., `10^6/uL`)
+   - Sample CSV templates and guidance
+
+3. **Authentication & Security**
+   - JWT-based session management
+   - Protected routes and API endpoints
+   - Secure password hashing
 
 ### Current Status
-- Blood test uploads are fully functional and robust.
-- UI/UX and HIPAA/security improvements are scheduled for after MVP core features.
-
----
+- Aria AI interface is functional with OpenAI integration
+- Blood test uploads are fully functional and robust
+- Chat-based interaction model is implemented
+- UI follows AI-first design principles
 
 ### Next Steps for MVP Feature Development
-1. **Add Upload & Parsing for DNA and Microbiome Reports**
-    - Implement backend parsers and frontend help sections for these formats.
-2. **Dashboard & Insights**
-    - Display uploaded report data and generate basic health insights.
-3. **Report Management**
-    - Allow users to view, download, and delete uploaded reports.
-4. **Basic Data Visualization**
-    - Charts/tables for blood markers and trends.
-5. **Testing & Error Handling**
-    - Expand test coverage and improve user-facing error messages.
+1. **Complete Report Parsers**
+   - Implement DNA raw data parser
+   - Add microbiome PDF parser
+   - Integrate parsing feedback into Aria's responses
 
----
+2. **Correlation Engine**
+   - Build cross-report correlation analysis
+   - Generate health score calculations
+   - Have Aria explain correlations naturally
 
+3. **Weekly Insights**
+   - Automate weekly report generation
+   - Deliver insights through Aria
+   - Track engagement and improvements
 
+4. **Mobile Experience**
+   - Optimize chat for mobile keyboards
+   - Implement slide-up health panel
+   - Add touch gestures
 
-### 1. AI Health Coach
-- Interactive chat interface
-- Context-aware health recommendations
-- Integration with health data
-
-### 2. Dashboard
-- Overview of health metrics
-- Weekly insights
-- Quick actions
-
-### 3. Data Management
-- File upload for health reports
-- Support for multiple report types
-- Data parsing and storage
-
-### 4. Reports
-- View and manage uploaded reports
-- Detailed report visualization
-- Historical data comparison
-
-### 5. Correlations
-- Identify patterns in health data
-- Cross-reference different metrics
-- Visualize relationships
-
-## Troubleshooting
-
-### Common Issues
-
-#### Login Not Working
-1. **Symptom**: Form submits but nothing happens (no redirect, no error)
-   - **Solution**: 
-     - Verify `NEXTAUTH_SECRET` is set and at least 32 characters
-     - Ensure the server is restarted after changing environment variables
-     - Check browser console and network tab for errors
-     - Clear browser cookies or try incognito mode
-
-2. **Symptom**: `JWEDecryptionFailed` error
-   - **Solution**:
-     - Verify `NEXTAUTH_SECRET` matches between server restarts
-     - Ensure the secret is consistent across all environments
-     - Clear existing sessions by removing browser cookies
-
-#### Environment Variables Not Loading
-- Ensure `.env.local` is in the project root
-- Verify variable names are correct (case-sensitive)
-- Restart the development server after making changes
+5. **Beta Testing**
+   - Deploy to 20-50 friends/family
+   - Collect feedback on Aria's personality
+   - Iterate based on user engagement
 
 ## API Endpoints
 
@@ -199,14 +357,40 @@ DATABASE_URL=file:./dev.db
 - `POST /api/auth/login` - User login
 - `GET /api/auth/session` - Get current session
 
+### Aria Chat
+- `POST /api/chat` - Send message to Aria
+- `GET /api/chat/history` - Get conversation history
+- `POST /api/chat/feedback` - Rate Aria's response
+
 ### Reports
 - `GET /api/reports` - List user's reports
-- `POST /api/upload` - Upload new report
+- `POST /api/reports/upload` - Upload new report via chat
 - `GET /api/reports/:id` - Get report details
+- `POST /api/reports/parse` - Parse uploaded file
 
-### Integrations
-- `POST /api/integrations/oura` - Oura ring data sync
-- `POST /api/integrations/apple-health` - Apple Health data sync
+### Correlations
+- `GET /api/correlations` - Get health correlations
+- `POST /api/correlations/calculate` - Trigger correlation analysis
+
+## Testing Strategy
+
+### Component Testing
+- Aria personality consistency
+- Chat interface responsiveness
+- Health metric calculations
+- File upload flows
+
+### Integration Testing
+- Full conversation flows
+- Upload → Parse → Correlate → Explain
+- Mobile experience
+- API response times
+
+### User Testing Checkpoints
+- After each major milestone
+- Focus on Aria's helpfulness
+- Measure emotional connection
+- Track feature adoption
 
 ## Security Considerations
 
@@ -215,509 +399,38 @@ DATABASE_URL=file:./dev.db
 - JWT-based session management
 - Protected API routes
 - CSRF protection
+- Secure file upload validation
 
-### Pending Security Work
+### Pending Security Work (Post-MVP)
 - Implement rate limiting
 - Add email verification
 - Set up proper CORS policies
 - Audit logging
+- HIPAA compliance measures
 
-# Correlation Engine Integration Documentation
+## Success Metrics
 
-## Overview
-This document provides comprehensive instructions for integrating the multi-omics test report parser and AI-powered correlation engine into the existing For Your Health MVP application.
+### Technical Metrics
+- Chat response time < 2 seconds
+- File parsing success rate > 95%
+- Zero conversation breaks/errors
+- Mobile performance score > 90
 
-## Integration Architecture
+### User Experience Metrics
+- Average conversation length > 10 messages
+- User return rate > 80% weekly
+- Aria helpfulness rating > 4.5/5
+- Feature adoption rate > 70%
 
-The correlation engine integrates with the Next.js application by:
-1. Extending the current Report model to support multiple test types
-2. Adding new parser services for each test type
-3. Implementing a correlation analysis system
-4. Creating new UI components for correlation visualization
+### Health Outcome Metrics
+- Users checking metrics weekly > 75%
+- Report uploads per user > 3
+- Insight acknowledgment rate > 60%
+- Health improvement reported > 50%
 
-## Database Schema Updates
-
-### 1. Prisma Schema Updates
-Added new models and relationships to support correlation analysis:
-- Enhanced `Report` model with new fields
-- New `Biomarker` model for storing test results
-- `Correlation` model for storing relationships between biomarkers
-- Junction tables for many-to-many relationships
-
-### 2. Database Migration
-```bash
-npx prisma migrate dev --name add-correlation-engine
-```
-
-## File Structure Updates
-
-New directories and files added:
-```
-src/
-├── lib/
-│   ├── parsers/           # Report parsing logic
-│   ├── correlations/      # Correlation analysis engine
-│   └── test-samples/      # Sample test files
-├── app/
-│   ├── api/correlations/  # API endpoints
-│   └── dashboard/correlations/  # UI components
-└── components/
-    ├── upload/           # Enhanced upload components
-    └── correlations/      # Visualization components
-```
-
-## Key Features
-
-1. **Multi-format Parser System**
-   - Support for DNA, microbiome, hormone, and blood test reports
-   - Automatic format detection
-   - Standardized data extraction
-
-2. **Correlation Engine**
-   - Rule-based correlation analysis
-   - Confidence scoring
-   - Actionable recommendations
-
-3. **API Endpoints**
-   - Upload and process reports
-   - Retrieve correlations
-   - Manage user data
-
-## Implementation Status
-
-✅ Database schema updated
-✅ Core parser infrastructure
-✅ DNA and Microbiome parsers
-✅ Correlation engine
-✅ API endpoints
-
-# Correlation Engine Integration Documentation
-
-## Overview
-This document provides comprehensive instructions for integrating the multi-omics test report parser and AI-powered correlation engine into the existing For Your Health MVP application.
-
-## Integration Architecture
-
-The correlation engine will integrate with the existing Next.js application by:
-1. Extending the current Report model to support multiple test types
-2. Adding new parser services for each test type
-3. Implementing a correlation analysis system
-4. Creating new UI components for correlation visualization
-
-## Database Schema Updates
-
-### 1. Update Prisma Schema
-Add the following to your `prisma/schema.prisma`:
-
-```prisma
-// Update existing Report model
-model Report {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String   // Now supports: DNA, MICROBIOME, HORMONE, BLOOD
-  fileName    String
-  filePath    String
-  parsedData  String   // JSON string
-  labName     String?  // New: Laboratory name
-  testDate    DateTime? // New: Test collection date
-  rawData     String?  // New: Original file content
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  biomarkers  Biomarker[]
-  correlations CorrelationSource[] @relation("SourceReport")
-  correlationTargets CorrelationTarget[] @relation("TargetReport")
-  
-  @@index([userId, type])
-}
-
-// New models for correlation engine
-model Biomarker {
-  id              String   @id @default(cuid())
-  reportId        String
-  category        String   // genetic, microbiome, hormone, metabolic
-  name            String
-  value           Float?
-  stringValue     String?  // For non-numeric values like genotypes
-  unit            String?
-  referenceMin    Float?
-  referenceMax    Float?
-  percentile      Float?
-  status          String?  // optimal, normal, low, high
-  
-  report          Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  
-  @@index([reportId, category])
-  @@index([name])
-}
-
-model Correlation {
-  id              String   @id @default(cuid())
-  userId          String
-  sourceType      String   // dna, microbiome, hormone, blood
-  sourceMarker    String
-  targetType      String
-  targetMarker    String
-  correlationScore Float   // -1 to 1
-  confidenceScore Float    // 0 to 1
-  explanation     String
-  recommendations Json     // Array of recommendation strings
-  createdAt       DateTime @default(now())
-  
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sourceReports   CorrelationSource[]
-  targetReports   CorrelationTarget[]
-  
-  @@index([userId, confidenceScore])
-}
-
-// Junction tables for many-to-many relationships
-model CorrelationSource {
-  correlationId String
-  reportId      String
-  
-  correlation   Correlation @relation(fields: [correlationId], references: [id], onDelete: Cascade)
-  report        Report      @relation("SourceReport", fields: [reportId], references: [id], onDelete: Cascade)
-  
-  @@id([correlationId, reportId])
-}
-
-model CorrelationTarget {
-  correlationId String
-  reportId      String
-  
-  correlation   Correlation @relation(fields: [correlationId], references: [id], onDelete: Cascade)
-  report        Report      @relation("TargetReport", fields: [reportId], references: [id], onDelete: Cascade)
-  
-  @@id([correlationId, reportId])
-}
-```
-
-### 2. Run Database Migration
-```bash
-npx prisma migrate dev --name add-correlation-engine
-```
-
-## File Structure Updates
-
-Add the following directories and files to your project:
-
-```
-src/
-├── lib/
-│   ├── parsers/
-│   │   ├── base-parser.ts
-│   │   ├── dna-parser.ts
-│   │   ├── microbiome-parser.ts
-│   │   ├── hormone-parser.ts
-│   │   ├── blood-parser.ts
-│   │   └── index.ts
-│   ├── correlations/
-│   │   ├── correlation-engine.ts
-│   │   ├── correlation-rules.ts
-│   │   └── types.ts
-│   └── test-samples/  # Sample test files for development
-│       ├── 23andme-sample.txt
-│       ├── viome-sample.json
-│       ├── dutch-sample.json
-│       └── quest-sample.txt
-├── app/
-│   ├── api/
-│   │   ├── upload/
-│   │   │   └── route.ts  # Update existing
-│   │   └── correlations/
-│   │       ├── route.ts
-│   │       └── [userId]/
-│   │           └── route.ts
-│   └── dashboard/
-│       └── correlations/
-│           └── page.tsx  # New page
-└── components/
-    ├── upload/
-    │   ├── enhanced-upload-zone.tsx  # New
-    │   └── file-type-detector.tsx    # New
-    └── correlations/
-        ├── correlation-dashboard.tsx  # New
-        ├── correlation-widget.tsx     # New
-        └── correlation-filters.tsx    # New
-```
-
-## Implementation Status
-
-✅ Database schema updated  
-✅ Core parser infrastructure  
-✅ DNA and Microbiome parsers  
-✅ Correlation engine  
-✅ API endpoints  
-
-## Setup and Installation
-
-### 1. Install Additional Dependencies
+## Installation
 
 ```bash
-# Install new dependencies
-npm install react-dropzone papaparse csv-parse
-
-# Install types
-npm install -D @types/papaparse
-```
-
-### 2. Update Prisma Schema
-
-1. Copy the Prisma schema updates from the main documentation
-2. Run migrations:
-```bash
-npx prisma migrate dev --name add-correlation-engine
-npx prisma generate
-```
-
-### 3. Create Directory Structure
-
-```bash
-# Create necessary directories
-mkdir -p src/lib/parsers
-mkdir -p src/lib/correlations
-mkdir -p src/lib/test-samples
-mkdir -p src/components/correlations
-mkdir -p src/components/upload
-mkdir -p src/app/api/correlations
-mkdir -p src/app/dashboard/correlations
-mkdir -p uploads
-```
-
-### 4. Copy Implementation Files
-
-Copy all the implementation files from this documentation:
-1. Parser implementations (dna-parser.ts, microbiome-parser.ts, etc.)
-2. Correlation engine (correlation-engine.ts)
-3. API routes (updated upload route, new correlation routes)
-4. React components (CorrelationDashboard, EnhancedUploadZone)
-5. New pages (correlations page)
-
-### 5. Update Navigation
-
-Add the Correlations link to your navigation component:
-
-```typescript
-// In your navigation configuration
-const navigationItems = [
-  // ... existing items
-  {
-    name: 'Correlations',
-    href: '/dashboard/correlations',
-    icon: LinkIcon, // or any appropriate icon
-    description: 'View health correlations'
-  }
-];
-```
-
-### 6. Create Sample Test Files
-
-Create the sample test files in `src/lib/test-samples/`:
-- Copy the content from the artifacts created earlier
-- Save as: 23andme-sample.txt, viome-sample.json, dutch-sample.json, quest-sample.txt
-
-### 7. Update Environment Variables
-
-Add to your `.env.local`:
-```env
-# Existing variables...
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=10485760  # 10MB in bytes
-```
-
-### 8. Test the Implementation
-
-1. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-2. **Test file uploads:**
-   - Navigate to your upload page
-   - Upload each sample file type
-   - Verify successful parsing
-
-3. **Check correlations:**
-   - After uploading at least 2 different test types
-   - Navigate to /dashboard/correlations
-   - Verify correlations are displayed
-
-4. **Test error handling:**
-   - Try uploading invalid files
-   - Verify appropriate error messages
-
-## Troubleshooting Guide
-
-### Issue: Parser not detecting file type
-**Solution:**
-- Check file content matches expected format
-- Verify filename includes lab name
-- Add debug logging to detectTestType
-
-## Parser Implementation Details
-
-### Hormone Parser
-
-The `HormoneParser` class handles parsing of hormone test reports from various labs including DUTCH, ZRT, and Genova.
-
-#### Supported Labs
-- **DUTCH** - Comprehensive hormone testing
-- **ZRT** - Saliva and blood spot testing
-- **Genova** - Comprehensive hormone panels
-
-#### Key Features
-- Parses multiple hormone metabolites including:
-  - Estrogen metabolites (2-OH-E1, 4-OH-E1, 16-OH-E1, 2-Methoxy-E1)
-  - Androgens (testosterone, DHEA-S)
-  - Cortisol metabolites
-  - B-vitamin markers
-- Calculates important ratios:
-  - 2/16 hydroxyestrone ratio
-  - Estrogen methylation status
-  - Cortisol/cortisone ratio
-- Supports JSON and text formats
-- Handles different reference ranges by lab
-
-#### Example Usage
-```typescript
-const parser = new HormoneParser();
-const report = await parser.parse(fileContent, 'application/json');
-```
-
-#### Status Interpretation
-- **Optimal**: Values in the middle 50% of reference range or specific optimal ranges for ratios
-- **Normal**: Within reference range but not optimal
-- **Low/High**: Outside reference range
-
-### Blood Parser
-
-The `BloodParser` class handles parsing of comprehensive blood test reports from various labs including Quest, LabCorp, and Genova.
-
-#### Supported Labs
-- **Quest Diagnostics** - Standard blood panels
-- **LabCorp** - Comprehensive metabolic panels
-- **Genova** - NutrEval and specialized testing
-
-#### Key Features
-- Parses multiple blood test components:
-  - Complete Blood Count (CBC)
-  - Comprehensive Metabolic Panel (CMP)
-  - Lipid profiles
-  - Thyroid function tests
-  - Inflammatory markers
-  - Vitamin and mineral levels
-- Handles different report formats (text, CSV, JSON)
-- Normalizes test names across different labs
-- Calculates derived metrics and ratios
-- Supports flag-based result interpretation (H/L for high/low)
-
-#### Test Name Normalization
-Common test name variations are normalized to standard names, for example:
-- `vitamin_d,_25-oh` → `vitamin_d`
-- `testosterone,_total` → `testosterone`
-- `magnesium,_rbc` → `rbc_magnesium`
-
-#### Specialized Parsing Logic
-- Handles different range formats (e.g., `10-20`, `<5`, `>100`)
-- Processes flagged results (H/L indicators)
-- Extracts values with proper units
-- Categorizes tests into functional groups (hematology, metabolic, etc.)
-
-#### Example Usage
-```typescript
-const parser = new BloodParser();
-const report = await parser.parse(fileContent, 'text/csv');
-```
-
-#### Status Interpretation
-- **Optimal**: Values in the middle 60% of reference range
-- **Normal**: Within reference range but not optimal
-- **Low/High**: Outside reference range
-- **Flagged**: Explicitly marked as high (H) or low (L) in the report
-
-## Next Steps
-
-1. Add more correlation rules
-2. Build visualization components
-3. Add user feedback mechanism
-4. Implement test coverage for all parsers
-
-## Recent Progress (May 2024)
-
-### Implemented Features
-1. **Data Sources Page**
-   - File upload functionality for health reports (CSV, JSON, PDF, images)
-   - Support for multiple report types (blood tests, DNA, microbiome)
-   - Sample file templates and format validations
-   - User-friendly error handling and feedback
-
-2. **Dashboard Enhancements**
-   - Report listing with file details and actions
-   - Quick metrics display
-   - Responsive design for all screen sizes
-
-3. **Backend Improvements**
-   - File upload API endpoint
-   - Session-based authentication
-   - Basic data validation
-
-### Technical Details
-- **Frontend**: React hooks for state management
-- **File Handling**: Client-side validation before upload
-- **UI/UX**: Loading states and error feedback
-- **Security**: Protected routes and API endpoints
-
-## Next Steps
-
-### High Priority
-1. **Backend Integration**
-   - [ ] Store uploaded files in a secure storage solution
-   - [ ] Parse and validate uploaded reports
-   - [ ] Store report metadata in the database
-
-2. **Dashboard Features**
-   - [ ] Implement real data fetching for reports
-   - [ ] Add search and filter functionality
-   - [ ] Create detailed report views
-
-3. **Data Processing**
-   - [ ] Parse blood test results into structured data
-   - [ ] Extract key metrics from DNA reports
-   - [ ] Process microbiome data for analysis
-
-### Medium Priority
-4. **Visualizations**
-   - [ ] Add charts for blood test trends
-   - [ ] Create microbiome composition visualizations
-   - [ ] Implement DNA result visualizations
-
-5. **User Experience**
-   - [ ] Add loading skeletons
-   - [ ] Implement optimistic UI updates
-   - [ ] Add toast notifications
-
-### Future Enhancements
-6. **Integration**
-   - [ ] Oura Ring API integration
-   - [ ] Apple Health integration
-   - [ ] Google Fit integration
-
-7. **Advanced Features**
-   - [ ] AI-powered health insights
-   - [ ] Trend analysis
-   - [ ] Health recommendations
-
-## Developer Note: HIPAA-Aware MVP
-
-> **This MVP is being built with HIPAA-awareness.**
-> While some temporary workarounds exist for rapid development and testing, full HIPAA compliance will be a priority after the MVP testing phase. All developers should code with HIPAA requirements in mind:
-> - Secure handling of environment variables and secrets (no hardcoding)
-> - Proper authentication and authorization
-> - Secure token/session management
-> - No PHI exposure in logs or error messages
-> - Plan for compliance upgrades post-testing
 # Clone the repository
 git clone <repository-url>
 cd for-your-health-mvp
@@ -727,6 +440,7 @@ npm install
 
 # Set up environment variables
 cp .env.example .env.local
+# Edit .env.local with your values
 
 # Run database migrations
 npx prisma migrate dev --name init
@@ -735,61 +449,50 @@ npx prisma migrate dev --name init
 npm run dev
 ```
 
-### Testing
-```bash
-# Run tests
-npm test
+## Troubleshooting
 
-# Run tests with UI
-npm run test:ui
-```
+### Common Issues
 
-## Deployment
+#### Aria Not Responding
+1. **Symptom**: Chat messages don't get responses
+   - **Solution**: 
+     - Verify `OPENAI_API_KEY` is set correctly
+     - Check API key has sufficient credits
+     - Ensure streaming is supported in your environment
 
-### Environment Variables
-- `DATABASE_URL` - Database connection string
-- `NEXTAUTH_SECRET` - Secret for JWT encryption
-- `NEXTAUTH_URL` - Base URL of the application
-- `UPLOAD_DIR` - Directory for file uploads
-
-### Build and Start
-```bash
-# Build the application
-npm run build
-
-# Start production server
-npm start
-```
+#### Login Not Working
+1. **Symptom**: Form submits but nothing happens
+   - **Solution**: 
+     - Verify `NEXTAUTH_SECRET` is set (32+ characters)
+     - Restart server after environment changes
+     - Clear browser cookies
 
 ## Future Enhancements
 
 ### Short-term
-- [ ] Implement password reset flow
-- [ ] Add email verification
-- [ ] **DNA and microbiome report uploads (parsing, help sections)**
-- [ ] Enhanced data visualization
-- [ ] Dashboard and insights for uploaded health data
-- [ ] Report management (view, download, delete)
-- [ ] Expand test coverage and error handling
-- [ ] UI/UX improvements after MVP features
-- [ ] HIPAA/security enhancements after MVP features
+- [ ] Voice input for Aria
+- [ ] Aria mood indicators
+- [ ] Export conversations
+- [ ] Multiple AI personality options
 
 ### Long-term
-- [ ] Mobile app development
-- [ ] Integration with wearables
-- [ ] Advanced AI analysis
-- [ ] Health professional portal
+- [ ] Mobile app with Aria
+- [ ] Wearable integrations
+- [ ] Video consultations through Aria
+- [ ] Multi-language support
 
-## Known Issues
-- Some security improvements needed for HIPAA compliance (see 'Pending Security Work')
-- Limited error handling in some API routes (to be addressed post-MVP)
-- Basic test coverage needs expansion
-- UI/UX polish and accessibility improvements pending
-- DNA/microbiome upload features not yet implemented
+## Developer Note: HIPAA-Aware MVP
+
+> **This MVP is being built with HIPAA-awareness.**
+> While some temporary workarounds exist for rapid development and testing, full HIPAA compliance will be a priority after the MVP testing phase. All developers should code with HIPAA requirements in mind:
+> - Secure handling of environment variables and secrets
+> - Proper authentication and authorization
+> - No PHI exposure in logs or error messages
+> - Plan for compliance upgrades post-testing
 
 ## Contributing
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`feat/aria-[feature-name]`)
 3. Commit your changes
 4. Push to the branch
 5. Open a pull request
