@@ -29,11 +29,39 @@ export default function DataSourcesPage() {
       setUploading(false);
       return;
     }
+
+    // File type validation
+    const allowedTypes: Record<string, string[]> = {
+      blood: ["text/csv", "text/plain"],
+      dna: ["text/plain"],
+      microbiome: ["application/json"],
+      hormone: ["application/json"],
+      pdf: ["application/pdf"],
+      image: ["image/jpeg", "image/png", "image/jpg", "image/heic", "image/heif"]
+    };
+    const currentAllowed = allowedTypes[reportType] || [];
+    if (!currentAllowed.includes(file.type)) {
+      setMessage(
+        reportType === 'pdf' ? "Please upload a valid PDF file." :
+        reportType === 'image' ? "Please upload a valid image file (JPG, PNG, HEIC, HEIF)." :
+        reportType === 'blood' ? "Please upload a CSV or TXT file." :
+        reportType === 'dna' ? "Please upload a TXT file." :
+        reportType === 'microbiome' || reportType === 'hormone' ? "Please upload a JSON file." :
+        "Unsupported file type."
+      );
+      setUploading(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", reportType);
     try {
-      const res = await fetch("/api/reports/upload", { method: "POST", body: formData });
+      // Route to OCR endpoint for PDF/image, else to reports/upload
+      const uploadUrl = (reportType === 'pdf' || reportType === 'image')
+        ? "/api/ocr-upload"
+        : "/api/reports/upload";
+      const res = await fetch(uploadUrl, { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.success) setMessage("Upload successful!");
       else if (data && data.error) setMessage(data.error);
@@ -44,6 +72,7 @@ export default function DataSourcesPage() {
       setUploading(false);
     }
   };
+
 
   if (status === "loading") {
     return <div className="text-center py-12">Loading session...</div>;
@@ -68,103 +97,48 @@ export default function DataSourcesPage() {
             <select
               value={reportType}
               onChange={e => setReportType(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full border border-blue-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
               required
             >
               <option value="" disabled>Select report type</option>
-              <option value="blood">Blood Test (CSV/TXT - Quest, LabCorp, etc.)</option>
-              <option value="dna">DNA Data (TXT - 23andMe, AncestryDNA, etc.)</option>
-              <option value="microbiome">Microbiome Report (JSON - Viome, etc.)</option>
-              <option value="hormone">Hormone Panel (JSON - DUTCH, etc.)</option>
-              <option value="pdf">PDF Report (PDF - General lab results)</option>
-              <option value="image">Image (JPG/PNG - Photo of report)</option>
+              <option value="pdf">Lab Report (PDF for OCR)</option>
+              <option value="image">Lab Report (Image for OCR)</option>
             </select>
             {reportType && (
-              <p className="text-xs text-gray-500 mt-1">
-                {reportType === 'blood' && 'Upload Quest, LabCorp, or other blood test results in CSV or TXT format'}
-                {reportType === 'dna' && 'Upload 23andMe, AncestryDNA, or similar DNA data in TXT format'}
-                {reportType === 'microbiome' && 'Upload Viome or other microbiome reports in JSON format'}
-                {reportType === 'hormone' && 'Upload DUTCH or other hormone panel results in JSON format'}
-                {reportType === 'pdf' && 'Upload any lab report in PDF format'}
-                {reportType === 'image' && 'Upload a photo or scan of your lab report (JPG/PNG)'}
+              <p className="text-xs text-blue-700 mt-1">
+                {reportType === 'pdf' && 'Upload any lab report in PDF format. We use advanced AI to extract your results.'}
+                {reportType === 'image' && 'Upload a photo or scan of your lab report (JPG/PNG/HEIC/HEIF).'}
               </p>
             )}
           </div>
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              {reportType === 'blood' ? 'Blood Test File (CSV/TXT)' : 
-               reportType === 'dna' ? 'DNA Data File (TXT)' :
-               reportType === 'microbiome' ? 'Microbiome Report (JSON)' :
-               reportType === 'hormone' ? 'Hormone Panel (JSON)' :
-               reportType === 'pdf' ? 'PDF Report' : 'Image File'}
+            <label className="block text-sm font-medium text-blue-700">
+              {reportType === 'pdf' ? 'Lab Report (PDF)' : 'Lab Report (Image)'}
             </label>
             <input
               ref={fileInputRef}
               type="file"
               accept={
-                reportType === 'blood' ? '.csv,.txt' :
-                reportType === 'dna' ? '.txt' :
-                reportType === 'microbiome' || reportType === 'hormone' ? '.json' :
-                reportType === 'pdf' ? '.pdf' : '.jpg,.jpeg,.png'
+                reportType === 'pdf' ? '.pdf' :
+                reportType === 'image' ? '.jpg,.jpeg,.png,.heic,.heif' : ''
               }
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="w-full border border-blue-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 shadow-sm"
               required
             />
           </div>
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            className={`bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold py-2 rounded-lg transition-all shadow-md disabled:opacity-50 ${uploading ? 'animate-pulse' : ''}`}
             disabled={uploading}
           >
-            {uploading ? "Uploading..." : "Upload Report"}
+            {uploading ? (
+              <span className="flex items-center justify-center"><svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Uploading...</span>
+            ) : "Upload Lab Report"}
           </button>
-          {message && <div className="text-center text-sm mt-2">{message}</div>}
+          {message && <div className={`text-center text-sm mt-2 ${message.includes('success') ? 'text-green-600' : 'text-red-600'}`}>{message}</div>}
         </form>
         
-        {/* Blood Test Help Section */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-          <b>Blood Test CSV format:</b><br/>
-          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">name,value,unit
-HGB,13.5,g/dL
-RBC,4.8,10^6/uL</pre>
-          <div className="mt-2">
-            Only the following markers are recognized:
-            <span className="block mt-1 text-xs text-gray-600">
-              WBC, RBC, HGB, HCT, MCV, MCH, MCHC, RDW, PLT, GLUCOSE, BUN, CREATININE, eGFR, AST, ALT
-            </span>
-            <a href="/sample-blood-test.csv" download className="text-blue-700 underline mt-2 inline-block">Download sample CSV</a>
-          </div>
-        </div>
         
-        {/* DNA Report Help Section */}
-        <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm">
-          <b>DNA Report CSV format:</b><br/>
-          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">rsid,chromosome,position,genotype
-rs9939609,16,53786615,AA
-rs662799,11,116792662,AG
-rs1801133,1,11856378,TT
-rs429358,19,45411941,CC</pre>
-          <div className="mt-2">
-            Only the following SNPs are recognized:
-            <span className="block mt-1 text-xs text-gray-600">
-              rs9939609 (FTO), rs662799 (APOA5), rs1801133 (MTHFR), rs429358 (APOE)
-            </span>
-            <a href="/sample-dna-report.csv" download className="text-purple-700 underline mt-2 inline-block">Download sample CSV</a>
-          </div>
-        </div>
-        
-        {/* Microbiome Report Help Section */}
-        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
-          <b>Microbiome JSON format:</b><br/>
-          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">{"{\n  \"sample_date\": \"2024-05-01\",\n  \"bacteria\": [\n    { \"taxon\": \"Bacteroides\", \"abundance\": 0.23 },\n    { \"taxon\": \"Firmicutes\", \"abundance\": 0.45 },\n    { \"taxon\": \"Lactobacillus\", \"abundance\": 0.05 }\n  ]\n}"}</pre>
-          <div className="mt-2">
-            Only the following taxa are recognized (example):
-            <span className="block mt-1 text-xs text-gray-600">
-              Bacteroides, Firmicutes, Lactobacillus
-            </span>
-            <a href="/sample-microbiome-report.json" download className="text-green-700 underline mt-2 inline-block">Download sample JSON</a>
-          </div>
-        </div>
       </div>
 
       {/* Integration Cards */}
