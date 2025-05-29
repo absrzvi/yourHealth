@@ -8,14 +8,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  reports   Report[]
-  insights  WeeklyInsight[]
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  reports      Report[]
+  insights     WeeklyInsight[]
+  chatMessages ChatMessage[]
 }
 
 model Report {
@@ -67,4 +68,13 @@ model WeeklyInsight {
   user                  User     @relation(fields: [userId], references: [id])
 }
 
-
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  role      String
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+}

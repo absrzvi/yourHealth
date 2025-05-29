@@ -23,55 +23,81 @@ export async function POST(req: Request) {
     // Format context for the AI
     const context = formatReportsForLLM(userReports);
 
-    // Dynamically determine the model from Ollama
-    let model = process.env.OLLAMA_MODEL;
-    if (!model) {
-      // Fetch the list of models from Ollama and use the first one
-      const modelsResponse = await fetch('http://localhost:11434/api/tags');
+    // Set a default model in case we can't connect to Ollama
+    let model = process.env.OLLAMA_MODEL || 'phi3';
+    
+    // Create an AbortController to handle timeout for model fetching
+    const modelController = new AbortController();
+    const modelTimeoutId = setTimeout(() => modelController.abort(), 5000); // 5 second timeout
+    
+    // Try to fetch available models from Ollama
+    try {
+      const modelsResponse = await fetch('http://localhost:11434/api/tags', {
+        signal: modelController.signal
+      });
+      
       if (modelsResponse.ok) {
         const modelsData = await modelsResponse.json();
         if (modelsData.models && modelsData.models.length > 0) {
           model = modelsData.models[0].name;
-        } else {
-          throw new Error('No models found in Ollama');
+          console.log(`Using Ollama model: ${model}`);
         }
-      } else {
-        throw new Error('Failed to fetch models from Ollama');
       }
+    } catch (error) {
+      console.log('Could not fetch models from Ollama, using default:', model);
+    } finally {
+      clearTimeout(modelTimeoutId);
     }
-    const response = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        prompt: buildPrompt(message, context),
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get response from Ollama');
-    }
-
-    const data = await response.json();
     
-    // Save chat history
-    await prisma.chatMessage.createMany({
-      data: [
-        {
-          userId,
-          content: message,
-          role: 'user',
-        },
-        {
-          userId,
-          content: data.response,
-          role: 'assistant',
-        }
-      ]
-    });
+    // Call Ollama with proper timeout handling
+    const generateController = new AbortController();
+    const generateTimeoutId = setTimeout(() => generateController.abort(), 15000); // 15 second timeout
+    
+    try {
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        signal: generateController.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          prompt: buildPrompt(message, context),
+          stream: false,
+        }),
+      });
+      
+      clearTimeout(generateTimeoutId);
 
-    return NextResponse.json({ message: data.response });
+      if (!response.ok) {
+        throw new Error(`Failed to get response from Ollama: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Save chat history
+      await prisma.$transaction([
+        prisma.chatMessage.create({
+          data: {
+            userId,
+            content: message,
+            role: 'user',
+          }
+        }),
+        prisma.chatMessage.create({
+          data: {
+            userId,
+            content: data.response,
+            role: 'assistant',
+          }
+        })
+      ]);
+
+      return NextResponse.json({ message: data.response });
+    } catch (error) {
+      console.error('Ollama generation error:', error);
+      throw error; // Re-throw to be caught by the outer try-catch
+    } finally {
+      clearTimeout(generateTimeoutId);
+    }
   } catch (error) {
     console.error('AI Chat error:', error);
     return NextResponse.json(
