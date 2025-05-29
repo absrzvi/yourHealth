@@ -222,6 +222,82 @@ DATABASE_URL=file:./dev.db
 - Set up proper CORS policies
 - Audit logging
 
+# Correlation Engine Integration Documentation
+
+## Overview
+This document provides comprehensive instructions for integrating the multi-omics test report parser and AI-powered correlation engine into the existing For Your Health MVP application.
+
+## Integration Architecture
+
+The correlation engine integrates with the Next.js application by:
+1. Extending the current Report model to support multiple test types
+2. Adding new parser services for each test type
+3. Implementing a correlation analysis system
+4. Creating new UI components for correlation visualization
+
+## Database Schema Updates
+
+### 1. Prisma Schema Updates
+Added new models and relationships to support correlation analysis:
+- Enhanced `Report` model with new fields
+- New `Biomarker` model for storing test results
+- `Correlation` model for storing relationships between biomarkers
+- Junction tables for many-to-many relationships
+
+### 2. Database Migration
+```bash
+npx prisma migrate dev --name add-correlation-engine
+```
+
+## File Structure Updates
+
+New directories and files added:
+```
+src/
+├── lib/
+│   ├── parsers/           # Report parsing logic
+│   ├── correlations/      # Correlation analysis engine
+│   └── test-samples/      # Sample test files
+├── app/
+│   ├── api/correlations/  # API endpoints
+│   └── dashboard/correlations/  # UI components
+└── components/
+    ├── upload/           # Enhanced upload components
+    └── correlations/      # Visualization components
+```
+
+## Key Features
+
+1. **Multi-format Parser System**
+   - Support for DNA, microbiome, hormone, and blood test reports
+   - Automatic format detection
+   - Standardized data extraction
+
+2. **Correlation Engine**
+   - Rule-based correlation analysis
+   - Confidence scoring
+   - Actionable recommendations
+
+3. **API Endpoints**
+   - Upload and process reports
+   - Retrieve correlations
+   - Manage user data
+
+## Implementation Status
+
+✅ Database schema updated
+✅ Core parser infrastructure
+✅ DNA and Microbiome parsers
+✅ Correlation engine
+✅ API endpoints
+
+## Next Steps
+
+1. Implement remaining parsers (Hormone, Blood)
+2. Add more correlation rules
+3. Build visualization components
+4. Add user feedback mechanism
+
 ## Recent Progress (May 2024)
 
 ### Implemented Features
