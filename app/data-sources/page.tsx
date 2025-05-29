@@ -36,7 +36,8 @@ export default function DataSourcesPage() {
       const res = await fetch("/api/reports/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok && data.success) setMessage("Upload successful!");
-      else setMessage(`Upload failed: ${data.error || 'Unknown error'}`);
+      else if (data && data.error) setMessage(data.error);
+      else setMessage('Upload failed: Unknown error');
     } catch (err: any) {
       setMessage(`Upload failed: ${err.message}`);
     } finally {
@@ -98,6 +99,41 @@ RBC,4.8,10^6/uL
               WBC, RBC, HGB, HCT, MCV, MCH, MCHC, RDW, PLT, GLUCOSE, BUN, CREATININE, eGFR, AST, ALT
             </span>
             <a href="/sample-blood-test.csv" download className="text-blue-700 underline mt-2 inline-block">Download sample CSV</a>
+          </div>
+        </div>
+        <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm">
+          <b>DNA Report CSV format:</b><br/>
+          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">rsid,chromosome,position,genotype
+rs9939609,16,53786615,AA
+rs662799,11,116792662,AG
+rs1801133,1,11856378,TT
+rs429358,19,45411941,CC
+</pre>
+          <div className="mt-2">
+            Only the following SNPs are recognized:
+            <span className="block mt-1 text-xs text-gray-600">
+              rs9939609 (FTO), rs662799 (APOA5), rs1801133 (MTHFR), rs429358 (APOE)
+            </span>
+            <a href="/sample-dna-report.csv" download className="text-purple-700 underline mt-2 inline-block">Download sample CSV</a>
+          </div>
+        </div>
+        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
+          <b>Microbiome JSON format:</b><br/>
+          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">{
+  "sample_date": "2024-05-01",
+  "bacteria": [
+    { "taxon": "Bacteroides", "abundance": 0.23 },
+    { "taxon": "Firmicutes", "abundance": 0.45 },
+    { "taxon": "Lactobacillus", "abundance": 0.05 }
+  ]
+}
+</pre>
+          <div className="mt-2">
+            Only the following taxa are recognized (example):
+            <span className="block mt-1 text-xs text-gray-600">
+              Bacteroides, Firmicutes, Lactobacillus
+            </span>
+            <a href="/sample-microbiome-report.json" download className="text-green-700 underline mt-2 inline-block">Download sample JSON</a>
           </div>
         </div>
       </div>

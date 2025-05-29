@@ -35,15 +35,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded.' }, { status: 400 });
     }
 
-    // File type validation
+    // Strict file type validation for each report type
+    // @ts-ignore
+    const fileType = file.type;
+    if (
+      (reportType === 'blood' && fileType !== 'text/csv') ||
+      (reportType === 'dna' && fileType !== 'text/csv') ||
+      (reportType === 'microbiome' && fileType !== 'application/json')
+    ) {
+      let expected = reportType === 'microbiome' ? 'JSON' : 'CSV';
+      return NextResponse.json({ error: `Unsupported file type for ${reportType} report. Please upload a ${expected} file.` }, { status: 400 });
+    }
+    // Disallow PDF uploads for DNA and Microbiome
+    if ((reportType === 'dna' || reportType === 'microbiome') && fileType === 'application/pdf') {
+      return NextResponse.json({ error: `PDF uploads are not supported for ${reportType} reports. Please upload a CSV or JSON file as appropriate.` }, { status: 400 });
+    }
+    // General allowed types for other report types
     const allowedTypes = [
       'text/csv',
       'application/pdf',
       'application/json',
       'text/plain',
     ];
-    // @ts-ignore
-    if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(fileType)) {
       return NextResponse.json({ error: 'Unsupported file type. Please upload a CSV, PDF, TXT, or JSON file.' }, { status: 400 });
     }
 
@@ -72,7 +86,7 @@ export async function POST(req: NextRequest) {
         try {
           const parsed = await parseReport(reportType, file.type, content);
           if (Array.isArray(parsed) && parsed.length === 0) {
-            return NextResponse.json({ error: 'No recognized biomarkers found in your file. Please check the format or marker names.' }, { status: 400 });
+            return NextResponse.json({ error: 'No recognized biomarkers found in your file. Please check the format, marker/SNP/taxa names, or file structure.' }, { status: 422 });
           }
           parsedData = JSON.stringify(parsed);
         } catch (err: any) {

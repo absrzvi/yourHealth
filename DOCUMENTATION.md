@@ -108,6 +108,42 @@ DATABASE_URL=file:./dev.db
 
 ## Core Features
 
+---
+
+### Recent Progress (May 2025)
+- **Health Data Uploads:**
+  - Implemented robust backend for uploading and parsing blood test CSVs, with clear user feedback and error handling.
+  - Added frontend help section with sample CSV and guidance on supported biomarkers.
+  - Ensured upload endpoint (`/api/reports/upload`) is correctly used and legacy routes are deprecated.
+  - Resolved issues caused by running the dev server from the wrong directory and stale cache/build artifacts.
+  - Confirmed support for complex units (e.g., `10^6/uL`) in CSV uploads.
+- **Troubleshooting & Best Practices:**
+  - Documented the importance of running the correct project, clearing `.next` and browser caches, and verifying endpoints when debugging persistent errors.
+
+---
+
+### Current Status
+- Blood test uploads are fully functional and robust.
+- UI/UX and HIPAA/security improvements are scheduled for after MVP core features.
+
+---
+
+### Next Steps for MVP Feature Development
+1. **Add Upload & Parsing for DNA and Microbiome Reports**
+    - Implement backend parsers and frontend help sections for these formats.
+2. **Dashboard & Insights**
+    - Display uploaded report data and generate basic health insights.
+3. **Report Management**
+    - Allow users to view, download, and delete uploaded reports.
+4. **Basic Data Visualization**
+    - Charts/tables for blood markers and trends.
+5. **Testing & Error Handling**
+    - Expand test coverage and improve user-facing error messages.
+
+---
+
+
+
 ### 1. AI Health Coach
 - Interactive chat interface
 - Context-aware health recommendations
@@ -186,15 +222,15 @@ DATABASE_URL=file:./dev.db
 - Set up proper CORS policies
 - Audit logging
 
-## Development Setup
+## Developer Note: HIPAA-Aware MVP
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- SQLite
-
-### Installation
-```bash
+> **This MVP is being built with HIPAA-awareness.**
+> While some temporary workarounds exist for rapid development and testing, full HIPAA compliance will be a priority after the MVP testing phase. All developers should code with HIPAA requirements in mind:
+> - Secure handling of environment variables and secrets (no hardcoding)
+> - Proper authentication and authorization
+> - Secure token/session management
+> - No PHI exposure in logs or error messages
+> - Plan for compliance upgrades post-testing
 # Clone the repository
 git clone <repository-url>
 cd for-your-health-mvp
@@ -243,8 +279,13 @@ npm start
 ### Short-term
 - [ ] Implement password reset flow
 - [ ] Add email verification
-- [ ] Support for more health data formats
+- [ ] **DNA and microbiome report uploads (parsing, help sections)**
 - [ ] Enhanced data visualization
+- [ ] Dashboard and insights for uploaded health data
+- [ ] Report management (view, download, delete)
+- [ ] Expand test coverage and error handling
+- [ ] UI/UX improvements after MVP features
+- [ ] HIPAA/security enhancements after MVP features
 
 ### Long-term
 - [ ] Mobile app development
@@ -253,9 +294,11 @@ npm start
 - [ ] Health professional portal
 
 ## Known Issues
-- Some security improvements needed for HIPAA compliance
-- Limited error handling in some API routes
+- Some security improvements needed for HIPAA compliance (see 'Pending Security Work')
+- Limited error handling in some API routes (to be addressed post-MVP)
 - Basic test coverage needs expansion
+- UI/UX polish and accessibility improvements pending
+- DNA/microbiome upload features not yet implemented
 
 ## Contributing
 1. Fork the repository
