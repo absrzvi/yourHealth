@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface Report {
   id: string;
@@ -11,24 +12,66 @@ interface Report {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
-    fetch(`/api/reports?userId=${session.user.id}`)
-      .then(res => res.json())
-      .then(data => {
-        setReports(data.reports || []);
-        setLoading(false);
-      });
-  }, [session]);
+    console.log('Dashboard: Session status:', status);
+    console.log('Dashboard: Session data:', session);
+    
+    if (status === 'unauthenticated') {
+      console.log('Dashboard: User not authenticated, redirecting to login');
+      router.push('/auth/login?callbackUrl=' + encodeURIComponent('/dashboard'));
+      return;
+    }
 
-  if (status === "loading" || loading) return <div className="text-center py-12">Loading dashboard...</div>;
-  if (!session || !session.user) return <div className="text-center py-12 text-red-600">You must be logged in to view your dashboard.</div>;
+    if (status === 'authenticated' && session?.user?.id) {
+      console.log('Dashboard: Fetching reports for user:', session.user.id);
+      setLoading(true);
+      fetch(`/api/reports?userId=${session.user.id}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to fetch reports');
+          return res.json();
+        })
+        .then(data => {
+          console.log('Dashboard: Reports data:', data);
+          setReports(data.reports || []);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Dashboard: Error fetching reports:', err);
+          setError('Failed to load dashboard data');
+          setLoading(false);
+        });
+    }
+  }, [session, status, router]);
+
+  if (status === 'loading' || loading) {
+    return <div className="text-center py-12">Loading dashboard...</div>;
+  }
+
+  if (status === 'unauthenticated' || !session?.user) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 mb-4">You must be logged in to view your dashboard.</p>
+        <button
+          onClick={() => signIn()}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Sign In
+        </button>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-center py-12 text-red-600">{error}</div>;
+  }
 
   const handleDelete = async (id: string) => {
     if (!session?.user?.id) return;

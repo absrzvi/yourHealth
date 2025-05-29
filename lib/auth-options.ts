@@ -12,11 +12,22 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        console.log('Login attempt for email:', credentials?.email);
+        if (!credentials?.email || !credentials?.password) {
+          console.log('Missing credentials');
+          return null;
+        }
+        
         const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+        console.log('User found in DB:', user ? 'Yes' : 'No');
         if (!user) return null;
+        
+        console.log('Comparing password for user:', user.email);
         const isValid = await compare(credentials.password, user.password);
+        console.log('Password valid:', isValid);
+        
         if (!isValid) return null;
+        console.log('Authentication successful for user:', user.email);
         return { id: user.id, email: user.email, name: user.name };
       }
     })

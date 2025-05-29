@@ -11,6 +11,8 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/settings": { title: "Settings", subtitle: "Manage your account and preferences" },
 };
 
+import React from 'react';
+
 export default function Header() {
   const pathname = usePathname();
   const { title, subtitle } = pageTitles[pathname] || pageTitles["/ai-coach"];

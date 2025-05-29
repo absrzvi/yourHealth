@@ -78,3 +78,23 @@ model ChatMessage {
   
   @@index([userId])
 }
+
+model AuditLog {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  action       String
+  resourceType String    @map("resource_type")
+  resourceId   String?   @map("resource_id")
+  ipAddress    String?   @map("ip_address")
+  userAgent    String?   @map("user_agent")
+  metadata     String?   @default("{}")
+  timestamp    DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([timestamp])
+  
+  @@map("audit_log")
+}
+

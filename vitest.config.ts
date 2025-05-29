@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['tests/**/*.test.ts'], // Explicitly include test files
+    include: ['tests/**/*.test.ts', 'components/**/*.test.tsx'], // Include UI/UX component tests
     // setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',

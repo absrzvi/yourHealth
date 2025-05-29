@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Primary Blues */
+  --primary-50: #EFF6FF;
+  --primary-100: #DBEAFE;
+  --primary-500: #3B82F6;
+  --primary-600: #2563EB;
+  --primary-700: #1D4ED8;
+
+  /* Aria AI Gradient */
+  --aria-gradient: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+  --aria-glow: 0 0 40px rgba(79, 70, 229, 0.3);
+
+  /* Health Metrics */
+  --metric-cardio: #F43F5E;
+  --metric-metabolic: #10B981;
+  --metric-inflammation: #F59E0B;
+
+  /* Backgrounds */
+  --bg-primary: #FAFAFA;
+  --bg-chat: #FFFFFF;
+  --bg-user-message: #F3F4F6;
+  --bg-aria-message: linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 100%);
+
+  /* Typography */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  
+  /* HIPAA Compliance */
+  --timeout-overlay: rgba(31, 41, 55, 0.95);
+  --audit-highlight: rgba(219, 234, 254, 0.1);
+}
+
 /* Custom global styles for dashboard layout */
 
 .app-container {

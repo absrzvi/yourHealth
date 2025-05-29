@@ -12,6 +12,8 @@ const navItems = [
   { href: "/settings", icon: "⚙️", label: "Settings" },
 ];
 
+import React from 'react';
+
 export default function Sidebar() {
   const pathname = usePathname();
   return (
