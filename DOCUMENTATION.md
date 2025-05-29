@@ -291,9 +291,44 @@ src/
 ✅ Correlation engine
 ✅ API endpoints
 
+## Parser Implementation Details
+
+### Hormone Parser
+
+The `HormoneParser` class handles parsing of hormone test reports from various labs including DUTCH, ZRT, and Genova.
+
+#### Supported Labs
+- **DUTCH** - Comprehensive hormone testing
+- **ZRT** - Saliva and blood spot testing
+- **Genova** - Comprehensive hormone panels
+
+#### Key Features
+- Parses multiple hormone metabolites including:
+  - Estrogen metabolites (2-OH-E1, 4-OH-E1, 16-OH-E1, 2-Methoxy-E1)
+  - Androgens (testosterone, DHEA-S)
+  - Cortisol metabolites
+  - B-vitamin markers
+- Calculates important ratios:
+  - 2/16 hydroxyestrone ratio
+  - Estrogen methylation status
+  - Cortisol/cortisone ratio
+- Supports JSON and text formats
+- Handles different reference ranges by lab
+
+#### Example Usage
+```typescript
+const parser = new HormoneParser();
+const report = await parser.parse(fileContent, 'application/json');
+```
+
+#### Status Interpretation
+- **Optimal**: Values in the middle 50% of reference range or specific optimal ranges for ratios
+- **Normal**: Within reference range but not optimal
+- **Low/High**: Outside reference range
+
 ## Next Steps
 
-1. Implement remaining parsers (Hormone, Blood)
+1. Implement remaining parsers (Blood)
 2. Add more correlation rules
 3. Build visualization components
 4. Add user feedback mechanism
