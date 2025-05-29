@@ -326,12 +326,58 @@ const report = await parser.parse(fileContent, 'application/json');
 - **Normal**: Within reference range but not optimal
 - **Low/High**: Outside reference range
 
+### Blood Parser
+
+The `BloodParser` class handles parsing of comprehensive blood test reports from various labs including Quest, LabCorp, and Genova.
+
+#### Supported Labs
+- **Quest Diagnostics** - Standard blood panels
+- **LabCorp** - Comprehensive metabolic panels
+- **Genova** - NutrEval and specialized testing
+
+#### Key Features
+- Parses multiple blood test components:
+  - Complete Blood Count (CBC)
+  - Comprehensive Metabolic Panel (CMP)
+  - Lipid profiles
+  - Thyroid function tests
+  - Inflammatory markers
+  - Vitamin and mineral levels
+- Handles different report formats (text, CSV, JSON)
+- Normalizes test names across different labs
+- Calculates derived metrics and ratios
+- Supports flag-based result interpretation (H/L for high/low)
+
+#### Test Name Normalization
+Common test name variations are normalized to standard names, for example:
+- `vitamin_d,_25-oh` → `vitamin_d`
+- `testosterone,_total` → `testosterone`
+- `magnesium,_rbc` → `rbc_magnesium`
+
+#### Specialized Parsing Logic
+- Handles different range formats (e.g., `10-20`, `<5`, `>100`)
+- Processes flagged results (H/L indicators)
+- Extracts values with proper units
+- Categorizes tests into functional groups (hematology, metabolic, etc.)
+
+#### Example Usage
+```typescript
+const parser = new BloodParser();
+const report = await parser.parse(fileContent, 'text/csv');
+```
+
+#### Status Interpretation
+- **Optimal**: Values in the middle 60% of reference range
+- **Normal**: Within reference range but not optimal
+- **Low/High**: Outside reference range
+- **Flagged**: Explicitly marked as high (H) or low (L) in the report
+
 ## Next Steps
 
-1. Implement remaining parsers (Blood)
-2. Add more correlation rules
-3. Build visualization components
-4. Add user feedback mechanism
+1. Add more correlation rules
+2. Build visualization components
+3. Add user feedback mechanism
+4. Implement test coverage for all parsers
 
 ## Recent Progress (May 2024)
 
