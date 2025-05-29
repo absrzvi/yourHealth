@@ -23,12 +23,27 @@ export async function POST(req: Request) {
     // Format context for the AI
     const context = formatReportsForLLM(userReports);
 
-    // Call Ollama API with Qwen3
+    // Dynamically determine the model from Ollama
+    let model = process.env.OLLAMA_MODEL;
+    if (!model) {
+      // Fetch the list of models from Ollama and use the first one
+      const modelsResponse = await fetch('http://localhost:11434/api/tags');
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        if (modelsData.models && modelsData.models.length > 0) {
+          model = modelsData.models[0].name;
+        } else {
+          throw new Error('No models found in Ollama');
+        }
+      } else {
+        throw new Error('Failed to fetch models from Ollama');
+      }
+    }
     const response = await fetch('http://localhost:11434/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'qwen3',
+        model,
         prompt: buildPrompt(message, context),
         stream: false,
       }),
