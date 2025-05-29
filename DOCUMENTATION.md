@@ -9,8 +9,44 @@ For Your Health is a personalized health platform designed to help users track a
 - **UI Components**: shadcn/ui
 - **State Management**: Zustand
 - **Database**: Prisma ORM with SQLite
-- **Authentication**: NextAuth.js
+- **Authentication**: NextAuth.js with JWT
 - **Testing**: Vitest with Testing Library
+
+## Environment Setup
+
+### Required Environment Variables
+Create a `.env.local` file in the project root with the following variables:
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here  # Must be at least 32 characters
+DATABASE_URL=file:./dev.db
+```
+
+### Security Notes
+- `.env.local` is included in `.gitignore` to prevent committing sensitive data
+- For production, ensure `NEXTAUTH_SECRET` is a strong, randomly generated string
+- Consider using a more secure database in production (e.g., PostgreSQL, MySQL)
+
+## Authentication
+
+### Features
+- Email/Password authentication with secure session management
+- JWT-based session tokens
+- Protected routes with middleware
+- Session duration: 30 days
+- Secure password hashing with bcrypt
+
+### Login Flow
+1. User submits credentials via the login form
+2. Credentials are validated against the database
+3. On success, a JWT session token is issued
+4. User is redirected to the dashboard or their intended destination
+5. Session is maintained via HTTP-only cookies
+
+### Error Handling
+- Invalid credentials show an error message
+- Session validation occurs on protected routes
+- Automatic redirection to login for unauthenticated users
 
 ## Project Structure
 
@@ -64,10 +100,11 @@ For Your Health is a personalized health platform designed to help users track a
 - Role-based access control (planned)
 
 ### Key Files
-- `app/api/auth/[...nextauth]/route.ts` - Authentication API routes
+- `app/api/auth/[...nextauth]/route.ts` - Authentication API routes and JWT configuration
 - `middleware.ts` - Route protection and session validation
-- `app/auth/login/page.tsx` - Login page
+- `app/auth/login/page.tsx` - Login page with form handling
 - `app/auth/register/page.tsx` - Registration page
+- `.env.local` - Environment configuration (not committed to version control)
 
 ## Core Features
 
@@ -95,6 +132,29 @@ For Your Health is a personalized health platform designed to help users track a
 - Identify patterns in health data
 - Cross-reference different metrics
 - Visualize relationships
+
+## Troubleshooting
+
+### Common Issues
+
+#### Login Not Working
+1. **Symptom**: Form submits but nothing happens (no redirect, no error)
+   - **Solution**: 
+     - Verify `NEXTAUTH_SECRET` is set and at least 32 characters
+     - Ensure the server is restarted after changing environment variables
+     - Check browser console and network tab for errors
+     - Clear browser cookies or try incognito mode
+
+2. **Symptom**: `JWEDecryptionFailed` error
+   - **Solution**:
+     - Verify `NEXTAUTH_SECRET` matches between server restarts
+     - Ensure the secret is consistent across all environments
+     - Clear existing sessions by removing browser cookies
+
+#### Environment Variables Not Loading
+- Ensure `.env.local` is in the project root
+- Verify variable names are correct (case-sensitive)
+- Restart the development server after making changes
 
 ## API Endpoints
 

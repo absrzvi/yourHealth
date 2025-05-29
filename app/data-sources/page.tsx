@@ -64,11 +64,13 @@ export default function DataSourcesPage() {
             <option value="blood">Blood test report</option>
             <option value="dna">DNA Report</option>
             <option value="microbiome">Microbiome Report</option>
+            <option value="pdf">PDF Report</option>
+            <option value="image">Image (photo of report)</option>
           </select>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls"
+            accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls,.png,.jpg,.jpeg"
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
             required
           />
@@ -103,13 +105,87 @@ export default function DataSourcesPage() {
             <button disabled className="bg-gray-300 text-gray-600 py-1 px-3 rounded cursor-not-allowed">Connect</button>
           </div>
         </div>
-        {/* Upload Section Placeholder */}
+        {/* Uploaded Reports List and Preview */}
         <div className="widget-card mt-8">
           <div className="card-header">
-            <div className="card-icon" style={{ background: '#e0e7ff', color: '#3730a3' }}>📁</div>
-            <div className="card-title">Upload Health Report</div>
+            <div className="card-icon" style={{ background: '#e0e7ff', color: '#3730a3' }}>📄</div>
+            <div className="card-title">Uploaded Reports</div>
           </div>
-          <div className="text-gray-500">Placeholder for upload functionality.</div>
+          {/* TODO: Fetch the user's uploaded reports from the API/backend */}
+          {/* Example static table for now, replace with dynamic data */}
+          <div className="overflow-x-auto mt-2">
+            <table className="min-w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="px-3 py-2">File Name</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Example row, replace with mapped data */}
+                <tr>
+                  <td className="px-3 py-2">report1.pdf</td>
+                  <td className="px-3 py-2">PDF</td>
+                  <td className="px-3 py-2 text-green-700">Completed</td>
+                  <td className="px-3 py-2 space-x-2">
+                    <button className="text-blue-600 underline">Preview</button>
+                    <button className="text-red-600 underline">Delete</button>
+                    <button className="text-yellow-600 underline">Re-upload</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2">blood_test.csv</td>
+                  <td className="px-3 py-2">Blood</td>
+                  <td className="px-3 py-2 text-yellow-700">Processing</td>
+                  <td className="px-3 py-2 space-x-2">
+                    <button className="text-blue-600 underline" disabled>Preview</button>
+                    <button className="text-red-600 underline">Delete</button>
+                    <button className="text-yellow-600 underline">Re-upload</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {/* Preview of Extracted Data */}
+        <div className="widget-card mt-8">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>🔬</div>
+            <div className="card-title">Extracted Data Preview</div>
+          </div>
+          {/* TODO: Show preview table after successful upload/parse */}
+          <div className="overflow-x-auto mt-2">
+            <table className="min-w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="px-3 py-2">Biomarker</th>
+                  <th className="px-3 py-2">Value</th>
+                  <th className="px-3 py-2">Unit</th>
+                  <th className="px-3 py-2">Category</th>
+                  <th className="px-3 py-2">Test Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Example row, replace with mapped data */}
+                <tr>
+                  <td className="px-3 py-2">Hemoglobin</td>
+                  <td className="px-3 py-2">13.5</td>
+                  <td className="px-3 py-2">g/dL</td>
+                  <td className="px-3 py-2">Blood</td>
+                  <td className="px-3 py-2">2024-05-01</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2">Vitamin D</td>
+                  <td className="px-3 py-2">32</td>
+                  <td className="px-3 py-2">ng/mL</td>
+                  <td className="px-3 py-2">Vitamin</td>
+                  <td className="px-3 py-2">2024-05-01</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         {/* Connected Sources List Placeholder */}
         <div className="widget-card mt-8">
