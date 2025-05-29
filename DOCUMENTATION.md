@@ -291,6 +291,166 @@ src/
 ✅ Correlation engine
 ✅ API endpoints
 
+# Correlation Engine Integration Documentation
+
+## Overview
+This document provides comprehensive instructions for integrating the multi-omics test report parser and AI-powered correlation engine into the existing For Your Health MVP application.
+
+## Integration Architecture
+
+The correlation engine will integrate with the existing Next.js application by:
+1. Extending the current Report model to support multiple test types
+2. Adding new parser services for each test type
+3. Implementing a correlation analysis system
+4. Creating new UI components for correlation visualization
+
+## Database Schema Updates
+
+### 1. Update Prisma Schema
+Add the following to your `prisma/schema.prisma`:
+
+```prisma
+// Update existing Report model
+model Report {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // Now supports: DNA, MICROBIOME, HORMONE, BLOOD
+  fileName    String
+  filePath    String
+  parsedData  String   // JSON string
+  labName     String?  // New: Laboratory name
+  testDate    DateTime? // New: Test collection date
+  rawData     String?  // New: Original file content
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biomarkers  Biomarker[]
+  correlations CorrelationSource[] @relation("SourceReport")
+  correlationTargets CorrelationTarget[] @relation("TargetReport")
+  
+  @@index([userId, type])
+}
+
+// New models for correlation engine
+model Biomarker {
+  id              String   @id @default(cuid())
+  reportId        String
+  category        String   // genetic, microbiome, hormone, metabolic
+  name            String
+  value           Float?
+  stringValue     String?  // For non-numeric values like genotypes
+  unit            String?
+  referenceMin    Float?
+  referenceMax    Float?
+  percentile      Float?
+  status          String?  // optimal, normal, low, high
+  
+  report          Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  @@index([reportId, category])
+  @@index([name])
+}
+
+model Correlation {
+  id              String   @id @default(cuid())
+  userId          String
+  sourceType      String   // dna, microbiome, hormone, blood
+  sourceMarker    String
+  targetType      String
+  targetMarker    String
+  correlationScore Float   // -1 to 1
+  confidenceScore Float    // 0 to 1
+  explanation     String
+  recommendations Json     // Array of recommendation strings
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceReports   CorrelationSource[]
+  targetReports   CorrelationTarget[]
+  
+  @@index([userId, confidenceScore])
+}
+
+// Junction tables for many-to-many relationships
+model CorrelationSource {
+  correlationId String
+  reportId      String
+  
+  correlation   Correlation @relation(fields: [correlationId], references: [id], onDelete: Cascade)
+  report        Report      @relation("SourceReport", fields: [reportId], references: [id], onDelete: Cascade)
+  
+  @@id([correlationId, reportId])
+}
+
+model CorrelationTarget {
+  correlationId String
+  reportId      String
+  
+  correlation   Correlation @relation(fields: [correlationId], references: [id], onDelete: Cascade)
+  report        Report      @relation("TargetReport", fields: [reportId], references: [id], onDelete: Cascade)
+  
+  @@id([correlationId, reportId])
+}
+```
+
+### 2. Run Database Migration
+```bash
+npx prisma migrate dev --name add-correlation-engine
+```
+
+## File Structure Updates
+
+Add the following directories and files to your project:
+
+```
+src/
+├── lib/
+│   ├── parsers/
+│   │   ├── base-parser.ts
+│   │   ├── dna-parser.ts
+│   │   ├── microbiome-parser.ts
+│   │   ├── hormone-parser.ts
+│   │   ├── blood-parser.ts
+│   │   └── index.ts
+│   ├── correlations/
+│   │   ├── correlation-engine.ts
+│   │   ├── correlation-rules.ts
+│   │   └── types.ts
+│   └── test-samples/  # Sample test files for development
+│       ├── 23andme-sample.txt
+│       ├── viome-sample.json
+│       ├── dutch-sample.json
+│       └── quest-sample.txt
+├── app/
+│   ├── api/
+│   │   ├── upload/
+│   │   │   └── route.ts  # Update existing
+│   │   └── correlations/
+│   │       ├── route.ts
+│   │       └── [userId]/
+│   │           └── route.ts
+│   └── dashboard/
+│       └── correlations/
+│           └── page.tsx  # New page
+└── components/
+    ├── upload/
+    │   ├── enhanced-upload-zone.tsx  # New
+    │   └── file-type-detector.tsx    # New
+    └── correlations/
+        ├── correlation-dashboard.tsx  # New
+        ├── correlation-widget.tsx     # New
+        └── correlation-filters.tsx    # New
+```
+
+## Implementation Status
+
+✅ Database schema updated  
+✅ Core parser infrastructure  
+✅ DNA and Microbiome parsers  
+✅ Correlation engine  
+✅ API endpoints  
+
 ## Setup and Installation
 
 ### 1. Install Additional Dependencies

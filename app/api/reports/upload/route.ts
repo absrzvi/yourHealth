@@ -35,30 +35,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded.' }, { status: 400 });
     }
 
-    // Strict file type validation for each report type
     // @ts-ignore
     const fileType = file.type;
-    if (
-      (reportType === 'blood' && fileType !== 'text/csv') ||
-      (reportType === 'dna' && fileType !== 'text/csv') ||
-      (reportType === 'microbiome' && fileType !== 'application/json')
-    ) {
-      let expected = reportType === 'microbiome' ? 'JSON' : 'CSV';
-      return NextResponse.json({ error: `Unsupported file type for ${reportType} report. Please upload a ${expected} file.` }, { status: 400 });
-    }
-    // Disallow PDF uploads for DNA and Microbiome
-    if ((reportType === 'dna' || reportType === 'microbiome') && fileType === 'application/pdf') {
-      return NextResponse.json({ error: `PDF uploads are not supported for ${reportType} reports. Please upload a CSV or JSON file as appropriate.` }, { status: 400 });
-    }
-    // General allowed types for other report types
-    const allowedTypes = [
-      'text/csv',
-      'application/pdf',
-      'application/json',
-      'text/plain',
-    ];
-    if (!allowedTypes.includes(fileType)) {
-      return NextResponse.json({ error: 'Unsupported file type. Please upload a CSV, PDF, TXT, or JSON file.' }, { status: 400 });
+    
+    // Define allowed file types for each report type
+    const reportTypeValidations = {
+      blood: ['text/csv', 'text/plain'], // For Quest bloodwork
+      dna: ['text/plain', 'text/csv'],    // For 23andMe
+      microbiome: ['application/json'],    // For Viome
+      hormone: ['application/json'],       // For DUTCH
+      pdf: ['application/pdf'],
+      image: ['image/jpeg', 'image/png', 'image/jpg']
+    };
+
+    // Check if file type is allowed for the selected report type
+    if (!reportTypeValidations[reportType as keyof typeof reportTypeValidations]?.includes(fileType)) {
+      const allowedTypes = reportTypeValidations[reportType as keyof typeof reportTypeValidations] || [];
+      const allowedExtensions = allowedTypes.map(t => {
+        if (t === 'text/csv') return 'CSV';
+        if (t === 'text/plain') return 'TXT';
+        if (t.startsWith('image/')) return 'JPG/PNG';
+        return t.split('/').pop()?.toUpperCase();
+      }).filter(Boolean).join(', ');
+      
+      return NextResponse.json({ 
+        error: `Unsupported file type for ${reportType} report. Please upload a ${allowedExtensions} file.` 
+      }, { status: 400 });
     }
 
     // Save file
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Save report in DB with real userId
-    await prisma.report.create({
+    const report = await prisma.report.create({
       data: {
         userId: user.id,
         type: reportType,
@@ -109,7 +111,51 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true });
+    // If we have parsed data, save it as biomarkers
+    if (parsedData) {
+      try {
+        const biomarkers = JSON.parse(parsedData);
+        if (Array.isArray(biomarkers) && biomarkers.length > 0) {
+          // Process biomarkers one by one to handle potential duplicates
+          let savedCount = 0;
+          for (const bm of biomarkers) {
+            try {
+              await prisma.biomarker.create({
+                data: {
+                  reportId: report.id,
+                  name: bm.biomarker || bm.name || bm.rsid || 'Unknown',
+                  value: parseFloat(bm.value) || 0,
+                  unit: bm.unit || null,
+                  range: bm.range || null,
+                  flag: bm.flag || bm.status || null,
+                  description: bm.description || bm.notes || null,
+                  category: bm.category || reportType,
+                }
+              });
+              savedCount++;
+            } catch (error) {
+              if (error.code === 'P2002') {
+                // Duplicate entry, skip
+                console.log(`Skipping duplicate biomarker: ${bm.biomarker || bm.name || bm.rsid}`);
+              } else {
+                console.error('Error saving biomarker:', error);
+              }
+            }
+          }
+          
+          console.log(`Saved ${savedCount} out of ${biomarkers.length} biomarkers for report ${report.id}`);
+        }
+      } catch (error) {
+        console.error('Error saving biomarkers:', error);
+        // Don't fail the whole request if we can't save biomarkers
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      reportId: report.id,
+      biomarkerCount: parsedData ? JSON.parse(parsedData).length : 0
+    });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: 'Server error: ' + (error as Error).message }, { status: 500 });

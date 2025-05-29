@@ -7,10 +7,11 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public access to auth pages and static assets
+  // Allow public access to auth pages, static assets, and correlations API (temporarily for testing)
   if (
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/correlations") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/assets")

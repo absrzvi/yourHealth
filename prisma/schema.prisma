@@ -19,14 +19,39 @@ model User {
 }
 
 model Report {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  fileName  String
-  filePath  String
+  id         String     @id @default(cuid())
+  userId     String
+  type       String
+  fileName   String
+  filePath   String
   parsedData String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  testDate   DateTime?
+  labName    String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id])
+  biomarkers Biomarker[]
+  
+  @@index([userId])
+  @@index([type])
+  @@index([testDate])
+}
+
+model Biomarker {
+  id          String    @id @default(cuid())
+  reportId    String
+  name        String
+  value       Float
+  unit        String?
+  range       String?
+  flag        String?
+  description String?
+  category    String?
+  report      Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  @@index([reportId])
+  @@index([name])
+  @@index([category])
 }
 
 model WeeklyInsight {

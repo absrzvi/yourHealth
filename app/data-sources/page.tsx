@@ -63,26 +63,54 @@ export default function DataSourcesPage() {
           <div className="card-title">Upload Health Report</div>
         </div>
         <form onSubmit={handleUpload} className="flex flex-col space-y-4 w-full">
-          <select
-            value={reportType}
-            onChange={e => setReportType(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            required
-          >
-            <option value="" disabled>Select report type</option>
-            <option value="blood">Blood test report</option>
-            <option value="dna">DNA Report</option>
-            <option value="microbiome">Microbiome Report</option>
-            <option value="pdf">PDF Report</option>
-            <option value="image">Image (photo of report)</option>
-          </select>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls,.png,.jpg,.jpeg"
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            required
-          />
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Report Type</label>
+            <select
+              value={reportType}
+              onChange={e => setReportType(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              required
+            >
+              <option value="" disabled>Select report type</option>
+              <option value="blood">Blood Test (CSV/TXT - Quest, LabCorp, etc.)</option>
+              <option value="dna">DNA Data (TXT - 23andMe, AncestryDNA, etc.)</option>
+              <option value="microbiome">Microbiome Report (JSON - Viome, etc.)</option>
+              <option value="hormone">Hormone Panel (JSON - DUTCH, etc.)</option>
+              <option value="pdf">PDF Report (PDF - General lab results)</option>
+              <option value="image">Image (JPG/PNG - Photo of report)</option>
+            </select>
+            {reportType && (
+              <p className="text-xs text-gray-500 mt-1">
+                {reportType === 'blood' && 'Upload Quest, LabCorp, or other blood test results in CSV or TXT format'}
+                {reportType === 'dna' && 'Upload 23andMe, AncestryDNA, or similar DNA data in TXT format'}
+                {reportType === 'microbiome' && 'Upload Viome or other microbiome reports in JSON format'}
+                {reportType === 'hormone' && 'Upload DUTCH or other hormone panel results in JSON format'}
+                {reportType === 'pdf' && 'Upload any lab report in PDF format'}
+                {reportType === 'image' && 'Upload a photo or scan of your lab report (JPG/PNG)'}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              {reportType === 'blood' ? 'Blood Test File (CSV/TXT)' : 
+               reportType === 'dna' ? 'DNA Data File (TXT)' :
+               reportType === 'microbiome' ? 'Microbiome Report (JSON)' :
+               reportType === 'hormone' ? 'Hormone Panel (JSON)' :
+               reportType === 'pdf' ? 'PDF Report' : 'Image File'}
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={
+                reportType === 'blood' ? '.csv,.txt' :
+                reportType === 'dna' ? '.txt' :
+                reportType === 'microbiome' || reportType === 'hormone' ? '.json' :
+                reportType === 'pdf' ? '.pdf' : '.jpg,.jpeg,.png'
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              required
+            />
+          </div>
           <button
             type="submit"
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"

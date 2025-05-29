@@ -9,7 +9,9 @@ export type Biomarker = {
   };
   flagged?: 'high' | 'low' | 'normal';
   date: Date;
-  source: 'BLOOD_TEST' | 'DNA' | 'MICROBIOME' | 'USER_INPUT';
+  source: 'BLOOD_TEST' | 'QUEST_BLOOD_TEST' | 'DNA' | 'MICROBIOME' | 'USER_INPUT';
+  category?: string;
+  flag?: string | null;
 };
 
 export type CorrelationResult = {
