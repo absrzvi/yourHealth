@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import Sidebar from '../components/navigation/Sidebar';
 import MobileNav from '../components/navigation/MobileNav';

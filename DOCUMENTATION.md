@@ -37,8 +37,8 @@ For Your Health is an AI-first personalized health platform featuring Aria, an i
 ```
 Main Page (AI-First Interface)
 ├── Aria Chat Interface (70% of screen)
-│   ├── Conversation History
-│   ├── Input Area
+│   ├── Conversation History (scrollable)
+│   ├── Input Area (fixed at bottom)
 │   ├── Quick Actions
 │   └── Suggested Questions
 ├── Health Status Panel (30% of screen)
@@ -47,6 +47,24 @@ Main Page (AI-First Interface)
 │   └── Recent Activity
 └── Mobile: Full-screen chat with slide-up panel
 ```
+
+## Layout Design
+
+### Viewport-Based Layout
+The application uses a viewport-based layout system that ensures content is always visible without unnecessary scrolling:
+
+- Root layout uses `h-full w-full overflow-hidden` on HTML and body elements
+- Main content containers use `flex h-screen` to fill available height
+- Chat areas use flex layout with `flex-grow overflow-y-auto` for message scrolling
+- Chat input stays fixed at the bottom of the viewport for easy access
+- The AI Coach page utilizes a viewport-based layout design to ensure a seamless user experience
+
+### Sidebar Navigation
+- Left-aligned sidebar with clear visual hierarchy
+- Active menu items use solid background colors for better readability
+- Font size optimized for readability with proper contrast
+- Consistent spacing and padding throughout navigation
+- The sidebar has been enhanced with improved styling, including a clear visual hierarchy and proper contrast, to provide a better user experience
 
 ## Design System
 
@@ -126,8 +144,9 @@ src/
 │   │   ├── chat/           # Aria chat endpoints
 │   │   ├── upload/
 │   │   └── correlations/
-│   ├── dashboard/
-│   └── layout.tsx
+│   ├── dashboard/          # Data visualization dashboard
+│   ├── ai-coach/          # AI-first interface with Aria
+│   └── layout.tsx         # Root layout with viewport controls
 ├── components/
 │   ├── aria/              # AI agent components
 │   │   ├── AriaAvatar.tsx

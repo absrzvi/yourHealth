@@ -8,10 +8,10 @@ import Header from "../components/layout/Header";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-gray-50 min-h-screen">
+    <html lang="en" className="h-full w-full overflow-hidden">
+      <body className="bg-gray-50 h-full w-full overflow-hidden">
         <NextAuthSessionProvider>
-          <div className="app-container">
+          <div className="app-container flex h-full w-full">
             <Sidebar />
             <main className="main-content flex-1 flex flex-col">
               <Header />
