@@ -24,21 +24,24 @@ export default function DataSourcesPage() {
       setUploading(false);
       return;
     }
-    // Use the real userId from session
-    if (!session || !session.user || !session.user.id) {
+    if (!session || !session.user) {
       setMessage("You must be logged in to upload a report.");
       setUploading(false);
       return;
     }
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("userId", session.user.id);
     formData.append("type", reportType);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.success) setMessage("Upload successful!");
-    else setMessage(`Upload failed: ${data.error}`);
-    setUploading(false);
+    try {
+      const res = await fetch("/api/reports/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok && data.success) setMessage("Upload successful!");
+      else setMessage(`Upload failed: ${data.error || 'Unknown error'}`);
+    } catch (err: any) {
+      setMessage(`Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (status === "loading") return <div className="text-center py-12">Loading session...</div>;
@@ -83,6 +86,20 @@ export default function DataSourcesPage() {
           </button>
           {message && <div className="text-center text-sm mt-2">{message}</div>}
         </form>
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+          <b>Blood Test CSV format:</b><br/>
+          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">name,value,unit
+HGB,13.5,g/dL
+RBC,4.8,10^6/uL
+</pre>
+          <div className="mt-2">
+            Only the following markers are recognized:
+            <span className="block mt-1 text-xs text-gray-600">
+              WBC, RBC, HGB, HCT, MCV, MCH, MCHC, RDW, PLT, GLUCOSE, BUN, CREATININE, eGFR, AST, ALT
+            </span>
+            <a href="/sample-blood-test.csv" download className="text-blue-700 underline mt-2 inline-block">Download sample CSV</a>
+          </div>
+        </div>
       </div>
       <div className="content-section active">
         <h2 className="text-2xl font-bold mb-4">Data Sources</h2>
