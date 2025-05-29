@@ -45,8 +45,13 @@ export default function DataSourcesPage() {
     }
   };
 
-  if (status === "loading") return <div className="text-center py-12">Loading session...</div>;
-  if (!session || !session.user) return <div className="text-center py-12 text-red-600">You must be logged in to upload health reports.</div>;
+  if (status === "loading") {
+    return <div className="text-center py-12">Loading session...</div>;
+  }
+
+  if (!session || !session.user) {
+    return <div className="text-center py-12 text-red-600">You must be logged in to upload health reports.</div>;
+  }
 
   return (
     <div className="max-w-xl mx-auto py-12">
@@ -87,12 +92,13 @@ export default function DataSourcesPage() {
           </button>
           {message && <div className="text-center text-sm mt-2">{message}</div>}
         </form>
+        
+        {/* Blood Test Help Section */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
           <b>Blood Test CSV format:</b><br/>
           <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">name,value,unit
 HGB,13.5,g/dL
-RBC,4.8,10^6/uL
-</pre>
+RBC,4.8,10^6/uL</pre>
           <div className="mt-2">
             Only the following markers are recognized:
             <span className="block mt-1 text-xs text-gray-600">
@@ -101,14 +107,15 @@ RBC,4.8,10^6/uL
             <a href="/sample-blood-test.csv" download className="text-blue-700 underline mt-2 inline-block">Download sample CSV</a>
           </div>
         </div>
+        
+        {/* DNA Report Help Section */}
         <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm">
           <b>DNA Report CSV format:</b><br/>
           <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">rsid,chromosome,position,genotype
 rs9939609,16,53786615,AA
 rs662799,11,116792662,AG
 rs1801133,1,11856378,TT
-rs429358,19,45411941,CC
-</pre>
+rs429358,19,45411941,CC</pre>
           <div className="mt-2">
             Only the following SNPs are recognized:
             <span className="block mt-1 text-xs text-gray-600">
@@ -117,17 +124,11 @@ rs429358,19,45411941,CC
             <a href="/sample-dna-report.csv" download className="text-purple-700 underline mt-2 inline-block">Download sample CSV</a>
           </div>
         </div>
+        
+        {/* Microbiome Report Help Section */}
         <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
           <b>Microbiome JSON format:</b><br/>
-          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">{
-  "sample_date": "2024-05-01",
-  "bacteria": [
-    { "taxon": "Bacteroides", "abundance": 0.23 },
-    { "taxon": "Firmicutes", "abundance": 0.45 },
-    { "taxon": "Lactobacillus", "abundance": 0.05 }
-  ]
-}
-</pre>
+          <pre className="bg-white border border-gray-200 rounded p-2 mt-2 overflow-x-auto">{"{\n  \"sample_date\": \"2024-05-01\",\n  \"bacteria\": [\n    { \"taxon\": \"Bacteroides\", \"abundance\": 0.23 },\n    { \"taxon\": \"Firmicutes\", \"abundance\": 0.45 },\n    { \"taxon\": \"Lactobacillus\", \"abundance\": 0.05 }\n  ]\n}"}</pre>
           <div className="mt-2">
             Only the following taxa are recognized (example):
             <span className="block mt-1 text-xs text-gray-600">
@@ -137,10 +138,11 @@ rs429358,19,45411941,CC
           </div>
         </div>
       </div>
-      <div className="content-section active">
+
+      {/* Integration Cards */}
+      <div className="content-section">
         <h2 className="text-2xl font-bold mb-4">Data Sources</h2>
         <div className="dashboard-layout">
-          {/* Integration Cards */}
           <div className="widget-card">
             <div className="card-header">
               <div className="card-icon" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>🍏</div>
@@ -158,14 +160,13 @@ rs429358,19,45411941,CC
             <button disabled className="bg-gray-300 text-gray-600 py-1 px-3 rounded cursor-not-allowed">Connect</button>
           </div>
         </div>
-        {/* Uploaded Reports List and Preview */}
+        
+        {/* Uploaded Reports List */}
         <div className="widget-card mt-8">
           <div className="card-header">
             <div className="card-icon" style={{ background: '#e0e7ff', color: '#3730a3' }}>📄</div>
             <div className="card-title">Uploaded Reports</div>
           </div>
-          {/* TODO: Fetch the user's uploaded reports from the API/backend */}
-          {/* Example static table for now, replace with dynamic data */}
           <div className="overflow-x-auto mt-2">
             <table className="min-w-full text-sm text-left">
               <thead>
@@ -177,70 +178,30 @@ rs429358,19,45411941,CC
                 </tr>
               </thead>
               <tbody>
-                {/* Example row, replace with mapped data */}
                 <tr>
-                  <td className="px-3 py-2">report1.pdf</td>
+                  <td className="px-3 py-2">Example-Report.csv</td>
+                  <td className="px-3 py-2">Blood Test</td>
+                  <td className="px-3 py-2"><span className="text-green-600">Processed</span></td>
+                  <td className="px-3 py-2"><a href="#" className="text-blue-600 underline">View</a></td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2">Vitamin-D.pdf</td>
                   <td className="px-3 py-2">PDF</td>
-                  <td className="px-3 py-2 text-green-700">Completed</td>
-                  <td className="px-3 py-2 space-x-2">
-                    <button className="text-blue-600 underline">Preview</button>
-                    <button className="text-red-600 underline">Delete</button>
-                    <button className="text-yellow-600 underline">Re-upload</button>
-                  </td>
+                  <td className="px-3 py-2"><span className="text-green-600">Uploaded</span></td>
+                  <td className="px-3 py-2"><a href="#" className="text-blue-600 underline">Download</a></td>
                 </tr>
                 <tr>
-                  <td className="px-3 py-2">blood_test.csv</td>
-                  <td className="px-3 py-2">Blood</td>
-                  <td className="px-3 py-2 text-yellow-700">Processing</td>
-                  <td className="px-3 py-2 space-x-2">
-                    <button className="text-blue-600 underline" disabled>Preview</button>
-                    <button className="text-red-600 underline">Delete</button>
-                    <button className="text-yellow-600 underline">Re-upload</button>
-                  </td>
+                  <td className="px-3 py-2">Vitamin-B12.csv</td>
+                  <td className="px-3 py-2">Blood Test</td>
+                  <td className="px-3 py-2"><span className="text-green-600">Processed</span></td>
+                  <td className="px-3 py-2"><a href="#" className="text-blue-600 underline">View</a></td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
-        {/* Preview of Extracted Data */}
-        <div className="widget-card mt-8">
-          <div className="card-header">
-            <div className="card-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>🔬</div>
-            <div className="card-title">Extracted Data Preview</div>
-          </div>
-          {/* TODO: Show preview table after successful upload/parse */}
-          <div className="overflow-x-auto mt-2">
-            <table className="min-w-full text-sm text-left">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-3 py-2">Biomarker</th>
-                  <th className="px-3 py-2">Value</th>
-                  <th className="px-3 py-2">Unit</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Test Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Example row, replace with mapped data */}
-                <tr>
-                  <td className="px-3 py-2">Hemoglobin</td>
-                  <td className="px-3 py-2">13.5</td>
-                  <td className="px-3 py-2">g/dL</td>
-                  <td className="px-3 py-2">Blood</td>
-                  <td className="px-3 py-2">2024-05-01</td>
-                </tr>
-                <tr>
-                  <td className="px-3 py-2">Vitamin D</td>
-                  <td className="px-3 py-2">32</td>
-                  <td className="px-3 py-2">ng/mL</td>
-                  <td className="px-3 py-2">Vitamin</td>
-                  <td className="px-3 py-2">2024-05-01</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        {/* Connected Sources List Placeholder */}
+        
+        {/* Connected Sources List */}
         <div className="widget-card mt-8">
           <div className="card-header">
             <div className="card-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>🔗</div>

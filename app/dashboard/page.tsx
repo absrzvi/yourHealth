@@ -90,6 +90,49 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        {/* Uploaded Reports List */}
+        <div className="widget-card mt-8">
+          <div className="card-header">
+            <div className="card-icon" style={{ background: '#e0e7ff', color: '#3730a3' }}>📄</div>
+            <div className="card-title">Uploaded Reports</div>
+          </div>
+          {feedback && <div className="text-green-700 text-sm mb-2">{feedback}</div>}
+          {reports.length === 0 ? (
+            <div className="text-gray-500">No reports uploaded yet.</div>
+          ) : (
+            <div className="overflow-x-auto mt-2">
+              <table className="min-w-full text-sm text-left">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-3 py-2">File Name</th>
+                    <th className="px-3 py-2">Type</th>
+                    <th className="px-3 py-2">Uploaded</th>
+                    <th className="px-3 py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.map(report => (
+                    <tr key={report.id} className="border-b">
+                      <td className="px-3 py-2">{report.fileName}</td>
+                      <td className="px-3 py-2">{report.type}</td>
+                      <td className="px-3 py-2">{new Date(report.createdAt).toLocaleDateString()}</td>
+                      <td className="px-3 py-2">
+                        <a href={report.filePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline mr-3">Download</a>
+                        <button
+                          className={`text-red-600 hover:underline ${deletingId === report.id ? 'opacity-50 pointer-events-none' : ''}`}
+                          onClick={() => handleDelete(report.id)}
+                          disabled={deletingId === report.id}
+                        >
+                          {deletingId === report.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
