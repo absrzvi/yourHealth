@@ -1,5 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
+import UserMenu from "../auth/UserMenu";
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/ai-coach": { title: "AI Health Coach", subtitle: "Your compassionate and supportive health companion" },
@@ -14,15 +15,15 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
 export default function Header() {
   const pathname = usePathname();
   const { title, subtitle } = pageTitles[pathname] || pageTitles["/ai-coach"];
+  
   return (
-    <header className="header">
-      <div className="header-left">
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
+    <header className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+        <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
-      <div className="header-right">
-        <button className="quick-action">📤 Export Data</button>
-        <button className="quick-action">🩺 Contact Doctor</button>
+      <div className="flex items-center gap-4">
+        <UserMenu />
       </div>
     </header>
   );

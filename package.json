@@ -4,10 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev --name init",
+    "db:seed": "ts-node prisma/seed.ts",
+    "db:backup": "node scripts/backup-db.js",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
@@ -19,19 +26,29 @@
     "openai": "^4.24.0",
     "pdf-parse": "^1.1.1",
     "prisma": "^5.7.0",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
     "recharts": "^2.10.0",
     "tailwindcss": "^3.4.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@types/react": "19.1.6",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.14",
+    "babel-jest": "^29.7.0",
     "eslint": "9.27.0",
     "eslint-config-next": "15.3.2",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.21",
+    "ts-jest": "^29.1.2",
     "typescript": "^5.0.0"
   }
 }
