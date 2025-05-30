@@ -1,16 +1,23 @@
 import './globals.css';
 import { ReactNode } from 'react';
+import { getServerSession } from 'next-auth';
+import { authOptions } from './api/auth/[...nextauth]/route';
 
-import NextAuthSessionProvider from "./SessionProvider";
+import SessionProvider from '../components/providers/SessionProvider';
+import Sidebar from '../components/layout/Sidebar';
+import Header from '../components/layout/Header';
 
-import Sidebar from "../components/layout/Sidebar";
-import Header from "../components/layout/Header";
+export default async function RootLayout({ 
+  children 
+}: { 
+  children: ReactNode 
+}) {
+  const session = await getServerSession(authOptions);
 
-export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-gray-50 min-h-screen">
-        <NextAuthSessionProvider>
+        <SessionProvider session={session}>
           <div className="app-container">
             <Sidebar />
             <main className="main-content flex-1 flex flex-col">
@@ -18,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
             </main>
           </div>
-        </NextAuthSessionProvider>
+        </SessionProvider>
       </body>
     </html>
   );
