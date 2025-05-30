@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAuthForm } from '@/hooks/useAuthForm';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 // Mock the modules
@@ -11,11 +11,18 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('next-auth/react', () => ({
   signIn: jest.fn(),
+  useSession: jest.fn(() => ({
+    data: null,
+    status: 'unauthenticated',
+    update: jest.fn(),
+  })),
 }));
 
 describe('useAuthForm', () => {
   const mockPush = jest.fn();
   const mockGet = jest.fn();
+  const mockSignIn = signIn as jest.Mock;
+  const mockUseSession = useSession as jest.Mock;
 
   beforeEach(() => {
     // Reset all mocks before each test
@@ -30,11 +37,25 @@ describe('useAuthForm', () => {
     (useSearchParams as jest.Mock).mockReturnValue({
       get: mockGet,
     });
+
+    mockUseSession.mockReturnValue({
+      data: null,
+      status: 'unauthenticated',
+      update: jest.fn(),
+    });
   });
 
   it('should handle login form submission', async () => {
-    // Mock successful sign in
-    (signIn as jest.Mock).mockResolvedValueOnce({ error: null });
+    // Mock successful sign in with a Promise that resolves to { ok: true }
+    const mockSignInResult = { ok: true };
+    mockSignIn.mockResolvedValueOnce(mockSignInResult);
+    
+    // Mock the router to track navigation
+    const mockRouter = {
+      push: jest.fn().mockResolvedValue(undefined),
+      refresh: jest.fn(),
+    };
+    (useRouter as jest.Mock).mockReturnValue(mockRouter);
     
     const { result } = renderHook(() => useAuthForm('login'));
     
@@ -43,16 +64,25 @@ describe('useAuthForm', () => {
       await result.current.handleSubmit({
         email: 'test@example.com',
         password: 'password123',
+        rememberMe: false,
       });
     });
     
-    expect(signIn).toHaveBeenCalledWith('credentials', {
+    // Verify signIn was called with correct parameters
+    expect(mockSignIn).toHaveBeenCalledWith('credentials', {
       email: 'test@example.com',
       password: 'password123',
-      redirect: false,
+      rememberMe: 'false',
+      redirect: true,
+      callbackUrl: '/dashboard',
     });
     
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    // Since we're using redirect: true, we don't expect router.push to be called directly
+    // The redirection is handled by NextAuth's client-side routing
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    
+    // Verify loading state was reset
+    expect(result.current.isLoading).toBe(false);
   });
 
   it('should handle registration', async () => {
@@ -87,20 +117,48 @@ describe('useAuthForm', () => {
   });
 
   it('should handle errors during login', async () => {
-    // Mock failed sign in
     const errorMessage = 'Invalid credentials';
-    (signIn as jest.Mock).mockResolvedValueOnce({ error: errorMessage });
+    
+    // Mock failed sign in by rejecting with an error
+    mockSignIn.mockRejectedValueOnce(new Error(errorMessage));
+    
+    // Mock the router
+    const mockRouter = {
+      push: jest.fn(),
+      refresh: jest.fn(),
+    };
+    (useRouter as jest.Mock).mockReturnValue(mockRouter);
     
     const { result } = renderHook(() => useAuthForm('login'));
+    
+    // Initial state should not have error
+    expect(result.current.error).toBe('');
     
     // Simulate form submission
     await act(async () => {
       await result.current.handleSubmit({
         email: 'test@example.com',
         password: 'wrongpassword',
+        rememberMe: false,
       });
     });
     
+    // Verify signIn was called with correct parameters
+    expect(mockSignIn).toHaveBeenCalledWith('credentials', {
+      email: 'test@example.com',
+      password: 'wrongpassword',
+      rememberMe: 'false',
+      redirect: true,
+      callbackUrl: '/dashboard',
+    });
+    
+    // Verify the error state was set
     expect(result.current.error).toBe(errorMessage);
+    
+    // Verify no navigation occurred
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    
+    // Verify loading state was reset
+    expect(result.current.isLoading).toBe(false);
   });
 });
