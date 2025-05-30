@@ -13,13 +13,19 @@ type ReportType = 'DNA' | 'MICROBIOME' | 'BLOOD_TEST';
 
 const MAX_FILE_SIZE_MB = 10;
 const ALLOWED_FILE_TYPES = [
+  // Structured data formats
   'application/pdf',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/csv',
   'text/plain',
   'application/json',
-  'text/tab-separated-values'
+  'text/tab-separated-values',
+  // Image formats for OCR
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/heif'
 ];
 
 export function UploadCard() {
@@ -64,12 +70,12 @@ export function UploadCard() {
     // Check file type
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     const isAllowedType = ALLOWED_FILE_TYPES.includes(file.type) || 
-                         ['.pdf', '.xls', '.xlsx', '.csv', '.tsv', '.txt', '.json'].includes(`.${fileExtension}`);
+                         ['.pdf', '.xls', '.xlsx', '.csv', '.tsv', '.txt', '.json', '.jpg', '.jpeg', '.png', '.heic', '.heif'].includes(`.${fileExtension}`);
     
     if (!isAllowedType) {
       return {
         valid: false,
-        error: 'Invalid file type. Please upload a PDF, Excel, CSV, TSV, or JSON file.'
+        error: 'Invalid file type. Please upload a PDF, Excel, CSV, image, or text file.'
       };
     }
     
@@ -100,6 +106,22 @@ export function UploadCard() {
     }
   }, []);
 
+  // Check if file needs OCR processing
+  const needsOcrProcessing = useCallback((file: File): boolean => {
+    // Images always use OCR
+    if (file.type.startsWith('image/')) {
+      return true;
+    }
+    
+    // PDFs use OCR if they're likely scanned documents (smaller file size)
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      const PDF_OCR_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
+      return file.size < PDF_OCR_SIZE_THRESHOLD;
+    }
+    
+    return false;
+  }, []);
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -119,7 +141,11 @@ export function UploadCard() {
       formData.append('file', selectedFile);
       formData.append('type', reportType);
 
-      const response = await fetch('/api/upload', {
+      // Determine if we should use OCR processing
+      const useOcr = needsOcrProcessing(selectedFile);
+      const endpoint = useOcr ? '/api/ocr-upload' : '/api/upload';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
@@ -220,7 +246,7 @@ export function UploadCard() {
                   or drag and drop
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  PDF, CSV, XLS, XLSX, or TXT (max {MAX_FILE_SIZE_MB}MB)
+                  PDF, CSV, XLS, XLSX, TXT, JPG, PNG (max {MAX_FILE_SIZE_MB}MB)
                 </p>
               </div>
             </div>
@@ -239,8 +265,8 @@ export function UploadCard() {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                   onClick={removeFile}
                   disabled={isUploading}
                 >
