@@ -7,12 +7,20 @@ import SessionProvider from '../components/providers/SessionProvider';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 
+// Debug log the environment variables
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '***' : 'Not set');
+
 export default async function RootLayout({ 
   children 
 }: { 
   children: ReactNode 
 }) {
   const session = await getServerSession(authOptions);
+  
+  // Debug log the session
+  console.log('Root layout - Session:', session ? 'Authenticated' : 'Not authenticated');
 
   return (
     <html lang="en">

@@ -1,32 +1,53 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import RegisterPage from '@/app/auth/register/page';
 
 // Mock the modules
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(),
 }));
 
-// Create a mock for the useAuthForm hook
+jest.mock('next-auth/react', () => ({
+  signIn: jest.fn(),
+  useSession: jest.fn(() => ({
+    data: null,
+    status: 'unauthenticated',
+    update: jest.fn(),
+  })),
+}));
+
+// Mock the useAuthForm hook
 const mockHandleSubmit = jest.fn();
 jest.mock('@/hooks/useAuthForm', () => ({
   __esModule: true,
   useAuthForm: () => ({
     isLoading: false,
     error: null,
+    showSuccess: false,
     handleSubmit: mockHandleSubmit,
+    setError: jest.fn(),
   }),
 }));
 
 describe('Register Page', () => {
+  const mockPush = jest.fn();
+  const mockGet = jest.fn();
+  const mockSignIn = signIn as jest.Mock;
+
   beforeEach(() => {
     // Reset all mocks before each test
     jest.clearAllMocks();
     
     // Setup default mock implementations
     (useRouter as jest.Mock).mockReturnValue({
-      push: jest.fn(),
+      push: mockPush,
       refresh: jest.fn(),
+    });
+
+    (useSearchParams as jest.Mock).mockReturnValue({
+      get: mockGet,
     });
   });
 
