@@ -1,520 +1,951 @@
-# For Your Health MVP - Project Documentation
+# For Your Health - MVP PRD: Windsurf Implementation Guide
 
-## Overview
-For Your Health is an AI-first personalized health platform featuring Aria, an intelligent health companion that helps users understand their health data through natural conversation. The platform processes DNA tests, microbiome analyses, and blood work to provide actionable insights.
+## 1. Executive Summary & MVP Constraints
 
-## Product Vision
+**Vision**: Build a minimal personalized health platform for friends & family (20-50 users) to upload health reports, get 3 correlation metrics, and receive AI-powered weekly insights.
 
-### AI Agent Persona: "Aria" - Your Personal Health Companion
+**MVP Constraints**:
+- Friends & family only (no public launch)
+- Cost optimization priority (minimal infrastructure)
+- No security/compliance requirements 
+- Maximum development automation via Windsurf
+- 12-week timeline to working platform
 
-**Personality Traits:**
-- Warm, knowledgeable, and approachable
-- Evidence-based but not clinical
-- Encouraging without being pushy
-- Remembers your health journey
-- Proactive with insights
+## 2. Technical Architecture Specifications
 
-**Visual Identity:**
-- Soft gradient orb that pulses gently when speaking
-- Calming blue-to-teal gradient (#4F46E5 → #06B6D4)
-- Subtle animations that respond to user interaction
-- Appears friendly and trustworthy, not robotic
-
-## Tech Stack
-- **Frontend**: Next.js 14 (App Router) with TypeScript
-- **Styling**: Tailwind CSS v3.4
-- **UI Components**: shadcn/ui
-- **State Management**: Zustand
-- **Database**: Prisma ORM with SQLite
-- **Authentication**: NextAuth.js with JWT
-- **AI/LLM**: OpenAI GPT-4 API with streaming
-- **Testing**: Vitest with Testing Library
-- **Charts**: Recharts + Chart.js
-- **File Upload**: react-dropzone
-
-## Information Architecture
-
+### 2.1 Frontend Stack
 ```
-Main Page (AI-First Interface)
-├── Aria Chat Interface (70% of screen)
-│   ├── Conversation History (scrollable)
-│   ├── Input Area (fixed at bottom)
-│   ├── Quick Actions
-│   └── Suggested Questions
-├── Health Status Panel (30% of screen)
-│   ├── 3 Key Metrics (Cardiovascular, Metabolic, Inflammation)
-│   ├── Upload Drop Zone
-│   └── Recent Activity
-└── Mobile: Full-screen chat with slide-up panel
+Framework: Next.js 14 with App Router
+Styling: Tailwind CSS v3.4
+UI Components: shadcn/ui component library
+Charts: Recharts + Chart.js
+File Upload: react-dropzone
+State Management: Zustand (lightweight)
+Authentication: NextAuth.js with simple email/password
+Mobile: Responsive-first design (no native apps for MVP)
 ```
 
-## Layout Design
-
-### Viewport-Based Layout
-The application uses a viewport-based layout system that ensures content is always visible without unnecessary scrolling:
-
-- Root layout uses `h-full w-full overflow-hidden` on HTML and body elements
-- Main content containers use `flex h-screen` to fill available height
-- Chat areas use flex layout with `flex-grow overflow-y-auto` for message scrolling
-- Chat input stays fixed at the bottom of the viewport for easy access
-- The AI Coach page utilizes a viewport-based layout design to ensure a seamless user experience
-
-### Sidebar Navigation
-- Left-aligned sidebar with clear visual hierarchy
-- Active menu items use solid background colors for better readability
-- Font size optimized for readability with proper contrast
-- Consistent spacing and padding throughout navigation
-- The sidebar has been enhanced with improved styling, including a clear visual hierarchy and proper contrast, to provide a better user experience
-
-## Design System
-
-### Color Palette
-```scss
-// Primary - Trustworthy Healthcare Blues
-$primary-50: #EFF6FF;
-$primary-100: #DBEAFE;
-$primary-500: #3B82F6;
-$primary-600: #2563EB;
-$primary-700: #1D4ED8;
-
-// AI Agent Gradient
-$aria-gradient: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
-$aria-glow: 0 0 40px rgba(79, 70, 229, 0.3);
-
-// Health Metrics - Soft & Accessible
-$metric-cardio: #F43F5E;      // Warm red
-$metric-metabolic: #10B981;   // Fresh green  
-$metric-inflammation: #F59E0B; // Gentle amber
-
-// Backgrounds
-$bg-primary: #FAFAFA;
-$bg-chat: #FFFFFF;
-$bg-user-message: #F3F4F6;
-$bg-aria-message: linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 100%);
-
-// Text
-$text-primary: #111827;
-$text-secondary: #6B7280;
-$text-muted: #9CA3AF;
+### 2.2 Backend Stack
+```
+Runtime: Next.js API routes (full-stack approach)
+Database: SQLite with Prisma ORM (simple, file-based)
+File Storage: Local filesystem (no S3 for MVP)
+AI/LLM: OpenAI GPT-4 API only
+Vector Storage: In-memory arrays (no Pinecone for MVP)
+Hosting: Vercel (free tier + pro if needed)
 ```
 
-### Typography
-```scss
-// Clean, medical-grade readability
-$font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-mono: 'JetBrains Mono', monospace; // for data display
+## 3. Database Setup and Management
 
-// Scale
-$text-xs: 0.75rem;    // 12px
-$text-sm: 0.875rem;   // 14px
-$text-base: 1rem;     // 16px
-$text-lg: 1.125rem;   // 18px
-$text-xl: 1.25rem;    // 20px
-$text-2xl: 1.5rem;    // 24px
-$text-3xl: 1.875rem;  // 30px
+### 3.1 Database Schema (Prisma)
+### 3.1.1 Schema Overview
+
+The database schema is defined using Prisma and includes the following models:
+
+- **User**: Stores user account information and authentication details
+- **Report**: Tracks uploaded health reports (blood tests, DNA, microbiome)
+- **Biomarker**: Stores individual biomarker measurements from reports
+- **WeeklyInsight**: Contains AI-generated health insights and recommendations
+- **ChatMessage**: Stores conversation history with the AI health assistant
+- **AuditLog**: Tracks important user actions for security and debugging
+
+### 3.1.2 Schema Definition
+
+```prisma
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  reports   Report[]
+  insights  WeeklyInsight[]
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  userId    String
+  type      ReportType
+  fileName  String
+  filePath  String
+  parsedData Json?
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model WeeklyInsight {
+  id                    String   @id @default(cuid())
+  userId                String
+  weekNumber            Int
+  year                  Int
+  cardiovascularScore   Float?
+  metabolicScore        Float?
+  inflammationScore     Float?
+  recommendations       Json
+  generatedAt           DateTime @default(now())
+  
+  user                  User     @relation(fields: [userId], references: [id])
+}
+
+enum ReportType {
+  DNA
+  MICROBIOME
+  BLOOD_TEST
+}
 ```
 
-## Environment Setup
-
-### Required Environment Variables
-Create a `.env.local` file in the project root with the following variables:
-```env
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here  # Must be at least 32 characters
-DATABASE_URL=file:./dev.db
-OPENAI_API_KEY=your-openai-api-key  # For Aria AI agent
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=10485760  # 10MB in bytes
+### 2.4 File Structure
 ```
-
-### Security Notes
-- `.env.local` is included in `.gitignore` to prevent committing sensitive data
-- For production, ensure `NEXTAUTH_SECRET` is a strong, randomly generated string
-- Consider using a more secure database in production (e.g., PostgreSQL, MySQL)
-- OpenAI API key should have appropriate usage limits set
-
-## Project Structure
-
-### Core Directories
-```
-src/
+for-your-health-mvp/
 ├── app/
 │   ├── api/
 │   │   ├── auth/
-│   │   ├── chat/           # Aria chat endpoints
 │   │   ├── upload/
-│   │   └── correlations/
-│   ├── dashboard/          # Data visualization dashboard
-│   ├── ai-coach/          # AI-first interface with Aria
-│   └── layout.tsx         # Root layout with viewport controls
+│   │   ├── parse/
+│   │   ├── insights/
+│   │   └── chat/
+│   ├── dashboard/
+│   ├── upload/
+│   ├── reports/
+│   └── layout.tsx
 ├── components/
-│   ├── aria/              # AI agent components
-│   │   ├── AriaAvatar.tsx
-│   │   ├── AriaChat.tsx
-│   │   ├── AriaMessage.tsx
-│   │   └── AriaTypingIndicator.tsx
-│   ├── health/            # Health metrics components
-│   │   ├── HealthMetricCard.tsx
-│   │   ├── HealthPanel.tsx
-│   │   └── TrendChart.tsx
-│   ├── chat/              # Chat interface components
-│   │   ├── ChatInput.tsx
-│   │   ├── ChatHistory.tsx
-│   │   └── SuggestedQuestions.tsx
-│   ├── upload/            # File upload components
-│   │   ├── FileDropZone.tsx
-│   │   └── UploadProgress.tsx
-│   └── ui/                # shadcn/ui components
+│   ├── ui/ (shadcn components)
+│   ├── charts/
+│   ├── upload/
+│   └── chat/
 ├── lib/
-│   ├── aria/              # AI agent logic
-│   │   ├── prompts.ts
-│   │   ├── personality.ts
-│   │   └── responses.ts
-│   ├── parsers/           # Report parsing logic
-│   ├── correlations/      # Health correlation engine
-│   └── db.ts              # Prisma client
+│   ├── db.ts (Prisma client)
+│   ├── parsers/
+│   ├── correlations/
+│   └── ai/
 ├── prisma/
-├── public/
-├── tests/
+├── public/uploads/
 └── types/
 ```
 
-## Database Schema
+### 3.2 Database Initialization
 
-### Models
+#### 3.2.1 First-Time Setup
 
-#### User
-- `id` - Unique identifier
-- `email` - User's email (unique)
-- `password` - Hashed password
-- `name` - User's full name
-- `createdAt` - Account creation timestamp
-- `updatedAt` - Last update timestamp
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-#### Report
-- `id` - Unique identifier
-- `userId` - Reference to User
-- `type` - Type of report ('DNA', 'MICROBIOME', 'BLOOD_TEST')
-- `fileName` - Original filename
-- `filePath` - Path to stored file
-- `parsedData` - Processed report data (JSON string)
-- `labName` - Laboratory name
-- `testDate` - Test collection date
-- `createdAt` - Upload timestamp
+2. Set up environment variables:
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your configuration
+   ```
 
-#### WeeklyInsight
-- `id` - Unique identifier
-- `userId` - Reference to User
-- `weekNumber` - Week number of the year
-- `year` - Year
-- `cardiovascularScore` - Cardiovascular health score
-- `metabolicScore` - Metabolic health score
-- `inflammationScore` - Inflammation score
-- `recommendations` - AI-generated recommendations
-- `generatedAt` - Timestamp of insight generation
+3. Apply database migrations:
+   ```bash
+   npx prisma migrate dev --name init
+   ```
 
-#### ChatMessage (New)
-- `id` - Unique identifier
-- `userId` - Reference to User
-- `role` - 'user' or 'assistant'
-- `content` - Message content
-- `context` - Related health data context
-- `createdAt` - Message timestamp
+4. Seed the database with test data:
+   ```bash
+   npm run db:seed
+   ```
 
-## Core Features
+#### 3.2.2 Database Connection
 
-### 1. AI Health Companion (Aria)
-- **Interactive Chat Interface**: Natural conversation about health data
-- **Context-Aware Responses**: References user's uploaded reports
-- **Proactive Insights**: Initiates conversations about health trends
-- **Personality**: Warm, knowledgeable friend who happens to be a health expert
-- **Streaming Responses**: Real-time typing effect for natural feel
-
-### 2. Conversational File Upload
-- **In-Chat Upload**: Drop files directly into conversation
-- **Aria Acknowledgment**: AI explains what was found in uploads
-- **Progress Feedback**: Visual indicators during processing
-- **Error Handling**: Conversational error explanations
-
-### 3. Health Metrics Dashboard
-- **Three Core Scores**: 
-  - Cardiovascular (0-100)
-  - Metabolic (0-100)
-  - Inflammation (0-100)
-- **Trend Visualization**: Changes over time
-- **Collapsible Panel**: Doesn't interfere with chat
-- **Mobile Optimized**: Slide-up panel on mobile
-
-### 4. Data Management
-- **Supported Report Types**:
-  - DNA (23andMe, AncestryDNA raw data)
-  - Microbiome (Viome, uBiome PDFs)
-  - Blood Tests (LabCorp, Quest PDFs/CSVs)
-- **Parsing Engine**: Automatic data extraction
-- **Correlation Analysis**: Cross-reference different data types
-
-### 5. Weekly AI Insights
-- **Automated Generation**: Weekly health summaries
-- **Personalized Recommendations**: Based on all uploaded data
-- **Trend Analysis**: Week-over-week changes
-- **Aria Delivery**: Insights delivered conversationally
-
-## Aria System Prompt
+The database connection is managed in `lib/db.ts`:
 
 ```typescript
-const ARIA_SYSTEM_PROMPT = `
-You are Aria, a warm and knowledgeable personal health AI companion. You help users understand their health data from DNA tests, microbiome analyses, and blood work. 
+import { PrismaClient } from '@prisma/client';
 
-Personality:
-- Friendly and approachable, like a knowledgeable friend who happens to be a health expert
-- Use "I" and "we" to create connection
-- Acknowledge emotions around health ("I understand this can feel overwhelming")
-- Celebrate positive changes, no matter how small
-- Be honest about concerning trends but always provide actionable next steps
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-Communication style:
-- Start responses with acknowledgment ("I see you've uploaded your latest blood work...")
-- Use simple language first, then offer to go deeper
-- Break complex information into digestible pieces
-- Always end with a clear action or question to maintain engagement
-- Use emojis sparingly but effectively (💪 for fitness, 💚 for good news, 📊 for data)
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['query'],
+  });
 
-Remember:
-- You have access to the user's uploaded health data
-- Reference specific numbers from their reports
-- Track changes over time and highlight trends
-- Never provide medical diagnosis, but explain what the data shows
-- Always encourage consulting healthcare providers for medical decisions
-`;
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 ```
 
-## Implementation Phases
+### 3.3 Common Database Operations
 
-### Phase 1: Foundation & AI Interface (Weeks 1-3) ✅
-- [x] Project setup with design system
-- [x] Aria avatar component with animations
-- [x] Chat interface core
-- [x] OpenAI integration with streaming
+#### Querying Data
 
-### Phase 2: Health Data Integration (Weeks 4-6) 🚧
-- [x] File upload in chat interface
-- [x] Health metrics dashboard
-- [ ] Report parsing with AI feedback (In Progress)
-  - [x] Blood test CSV parsing
-  - [ ] DNA raw data parsing
-  - [ ] Microbiome PDF parsing
+```typescript
+// Get user with their reports
+const userWithReports = await prisma.user.findUnique({
+  where: { id: userId },
+  include: {
+    reports: true,
+    insights: {
+      orderBy: { generatedAt: 'desc' },
+      take: 1
+    },
+    chatMessages: {
+      orderBy: { timestamp: 'desc' },
+      take: 10
+    }
+  }
+});
 
-### Phase 3: AI Intelligence & Insights (Weeks 7-9) 📅
-- [ ] Correlation engine
-- [ ] Proactive AI insights
-- [ ] Advanced conversations
+// Get latest biomarker values
+const latestBiomarkers = await prisma.biomarker.findMany({
+  where: {
+    report: { userId },
+    name: { in: ['Hemoglobin A1c', 'LDL Cholesterol', 'CRP'] }
+  },
+  orderBy: { report: { testDate: 'desc' } },
+  distinct: ['name']
+});
+```
 
-### Phase 4: Polish & User Experience (Weeks 10-12) 📅
-- [ ] Onboarding with Aria
-- [ ] Mobile optimization
-- [ ] Personality polish
+#### Creating Records
 
-### Phase 5: Beta Testing & Iteration (Weeks 11-12) 📅
-- [ ] Friends & family beta
-- [ ] Iteration based on feedback
+```typescript
+// Create a new report with biomarkers
+const newReport = await prisma.report.create({
+  data: {
+    userId: user.id,
+    type: 'BLOOD_TEST',
+    fileName: 'blood_test_20230530.pdf',
+    filePath: '/uploads/blood_test_20230530.pdf',
+    testDate: new Date('2023-05-30'),
+    biomarkers: {
+      create: [
+        {
+          name: 'Hemoglobin A1c',
+          value: 5.2,
+          unit: '%',
+          range: '4.0-5.6',
+          flag: 'Normal',
+          category: 'Diabetes'
+        },
+        // More biomarkers...
+      ]
+    }
+  },
+  include: {
+    biomarkers: true
+  }
+});
+```
 
-## Recent Progress (May 2025)
+### 3.4 Database Maintenance
 
-### Implemented Features
-1. **AI-First Interface**
-   - Aria chat interface as primary interaction
-   - Natural language file upload
-   - Context-aware health discussions
+#### Running Migrations
 
-2. **Health Data Uploads**
-   - Robust backend for blood test CSVs
-   - Clear user feedback and error handling
-   - Support for complex units (e.g., `10^6/uL`)
-   - Sample CSV templates and guidance
-
-3. **Authentication & Security**
-   - JWT-based session management
-   - Protected routes and API endpoints
-   - Secure password hashing
-
-### Current Status
-- Aria AI interface is functional with OpenAI integration
-- Blood test uploads are fully functional and robust
-- Chat-based interaction model is implemented
-- UI follows AI-first design principles
-
-### Next Steps for MVP Feature Development
-1. **Complete Report Parsers**
-   - Implement DNA raw data parser
-   - Add microbiome PDF parser
-   - Integrate parsing feedback into Aria's responses
-
-2. **Correlation Engine**
-   - Build cross-report correlation analysis
-   - Generate health score calculations
-   - Have Aria explain correlations naturally
-
-3. **Weekly Insights**
-   - Automate weekly report generation
-   - Deliver insights through Aria
-   - Track engagement and improvements
-
-4. **Mobile Experience**
-   - Optimize chat for mobile keyboards
-   - Implement slide-up health panel
-   - Add touch gestures
-
-5. **Beta Testing**
-   - Deploy to 20-50 friends/family
-   - Collect feedback on Aria's personality
-   - Iterate based on user engagement
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/session` - Get current session
-
-### Aria Chat
-- `POST /api/chat` - Send message to Aria
-- `GET /api/chat/history` - Get conversation history
-- `POST /api/chat/feedback` - Rate Aria's response
-
-### Reports
-- `GET /api/reports` - List user's reports
-- `POST /api/reports/upload` - Upload new report via chat
-- `GET /api/reports/:id` - Get report details
-- `POST /api/reports/parse` - Parse uploaded file
-
-### Correlations
-- `GET /api/correlations` - Get health correlations
-- `POST /api/correlations/calculate` - Trigger correlation analysis
-
-## Testing Strategy
-
-### Component Testing
-- Aria personality consistency
-- Chat interface responsiveness
-- Health metric calculations
-- File upload flows
-
-### Integration Testing
-- Full conversation flows
-- Upload → Parse → Correlate → Explain
-- Mobile experience
-- API response times
-
-### User Testing Checkpoints
-- After each major milestone
-- Focus on Aria's helpfulness
-- Measure emotional connection
-- Track feature adoption
-
-## Security Considerations
-
-### Current Implementation
-- Password hashing with bcrypt
-- JWT-based session management
-- Protected API routes
-- CSRF protection
-- Secure file upload validation
-
-### Pending Security Work (Post-MVP)
-- Implement rate limiting
-- Add email verification
-- Set up proper CORS policies
-- Audit logging
-- HIPAA compliance measures
-
-## Success Metrics
-
-### Technical Metrics
-- Chat response time < 2 seconds
-- File parsing success rate > 95%
-- Zero conversation breaks/errors
-- Mobile performance score > 90
-
-### User Experience Metrics
-- Average conversation length > 10 messages
-- User return rate > 80% weekly
-- Aria helpfulness rating > 4.5/5
-- Feature adoption rate > 70%
-
-### Health Outcome Metrics
-- Users checking metrics weekly > 75%
-- Report uploads per user > 3
-- Insight acknowledgment rate > 60%
-- Health improvement reported > 50%
-
-## Installation
+To create a new migration after schema changes:
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd for-your-health-mvp
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your values
-
-# Run database migrations
-npx prisma migrate dev --name init
-
-# Start development server
-npm run dev
+npx prisma migrate dev --name add_new_feature
 ```
 
-## Troubleshooting
+#### Resetting the Database
 
-### Common Issues
+To reset the database and re-seed it:
 
-#### Aria Not Responding
-1. **Symptom**: Chat messages don't get responses
-   - **Solution**: 
-     - Verify `OPENAI_API_KEY` is set correctly
-     - Check API key has sufficient credits
-     - Ensure streaming is supported in your environment
+```bash
+npx prisma migrate reset
+npm run db:seed
+```
 
-#### Login Not Working
-1. **Symptom**: Form submits but nothing happens
-   - **Solution**: 
-     - Verify `NEXTAUTH_SECRET` is set (32+ characters)
-     - Restart server after environment changes
-     - Clear browser cookies
+#### Database Inspection
 
-## Future Enhancements
+Use Prisma Studio to inspect and modify data:
 
-### Short-term
-- [ ] Voice input for Aria
-- [ ] Aria mood indicators
-- [ ] Export conversations
-- [ ] Multiple AI personality options
+```bash
+npx prisma studio
+```
 
-### Long-term
-- [ ] Mobile app with Aria
-- [ ] Wearable integrations
-- [ ] Video consultations through Aria
-- [ ] Multi-language support
+### 3.5 Backup and Recovery
 
-## Developer Note: HIPAA-Aware MVP
+#### Creating a Backup
 
-> **This MVP is being built with HIPAA-awareness.**
-> While some temporary workarounds exist for rapid development and testing, full HIPAA compliance will be a priority after the MVP testing phase. All developers should code with HIPAA requirements in mind:
-> - Secure handling of environment variables and secrets
-> - Proper authentication and authorization
-> - No PHI exposure in logs or error messages
-> - Plan for compliance upgrades post-testing
+```bash
+# Create a timestamped backup
+cp prisma/dev.db prisma/backups/dev_$(date +%Y%m%d_%H%M%S).db
+```
 
-## Contributing
-1. Fork the repository
-2. Create a feature branch (`feat/aria-[feature-name]`)
-3. Commit your changes
-4. Push to the branch
-5. Open a pull request
+#### Restoring from Backup
 
-## License
-[Specify License]
+```bash
+# Stop the application
+# Restore the backup
+cp prisma/backups/dev_20230530_123456.db prisma/dev.db
+# Restart the application
+```
+
+## 4. Core Features Implementation
+
+### 3.1 Data Upload & Parsing Engine
+
+**API Endpoint**: `/api/upload`
+```typescript
+// app/api/upload/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile } from 'fs/promises';
+import { parseReport } from '@/lib/parsers';
+
+export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
+  const reportType = formData.get('type') as 'DNA' | 'MICROBIOME' | 'BLOOD_TEST';
+  
+  // Save file locally
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const filePath = `./public/uploads/${Date.now()}-${file.name}`;
+  await writeFile(filePath, buffer);
+  
+  // Parse based on type
+  const parsedData = await parseReport(filePath, reportType);
+  
+  // Save to database
+  const report = await prisma.report.create({
+    data: {
+      userId: session.user.id,
+      type: reportType,
+      fileName: file.name,
+      filePath,
+      parsedData
+    }
+  });
+  
+  return NextResponse.json({ success: true, reportId: report.id });
+}
+```
+
+**Parser Functions**:
+```typescript
+// lib/parsers/index.ts
+export async function parseReport(filePath: string, type: ReportType) {
+  switch (type) {
+    case 'DNA':
+      return parseDNAReport(filePath);
+    case 'MICROBIOME':
+      return parseMicrobiomeReport(filePath);
+    case 'BLOOD_TEST':
+      return parseBloodTestReport(filePath);
+  }
+}
+
+// lib/parsers/dna.ts
+export async function parseDNAReport(filePath: string) {
+  // Handle both 23andMe raw data and PDF reports
+  const extension = filePath.split('.').pop()?.toLowerCase();
+  
+  if (extension === 'txt') {
+    // Parse 23andMe/AncestryDNA raw data
+    const content = await fs.readFile(filePath, 'utf-8');
+    const lines = content.split('\n').filter(line => !line.startsWith('#'));
+    
+    const variants = {};
+    for (const line of lines) {
+      const [rsid, chromosome, position, genotype] = line.split('\t');
+      // Focus on key pharmacogenomic SNPs
+      if (PRIORITY_SNPS.includes(rsid)) {
+        variants[rsid] = { chromosome, position, genotype };
+      }
+    }
+    return { variants, totalSNPs: Object.keys(variants).length };
+  }
+  
+  if (extension === 'pdf') {
+    // Use pdf-parse for PDF extraction
+    const pdfParse = require('pdf-parse');
+    const buffer = await fs.readFile(filePath);
+    const data = await pdfParse(buffer);
+    
+    // Extract key genetic markers using regex patterns
+    const extractedData = extractGeneticMarkers(data.text);
+    return extractedData;
+  }
+}
+
+const PRIORITY_SNPS = [
+  'rs1065852', // CYP2D6
+  'rs4244285', // CYP2C19
+  'rs429358',  // APOE4
+  'rs1801133', // MTHFR
+  'rs7412',    // APOE
+];
+```
+
+### 3.2 Correlation Engine
+
+**Core Metrics Calculation**:
+```typescript
+// lib/correlations/index.ts
+export interface HealthMetrics {
+  cardiovascularScore: number;
+  metabolicScore: number;
+  inflammationScore: number;
+  recommendations: string[];
+}
+
+export async function calculateHealthMetrics(userId: string): Promise<HealthMetrics> {
+  const reports = await prisma.report.findMany({
+    where: { userId },
+    include: { parsedData: true }
+  });
+  
+  const dnaData = reports.find(r => r.type === 'DNA')?.parsedData;
+  const microbiomeData = reports.find(r => r.type === 'MICROBIOME')?.parsedData;
+  const bloodData = reports.find(r => r.type === 'BLOOD_TEST')?.parsedData;
+  
+  return {
+    cardiovascularScore: calculateCardiovascularRisk(dnaData, bloodData, microbiomeData),
+    metabolicScore: calculateMetabolicEfficiency(dnaData, bloodData, microbiomeData),
+    inflammationScore: calculateInflammationProfile(dnaData, bloodData, microbiomeData),
+    recommendations: generateRecommendations(dnaData, bloodData, microbiomeData)
+  };
+}
+
+function calculateCardiovascularRisk(dna: any, blood: any, microbiome: any): number {
+  let score = 50; // baseline
+  
+  // Genetic factors (40% weight)
+  if (dna?.variants?.rs429358 === 'CC') score += 15; // APOE4 risk
+  if (dna?.variants?.rs1065852 === 'TT') score += 10; // CYP2D6 poor metabolizer
+  
+  // Blood biomarkers (40% weight)
+  if (blood?.ldl > 160) score += 20;
+  if (blood?.hdl < 40) score += 15;
+  if (blood?.triglycerides > 200) score += 10;
+  
+  // Microbiome factors (20% weight)
+  if (microbiome?.diversity < 3.0) score += 8; // Low Shannon diversity
+  if (microbiome?.firmicutesBacteroidetesRatio > 3.0) score += 7;
+  
+  return Math.min(Math.max(score, 0), 100);
+}
+```
+
+### 3.3 AI Weekly Report Generation
+
+**Report Generator**:
+```typescript
+// lib/ai/reportGenerator.ts
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function generateWeeklyReport(userId: string) {
+  const metrics = await calculateHealthMetrics(userId);
+  const previousWeek = await getPreviousWeekMetrics(userId);
+  
+  const prompt = `
+Generate a personalized health report based on the following data:
+
+Current Metrics:
+- Cardiovascular Score: ${metrics.cardiovascularScore}/100
+- Metabolic Score: ${metrics.metabolicScore}/100  
+- Inflammation Score: ${metrics.inflammationScore}/100
+
+Previous Week Comparison:
+${previousWeek ? `
+- Cardiovascular: ${previousWeek.cardiovascularScore} → ${metrics.cardiovascularScore}
+- Metabolic: ${previousWeek.metabolicScore} → ${metrics.metabolicScore}
+- Inflammation: ${previousWeek.inflammationScore} → ${metrics.inflammationScore}
+` : 'First week - no previous data'}
+
+Format the report as JSON with:
+{
+  "summary": "2-3 sentence overview",
+  "keyFindings": ["finding1", "finding2", "finding3"],
+  "recommendations": ["rec1", "rec2", "rec3"],
+  "trendsAnalysis": "paragraph about changes from last week"
+}
+`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: "You are a personalized health AI assistant. Provide actionable, evidence-based health insights."
+      },
+      {
+        role: "user", 
+        content: prompt
+      }
+    ],
+    temperature: 0.7,
+    max_tokens: 800
+  });
+  
+  const reportData = JSON.parse(completion.choices[0].message.content!);
+  
+  // Save to database
+  await prisma.weeklyInsight.create({
+    data: {
+      userId,
+      weekNumber: getCurrentWeekNumber(),
+      year: new Date().getFullYear(),
+      cardiovascularScore: metrics.cardiovascularScore,
+      metabolicScore: metrics.metabolicScore,
+      inflammationScore: metrics.inflammationScore,
+      recommendations: reportData
+    }
+  });
+  
+  return reportData;
+}
+```
+
+### 3.4 AI Chatbot
+
+**Simple Non-Conversational Bot**:
+```typescript
+// app/api/chat/route.ts
+export async function POST(request: NextRequest) {
+  const { question, userId } = await request.json();
+  
+  // Get user's latest reports and insights
+  const userReports = await prisma.report.findMany({
+    where: { userId },
+    include: { parsedData: true }
+  });
+  
+  const latestInsight = await prisma.weeklyInsight.findFirst({
+    where: { userId },
+    orderBy: { generatedAt: 'desc' }
+  });
+  
+  const context = `
+User's Health Data Summary:
+${userReports.map(r => `${r.type}: ${JSON.stringify(r.parsedData)}`).join('\n')}
+
+Latest Health Scores:
+- Cardiovascular: ${latestInsight?.cardiovascularScore}/100
+- Metabolic: ${latestInsight?.metabolicScore}/100
+- Inflammation: ${latestInsight?.inflammationScore}/100
+
+User Question: ${question}
+
+Provide a specific answer based ONLY on the user's uploaded data. Do not provide general health advice.
+`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4",
+    messages: [
+      {
+        role: "system",
+        content: "You explain health reports based strictly on uploaded user data. No general advice."
+      },
+      {
+        role: "user",
+        content: context
+      }
+    ],
+    max_tokens: 300
+  });
+  
+  return NextResponse.json({ 
+    answer: completion.choices[0].message.content 
+  });
+}
+```
+
+## 4. UI Components
+
+### 4.1 Dashboard Layout
+```typescript
+// app/dashboard/page.tsx
+import { HealthMetricsChart } from '@/components/charts/HealthMetrics';
+import { UploadCard } from '@/components/upload/UploadCard';
+import { RecentReports } from '@/components/reports/RecentReports';
+import { ChatBot } from '@/components/chat/ChatBot';
+
+export default async function Dashboard() {
+  const metrics = await getCurrentUserMetrics();
+  
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+      <div className="lg:col-span-2">
+        <HealthMetricsChart data={metrics} />
+        <RecentReports />
+      </div>
+      <div className="space-y-6">
+        <UploadCard />
+        <ChatBot />
+      </div>
+    </div>
+  );
+}
+```
+
+### 4.2 File Upload Component
+```typescript
+// components/upload/UploadCard.tsx
+'use client';
+import { useDropzone } from 'react-dropzone';
+import { useState } from 'react';
+
+export function UploadCard() {
+  const [uploading, setUploading] = useState(false);
+  const [reportType, setReportType] = useState<'DNA' | 'MICROBIOME' | 'BLOOD_TEST'>('DNA');
+  
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg'],
+      'text/plain': ['.txt']
+    },
+    onDrop: async (files) => {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', files[0]);
+      formData.append('type', reportType);
+      
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          // Refresh page or update state
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+      } finally {
+        setUploading(false);
+      }
+    }
+  });
+  
+  return (
+    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+      <div className="mb-4">
+        <select 
+          value={reportType} 
+          onChange={(e) => setReportType(e.target.value as any)}
+          className="w-full p-2 border rounded"
+        >
+          <option value="DNA">DNA Report</option>
+          <option value="MICROBIOME">Microbiome Report</option>
+          <option value="BLOOD_TEST">Blood Test</option>
+        </select>
+      </div>
+      
+      <div {...getRootProps()} className="cursor-pointer text-center">
+        <input {...getInputProps()} />
+        {uploading ? (
+          <p>Uploading...</p>
+        ) : (
+          <p>Drop files here or click to upload</p>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## 5. Deployment Configuration
+
+### 5.1 Environment Variables
+```bash
+# .env.local
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=http://localhost:3000
+OPENAI_API_KEY=your-openai-key
+DATABASE_URL="file:./dev.db"
+```
+
+### 5.2 Package.json Scripts
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "next": "14.1.0",
+    "react": "^18",
+    "prisma": "^5.7.0",
+    "@prisma/client": "^5.7.0",
+    "next-auth": "^4.24.0",
+    "openai": "^4.24.0",
+    "react-dropzone": "^14.2.3",
+    "recharts": "^2.10.0",
+    "tailwindcss": "^3.4.0",
+    "zustand": "^4.4.7",
+    "pdf-parse": "^1.1.1"
+  }
+}
+```
+
+## 6. Development Phases with Checkpoints
+
+### Phase 1 (Weeks 1-4): Foundation & Core Infrastructure
+
+#### Milestone 1.1: Project Setup (Days 1-3)
+**Git Commit**: `feat: initial project setup`
+- [ ] Create Next.js 14 project with TypeScript
+- [ ] Install and configure Tailwind CSS
+- [ ] Set up shadcn/ui components
+- [ ] Create basic folder structure
+- [ ] Initialize Git repository with .gitignore
+
+**Test Checkpoint**: 
+- ✅ `npm run dev` starts without errors
+- ✅ Tailwind classes render correctly
+- ✅ Basic page routing works
+
+#### Milestone 1.2: Database Foundation (Days 4-6)
+**Git Commit**: `feat: database schema and prisma setup`
+- [ ] Install Prisma and SQLite
+- [ ] Create complete database schema
+- [ ] Generate Prisma client
+- [ ] Create database seed file
+- [ ] Set up database connection utilities
+
+**Test Checkpoint**:
+- ✅ `npx prisma db push` executes successfully
+- ✅ Database file created in project root
+- ✅ Prisma client connects without errors
+- ✅ Seed data populates correctly
+
+#### Milestone 1.3: Authentication System (Days 7-10)
+**Git Commit**: `feat: nextauth authentication system`
+- [ ] Install and configure NextAuth.js
+- [ ] Create login/register pages
+- [ ] Set up session management
+- [ ] Create protected route middleware
+- [ ] Build basic user profile page
+
+**Test Checkpoint**:
+- ✅ User can register new account
+- ✅ User can login/logout
+- ✅ Session persists across page reloads
+- ✅ Protected routes redirect properly
+- ✅ User data saves to database
+
+#### Milestone 1.4: File Upload Infrastructure (Days 11-14)
+**Git Commit**: `feat: file upload system with local storage`
+- [ ] Create file upload API endpoint
+- [ ] Build drag-and-drop upload component
+- [ ] Set up local file storage system
+- [ ] Add file type validation
+- [ ] Create upload progress indicators
+
+**Test Checkpoint**:
+- ✅ Files upload successfully to `/public/uploads/`
+- ✅ File metadata saves to database
+- ✅ Upload progress shows correctly
+- ✅ File type validation works
+- ✅ Error handling displays properly
+
+### Phase 2 (Weeks 5-8): Data Processing & Parsing
+
+#### Milestone 2.1: Blood Test Parser (Days 15-21)
+**Git Commit**: `feat: blood test report parsing engine`
+- [ ] Install pdf-parse library
+- [ ] Create blood test parsing functions
+- [ ] Build regex patterns for common biomarkers
+- [ ] Handle LabCorp/Quest report formats
+- [ ] Create parsed data visualization
+
+**Test Checkpoint**:
+- ✅ PDF blood test uploads parse correctly
+- ✅ Key biomarkers extracted (LDL, HDL, HbA1c)
+- ✅ Parsed data displays in dashboard
+- ✅ Error handling for unparseable files
+- ✅ Manual test with 3 different lab formats
+
+#### Milestone 2.2: DNA Data Parser (Days 22-28)
+**Git Commit**: `feat: DNA raw data parsing system`
+- [ ] Create 23andMe raw data parser
+- [ ] Build SNP extraction for priority variants
+- [ ] Handle AncestryDNA format differences
+- [ ] Create genetic variant interpretation
+- [ ] Add DNA data dashboard component
+
+**Test Checkpoint**:
+- ✅ 23andMe .txt files parse successfully
+- ✅ Priority SNPs extracted correctly
+- ✅ Genetic variants display in UI
+- ✅ Handle malformed DNA files gracefully
+- ✅ Test with actual 23andMe download
+
+#### Milestone 2.3: Microbiome Parser (Days 29-35)
+**Git Commit**: `feat: microbiome report parsing`
+- [ ] Create microbiome PDF parser
+- [ ] Extract diversity metrics
+- [ ] Parse bacterial composition data
+- [ ] Handle multiple microbiome test formats
+- [ ] Build microbiome visualization charts
+
+**Test Checkpoint**:
+- ✅ Microbiome PDFs parse key metrics
+- ✅ Diversity scores calculate correctly
+- ✅ Bacterial ratios display properly
+- ✅ Charts render microbiome data
+- ✅ Test with Viome/uBiome reports
+
+#### Milestone 2.4: Health Metrics Engine (Days 36-42)
+**Git Commit**: `feat: correlation engine and health scoring`
+- [ ] Build cardiovascular risk calculator
+- [ ] Create metabolic efficiency scorer
+- [ ] Implement inflammation profile
+- [ ] Cross-reference genetic and lab data
+- [ ] Create metrics dashboard component
+
+**Test Checkpoint**:
+- ✅ All 3 health scores calculate correctly
+- ✅ Scores update when new data added
+- ✅ Correlation logic works across data types
+- ✅ Edge cases handled (missing data)
+- ✅ Manual verification of score accuracy
+
+### Phase 3 (Weeks 9-12): AI Integration & Polish
+
+#### Milestone 3.1: OpenAI Integration (Days 43-49)
+**Git Commit**: `feat: openai integration for reports`
+- [ ] Set up OpenAI API client
+- [ ] Create report generation prompts
+- [ ] Build weekly report scheduler
+- [ ] Handle API rate limiting
+- [ ] Create report storage system
+
+**Test Checkpoint**:
+- ✅ OpenAI API connects successfully
+- ✅ Reports generate with user data
+- ✅ Report quality is readable/useful
+- ✅ API errors handled gracefully
+- ✅ Generated reports save to database
+
+#### Milestone 3.2: AI Chatbot (Days 50-56)
+**Git Commit**: `feat: ai chatbot for report explanations`
+- [ ] Create chat API endpoint
+- [ ] Build chat UI component
+- [ ] Implement context-aware responses
+- [ ] Add chat history storage
+- [ ] Create typing indicators
+
+**Test Checkpoint**:
+- ✅ Chat responds to user questions
+- ✅ Answers based on user's data only
+- ✅ Chat history persists
+- ✅ UI is responsive and intuitive
+- ✅ No general health advice given
+
+#### Milestone 3.3: Dashboard & Visualization (Days 57-63)
+**Git Commit**: `feat: complete dashboard with charts`
+- [ ] Build comprehensive dashboard layout
+- [ ] Create health metrics charts (Recharts)
+- [ ] Add trend analysis over time
+- [ ] Build responsive mobile layout
+- [ ] Add data export functionality
+
+**Test Checkpoint**:
+- ✅ Dashboard loads all user data
+- ✅ Charts render correctly on all devices
+- ✅ Trends show historical changes
+- ✅ Mobile experience is usable
+- ✅ Data exports work properly
+
+#### Milestone 3.4: Final Polish & Testing (Days 64-70)
+**Git Commit**: `feat: production ready mvp`
+- [ ] Add loading states throughout app
+- [ ] Implement error boundaries
+- [ ] Create user onboarding flow
+- [ ] Add email notifications for reports
+- [ ] Performance optimization
+
+**Test Checkpoint**:
+- ✅ All features work end-to-end
+- ✅ No broken states or error pages
+- ✅ Onboarding guides new users
+- ✅ Email notifications send correctly
+- ✅ App performs well under load
+
+#### Milestone 3.5: Friends & Family Beta (Days 71-84)
+**Git Commit**: `feat: beta deployment and user feedback`
+- [ ] Deploy to Vercel production
+- [ ] Create user invitation system
+- [ ] Set up user feedback collection
+- [ ] Monitor app performance
+- [ ] Iterate based on feedback
+
+**Test Checkpoint**:
+- ✅ 10+ friends/family using app
+- ✅ No critical bugs reported
+- ✅ Users completing full workflow
+- ✅ Positive feedback on core features
+- ✅ Performance metrics within targets
+
+## 7. Continuous Testing Strategy
+
+### Daily Testing Protocol
+```bash
+# Run before each commit
+npm run test              # Unit tests
+npm run build            # Build verification
+npm run db:push          # Database sync
+npm run lint             # Code quality
+```
+
+### Weekly Integration Tests
+- [ ] Complete user registration → upload → report flow
+- [ ] All 3 data types upload and parse correctly
+- [ ] Health metrics calculate with realistic data
+- [ ] AI responses are relevant and helpful
+- [ ] Mobile experience works on 3+ devices
+
+### Git Workflow
+```bash
+# Feature branch workflow
+git checkout -b feat/milestone-x-y
+# ... implement feature
+git add .
+git commit -m "feat: descriptive commit message"
+git push origin feat/milestone-x-y
+# ... test thoroughly
+git checkout main
+git merge feat/milestone-x-y
+git tag milestone-x.y
+git push origin main --tags
+```
+
+### Rollback Strategy
+- Each milestone tagged for easy rollback
+- Database migrations reversible
+- Feature flags for AI components
+- Local backup before major changes
+
+## 7. Cost Estimates (Monthly)
+
+- **Vercel Pro**: $20/month
+- **OpenAI API**: ~$50/month (estimated for 50 users)
+- **Domain**: $10/year
+- **Total**: ~$70/month
+
+## 8. Success Metrics
+
+- **Technical**: 95%+ file parsing success rate
+- **User Engagement**: 80%+ weekly report open rate
+- **AI Accuracy**: User satisfaction survey >4/5
+- **Performance**: <3 second page load times
+
+This PRD provides comprehensive technical specifications for Windsurf to implement the entire platform autonomously while maintaining MVP simplicity and cost constraints.

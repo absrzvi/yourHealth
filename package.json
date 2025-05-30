@@ -8,6 +8,7 @@
     "start": "next start",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:backup": "tsx scripts/backup-db.ts",
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "type-check": "tsc --noEmit"
