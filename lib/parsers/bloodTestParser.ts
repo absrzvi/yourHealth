@@ -1,219 +1,375 @@
 import { readFile } from 'fs/promises';
 import { parse } from 'csv-parse/sync';
-import { BloodTestReportData, ParserResult } from './types';
-import { BaseParser } from './baseParser';
+import * as fs from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { TextPreprocessor } from './textPreprocessor';
+import { SectionParser } from './sectionParser';
+import { BiomarkerExtractor } from './biomarkerExtractor';
+import { RemarksExtractor } from './remarksExtractor';
+import { BiomarkerValidator } from './biomarkerValidator';
+import { 
+  BloodTestReportData, 
+  ParserResult, 
+  ReportType, 
+  ReportSection,
+  ExtractedBiomarker,
+  Remark
+} from './types';
 
-export class BloodTestParser extends BaseParser<BloodTestReportData> {
-  private parsedData: any;
+type PatientInfo = NonNullable<BloodTestReportData['patientInfo']>;
+type LabInfo = NonNullable<BloodTestReportData['labInfo']>;
 
+/**
+ * Parser for blood test reports
+ * 
+ * This parser uses a multi-strategy approach to extract biomarkers and clinical remarks
+ * from various blood test report formats. It includes:
+ * 1. Text preprocessing and cleaning
+ * 2. Section-based parsing
+ * 3. Biomarker extraction and validation
+ * 4. Clinical remarks extraction
+ * 5. Result validation and confidence scoring
+ */
+export class BloodTestParser {
+  private content: string;
+  private logPath: string;
+  private parsedData: {
+    patientInfo?: PatientInfo;
+    labInfo?: LabInfo;
+  } = {};
+  private sections = new Map<string, ReportSection>();
+
+  constructor(file: File | null = null, content: string = '') {
+    // Set up logging
+    this.logPath = path.join(process.cwd(), 'logs', `parser-${Date.now()}.log`);
+    
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+      console.error('Invalid content type provided to BloodTestParser');
+      this.content = String(content || '');
+    } else {
+      this.content = content;
+    }
+    
+    this.logMessage(`BloodTestParser initialized with ${this.content.length} characters`);
+    if (file) {
+      this.logMessage(`Processing file: ${file.name}, size: ${file.size} bytes`);
+    }
+    
+    // Log a short preview for debugging
+    if (process.env.NODE_ENV === 'development') {
+      const preview = this.content.substring(0, Math.min(300, this.content.length));
+      this.logMessage(`Content preview: ${preview.replace(/\n/g, ' ').trim()}...`);
+    }
+  }
+  
+  /**
+   * Log a message to both console and file for debugging
+   */
+  private logMessage(message: string): void {
+    console.log(message);
+    try {
+      const timestamp = new Date().toISOString();
+      const logEntry = `${timestamp} - ${message}\n`;
+      fs.appendFileSync(this.logPath, logEntry);
+    } catch (error) {
+      console.error('Failed to write to log file:', error);
+    }
+  }
+
+  /**
+   * Helper method to create a successful result
+   */
+  private success(data: BloodTestReportData): ParserResult {
+    return {
+      success: true,
+      data
+    };
+  }
+
+  /**
+   * Helper method to create an error result
+   */
+  private error(message: string, error?: Error): ParserResult {
+    this.logMessage(`Error: ${message}${error ? ` - ${error.message}` : ''}`);
+    if (error?.stack) {
+      this.logMessage(`Stack trace: ${error.stack}`);
+    }
+    return {
+      success: false,
+      error: message
+    };
+  }
+
+  /**
+   * Main parsing method that coordinates the parsing process
+   */
   async parse(): Promise<ParserResult> {
     try {
-      // Try to parse as CSV first
-      try {
-        this.parsedData = parse(this.content, {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-        });
-      } catch (e) {
-        // If CSV parsing fails, try to extract data using regex patterns
-        return this.parseWithRegex();
-      }
-
-      // If we have valid CSV data, process it
-      if (Array.isArray(this.parsedData) && this.parsedData.length > 0) {
-        return this.parseCsvData();
-      }
-
-      return this.error('Could not parse the blood test report');
-    } catch (error) {
-      console.error('Error parsing blood test report:', error);
-      return this.error('Failed to parse blood test report');
-    }
-  }
-
-  private parseCsvData(): ParserResult {
-    const biomarkers = this.parsedData.map((row: any) => {
-      // Try to determine the structure of the CSV
-      const name = row['Test Name'] || row['Analyte'] || row['Biomarker'] || '';
-      const value = this.parseNumber(row['Result'] || row['Value'] || '') || 0;
-      const unit = row['Unit'] || row['Units'] || '';
-      const range = row['Reference Range'] || row['Range'] || '';
+      this.logMessage('Starting blood test report parsing');
       
-      return {
-        name: name.trim(),
-        value,
-        unit: unit.trim(),
-        referenceRange: range,
-        status: this.determineStatus(value, range)
+      // Step 1: Preprocess the content
+      this.logMessage('Step 1: Preprocessing content');
+      const preprocessedContent = TextPreprocessor.preprocess(this.content);
+      
+      // Step 2: Parse document sections
+      this.logMessage('Step 2: Parsing document sections');
+      this.sections = SectionParser.parseSections(preprocessedContent);
+      
+      // Step 3: Extract patient and lab information
+      this.logMessage('Step 3: Extracting metadata');
+      this.extractMetadata(preprocessedContent);
+      
+      // Step 4: Extract biomarkers
+      this.logMessage('Step 4: Extracting biomarkers');
+      const biomarkers = await this.extractBiomarkers(preprocessedContent);
+      
+      // Step 5: Extract and associate remarks
+      this.logMessage('Step 5: Extracting clinical remarks');
+      const { remarks, updatedBiomarkers } = await this.extractRemarks(preprocessedContent, biomarkers);
+      
+      // Step 6: Validate biomarkers and generate report
+      this.logMessage('Step 6: Validating results');
+      const validatedBiomarkers = BiomarkerValidator.validateAndFilter(updatedBiomarkers);
+      const validationReport = BiomarkerValidator.generateValidationReport(validatedBiomarkers, remarks);
+      
+      // Step 7: Prepare final result
+      this.logMessage('Step 7: Preparing final result');
+      const result: BloodTestReportData = {
+        type: 'BLOOD_TEST',
+        biomarkers: validatedBiomarkers,
+        remarks,
+        metadata: {
+          parser: 'BloodTestParser',
+          biomarkerCount: validatedBiomarkers.length,
+          parsedAt: new Date().toISOString(),
+          confidence: validationReport.averageConfidence,
+          sections: Array.from(this.sections.keys()),
+          validation: validationReport,
+          remarkCount: remarks.length,
+        },
+        patientInfo: this.parsedData.patientInfo,
+        labInfo: this.parsedData.labInfo,
+        criticalFindings: validationReport.criticalFindings,
       };
-    }).filter((b: any) => b.name);
-
-    return this.success({
-      type: 'BLOOD_TEST',
-      biomarkers,
-      metadata: {
-        parsedAt: new Date().toISOString(),
-        parser: 'BloodTestParser',
-        format: 'CSV'
-      }
-    });
-  }
-
-  private parseWithRegex(): ParserResult {
-    // Common blood test patterns
-    const patterns = {
-      // Lipid Panel
-      totalCholesterol: /(?:total\s*)?cholesterol[\s\S]*?([\d.,]+)\s*(?:mg\/dL|mmol\/L)?/i,
-      ldl: /(?:ldl|low[\s-]density[\s-]?lipoprotein)[\s\S]*?([\d.,]+)\s*(?:mg\/dL|mmol\/L)?/i,
-      hdl: /(?:hdl|high[\s-]density[\s-]?lipoprotein)[\s\S]*?([\d.,]+)\s*(?:mg\/dL|mmol\/L)?/i,
-      triglycerides: /triglycerides?[\s\S]*?([\d.,]+)\s*(?:mg\/dL|mmol\/L)?/i,
       
-      // Metabolic Panel
-      glucose: /glucose[\s\S]*?([\d.,]+)\s*(?:mg\/dL|mmol\/L)?/i,
-      a1c: /(?:a1c|hba1c|hemoglobin[\s-]?a1c)[\s\S]*?([\d.,]+)\s*%?/i,
+      this.logMessage(`Parsing completed successfully. Found ${validatedBiomarkers.length} biomarkers and ${remarks.length} remarks.`);
+      return this.success(result);
       
-      // Liver Function
-      ast: /(?:ast|sgot)[\s\S]*?([\d.,]+)\s*(?:U\/L|IU\/L)?/i,
-      alt: /(?:alt|sgpt)[\s\S]*?([\d.,]+)\s*(?:U\/L|IU\/L)?/i,
-      alp: /(?:alp|alkaline[\s-]phosphatase)[\s\S]*?([\d.,]+)\s*(?:U\/L|IU\/L)?/i,
-      bilirubin: /bilirubin[\s\S]*?([\d.,]+)\s*(?:mg\/dL|umol\/L)?/i,
-      
-      // Kidney Function
-      bun: /(?:bun|blood[\s-]urea[\s-]?nitrogen)[\s\S]*?([\d.,]+)\s*(?:mg\/dL|mmol\/L)?/i,
-      creatinine: /creatinine[\s\S]*?([\d.,]+)\s*(?:mg\/dL|umol\/L)?/i,
-      egfr: /(?:egfr|estimated[\s-]gfr)[\s\S]*?([\d.,]+)\s*(?:mL\/min)?/i,
-      
-      // Complete Blood Count (CBC)
-      wbc: /(?:wbc|white[\s-]blood[\s-]?cells?)[\s\S]*?([\d.,]+)\s*(?:K\/uL|10\^3\/uL|10\^9\/L)?/i,
-      rbc: /(?:rbc|red[\s-]blood[\s-]?cells?)[\s\S]*?([\d.,]+)\s*(?:M\/uL|10\^6\/uL|10\^12\/L)?/i,
-      hemoglobin: /hemoglobin[\s\S]*?([\d.,]+)\s*(?:g\/dL|g\/L)?/i,
-      hematocrit: /hematocrit[\s\S]*?([\d.,]+)\s*%?/i,
-      platelets: /platelets?[\s\S]*?([\d.,]+)\s*(?:K\/uL|10\^3\/uL|10\^9\/L)?/i,
-    };
-
-    const biomarkers = Object.entries(patterns)
-      .map(([key, pattern]) => {
-        const match = this.content.match(pattern);
-        if (!match) return null;
-        
-        const value = this.parseNumber(match[1]);
-        if (value === null) return null;
-        
-        return {
-          name: this.formatBiomarkerName(key),
-          value,
-          unit: this.getBiomarkerUnit(key, match[0]),
-        };
-      })
-      .filter(Boolean);
-
-    if (biomarkers.length === 0) {
-      return this.error('No recognizable blood test data found');
+    } catch (error) {
+      return this.error(
+        'Failed to parse blood test report', 
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
-
-    return this.success({
-      type: 'BLOOD_TEST',
-      biomarkers,
-      metadata: {
-        parsedAt: new Date().toISOString(),
-        parser: 'BloodTestParser',
-        format: 'TEXT'
-      }
-    });
   }
 
-  private formatBiomarkerName(key: string): string {
-    const names: Record<string, string> = {
-      totalCholesterol: 'Total Cholesterol',
-      ldl: 'LDL Cholesterol',
-      hdl: 'HDL Cholesterol',
-      triglycerides: 'Triglycerides',
-      glucose: 'Glucose',
-      a1c: 'Hemoglobin A1c',
-      ast: 'AST',
-      alt: 'ALT',
-      alp: 'Alkaline Phosphatase',
-      bilirubin: 'Bilirubin',
-      bun: 'Blood Urea Nitrogen',
-      creatinine: 'Creatinine',
-      egfr: 'eGFR',
-      wbc: 'White Blood Cells',
-      rbc: 'Red Blood Cells',
-      hemoglobin: 'Hemoglobin',
-      hematocrit: 'Hematocrit',
-      platelets: 'Platelets',
-    };
-    return names[key] || key;
-  }
-
-  private getBiomarkerUnit(key: string, match: string): string {
-    const unitMap: Record<string, string> = {
-      totalCholesterol: 'mg/dL',
-      ldl: 'mg/dL',
-      hdl: 'mg/dL',
-      triglycerides: 'mg/dL',
-      glucose: 'mg/dL',
-      a1c: '%',
-      ast: 'U/L',
-      alt: 'U/L',
-      alp: 'U/L',
-      bilirubin: 'mg/dL',
-      bun: 'mg/dL',
-      creatinine: 'mg/dL',
-      egfr: 'mL/min/1.73m²',
-      wbc: 'K/µL',
-      rbc: 'M/µL',
-      hemoglobin: 'g/dL',
-      hematocrit: '%',
-      platelets: 'K/µL',
-    };
-
-    // Try to extract unit from the match
-    const unitMatch = match.match(/([a-zA-Z%²µ\/]+)$/);
-    return unitMatch ? unitMatch[1].trim() : unitMap[key] || '';
-  }
-
-  private determineStatus(value: number, range: string): 'high' | 'normal' | 'low' | undefined {
-    if (!range) return undefined;
+  /**
+   * Extract metadata from the report content
+   */
+  private extractMetadata(content: string): void {
+    this.logMessage('Extracting metadata from content');
     
-    // Handle different range formats:
-    // 1. 3.5-5.5
-    // 2. < 5.5
-    // 3. > 3.5
-    // 4. 3.5 - 5.5
-    // 5. 3.5 to 5.5
+    // Extract patient information
+    this.parsedData.patientInfo = SectionParser.extractPatientInfo(content);
+    this.logMessage(`Extracted patient info: ${JSON.stringify(this.parsedData.patientInfo)}`);
     
-    // Clean up the range string
-    const cleanRange = range
-      .replace(/\s*to\s*/g, '-')
-      .replace(/\s*\-\s*/g, '-')
-      .replace(/[^0-9.<>\-]/g, '');
+    // Extract lab information
+    this.parsedData.labInfo = SectionParser.extractLabInfo(content);
+    this.logMessage(`Extracted lab info: ${JSON.stringify(this.parsedData.labInfo)}`);
+  }
 
-    // Check for less than format (<X)
-    const lessThanMatch = cleanRange.match(/<([0-9.]+)/);
-    if (lessThanMatch) {
-      const max = parseFloat(lessThanMatch[1]);
-      return value < max ? 'normal' : 'high';
+  /**
+   * Extract biomarkers from the report content
+   */
+  private async extractBiomarkers(content: string): Promise<ExtractedBiomarker[]> {
+    this.logMessage('Starting biomarker extraction');
+    
+    try {
+      // Use the BiomarkerExtractor to get biomarkers from content
+      const biomarkers = BiomarkerExtractor.extractBiomarkers(content);
+      this.logMessage(`Extracted ${biomarkers.length} potential biomarkers`);
+      
+      return biomarkers;
+    } catch (error) {
+      this.logMessage(`Error extracting biomarkers: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
     }
+  }
 
-    // Check for greater than format (>X)
-    const greaterThanMatch = cleanRange.match(/>([0-9.]+)/);
-    if (greaterThanMatch) {
-      const min = parseFloat(greaterThanMatch[1]);
-      return value > min ? 'normal' : 'low';
+  /**
+   * Extract and associate remarks with biomarkers
+   */
+  private async extractRemarks(
+    content: string,
+    biomarkers: ExtractedBiomarker[]
+  ): Promise<{ remarks: Remark[]; updatedBiomarkers: ExtractedBiomarker[] }> {
+    this.logMessage('Starting remarks extraction');
+    
+    try {
+      // Use the RemarksExtractor to get remarks and associate them with biomarkers
+      const result = RemarksExtractor.extractRemarks(content, biomarkers);
+      this.logMessage(`Extracted ${result.remarks.length} remarks`);
+      
+      return result;
+    } catch (error) {
+      this.logMessage(`Error extracting remarks: ${error instanceof Error ? error.message : String(error)}`);
+      return { remarks: [], updatedBiomarkers: biomarkers };
     }
+  }
 
-    // Check for range format (X-Y)
-    const rangeMatch = cleanRange.match(/([0-9.]+)-([0-9.]+)/);
-    if (rangeMatch) {
-      const min = parseFloat(rangeMatch[1]);
-      const max = parseFloat(rangeMatch[2]);
-      if (value < min) return 'low';
-      if (value > max) return 'high';
+  /**
+   * Parse a string into a number, handling various formats
+   */
+  private parseNumber(value: string | number): number {
+    if (typeof value === 'number') return value;
+    if (!value) return NaN;
+    
+    // Remove any non-numeric characters except decimal point and minus sign
+    const cleaned = value
+      .replace(/[^\d.-]/g, '') // Keep only digits, decimal points, and minus signs
+      .replace(/(\d),(?=\d)/g, '$1'); // Remove thousand separators
+    
+    return parseFloat(cleaned);
+  }
+
+  /**
+   * Determine status based on value and reference range
+   */
+  private determineStatus(
+    value: number,
+    referenceRange?: string
+  ): 'high' | 'normal' | 'low' | undefined {
+    if (!referenceRange) return undefined;
+    
+    try {
+      // Handle different reference range formats:
+      // - 12.0 - 15.0
+      // - 12.0-15.0
+      // - <15.0
+      // - >12.0
+      const rangePattern = /([<>=]?)\s*(\d+(?:\.\d+)?)(?:\s*[-–—]\s*([<>=]?)\s*(\d+(?:\.\d+)?))?/;
+      const match = referenceRange.match(rangePattern);
+      
+      if (!match) return 'normal'; // Can't determine status
+      
+      const [_, startOp, startStr, endOp, endStr] = match;
+      
+      // Handle single value with operator (e.g., <15.0)
+      if (startOp && !endStr) {
+        const refValue = parseFloat(startStr);
+        if (isNaN(refValue)) return 'normal';
+        
+        if (startOp === '<' && value >= refValue) return 'high';
+        if (startOp === '>' && value <= refValue) return 'low';
+        return 'normal';
+      }
+      
+      // Handle range (e.g., 12.0 - 15.0)
+      const start = parseFloat(startStr);
+      const end = endStr ? parseFloat(endStr) : start;
+      
+      if (isNaN(start) || isNaN(end)) return 'normal';
+      
+      if (value < start) return 'low';
+      if (value > end) return 'high';
       return 'normal';
+      
+    } catch (error) {
+      this.logMessage(`Error determining status: ${error instanceof Error ? error.message : String(error)}`);
+      return undefined;
     }
+  }
 
-    return undefined;
+  /**
+   * Parse data when it's in CSV format
+   */
+  private parseCsvData(data: any[]): ParserResult {
+    this.logMessage(`Parsing CSV data with ${data.length} rows`);
+    
+    try {
+      const biomarkers: ExtractedBiomarker[] = [];
+      
+      // Look for key columns in headers
+      const headers = Object.keys(data[0]);
+      this.logMessage(`CSV headers: ${headers.join(', ')}`);
+      
+      // Try to identify column names based on common patterns
+      const testNameKey = headers.find(h => /test|parameter|investigation|name|biomarker/i.test(h));
+      const valueKey = headers.find(h => /result|value|reading/i.test(h));
+      const unitKey = headers.find(h => /unit|measure/i.test(h));
+      const rangeKey = headers.find(h => /range|reference|normal/i.test(h));
+      
+      if (!testNameKey || !valueKey) {
+        this.logMessage('CSV missing required columns (test name and value)');
+        return { success: false, error: 'CSV data missing required columns' };
+      }
+      
+      // Process each row
+      for (const row of data) {
+        const name = row[testNameKey]?.toString().trim();
+        const rawValue = row[valueKey];
+        
+        if (!name || !rawValue) continue;
+        
+        // Parse value, handling different formats
+        const value = this.parseNumber(rawValue.toString());
+        if (isNaN(value)) continue;
+        
+        // Get unit if available
+        const unit = unitKey && row[unitKey] ? row[unitKey].toString().trim() : '';
+        
+        // Get reference range if available
+        const referenceRange = rangeKey && row[rangeKey] ? row[rangeKey].toString().trim() : '';
+        
+        // Create biomarker with required fields
+        const biomarker: ExtractedBiomarker = {
+          name,
+          standardName: name, // Will be standardized during validation
+          value,
+          unit,
+          referenceRange,
+          confidence: 0.9, // High confidence for structured data
+          category: 'general', // Will be categorized during validation
+          rawText: `${name}: ${value}${unit ? ' ' + unit : ''}${referenceRange ? ' (' + referenceRange + ')' : ''}`,
+        };
+        
+        biomarkers.push(biomarker);
+      }
+      
+      if (biomarkers.length === 0) {
+        this.logMessage('No valid biomarkers found in CSV data');
+        return { success: false, error: 'No valid biomarkers found in CSV data' };
+      }
+      
+      // Validate biomarkers
+      const validatedBiomarkers = BiomarkerValidator.validateAndFilter(biomarkers);
+      const validationReport = BiomarkerValidator.generateValidationReport(validatedBiomarkers, []);
+      
+      return this.success({
+        type: 'BLOOD_TEST',
+        biomarkers: validatedBiomarkers,
+        remarks: [],
+        metadata: {
+          parser: 'BloodTestParser-CSV',
+          biomarkerCount: validatedBiomarkers.length,
+          parsedAt: new Date().toISOString(),
+          confidence: validationReport.averageConfidence,
+          sections: ['CSV_DATA'],
+          validation: validationReport,
+          remarkCount: 0,
+        },
+        patientInfo: this.parsedData.patientInfo,
+        labInfo: this.parsedData.labInfo,
+        criticalFindings: validationReport.criticalFindings,
+      });
+      
+    } catch (error) {
+      this.logMessage(`Error parsing CSV data: ${error instanceof Error ? error.message : String(error)}`);
+      return this.error('Failed to parse CSV data');
+    }
   }
 }
+
+export default BloodTestParser;
