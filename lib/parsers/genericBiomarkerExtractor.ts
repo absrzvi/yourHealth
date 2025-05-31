@@ -60,13 +60,19 @@ export class GenericBiomarkerExtractor {
    * @returns Array of extracted biomarkers
    */
   static extractBiomarkers(text: string): ExtractedBiomarker[] {
-    // Debug logging disabled
+    // TEMPORARY DEBUG LOGGING
+    console.log('[DEBUG] GenericBiomarkerExtractor.extractBiomarkers - Input text first 100 chars:', text.substring(0, 100));
+    console.log('[DEBUG] GenericBiomarkerExtractor.extractBiomarkers - Text length:', text.length);
     
     const biomarkers: ExtractedBiomarker[] = [];
     
     // Run multiple extraction passes with decreasing strictness
     const knowledgeBasedBiomarkers = this.knowledgeBasedExtraction(text);
     const patternBasedBiomarkers = this.patternBasedExtraction(text);
+    
+    // TEMPORARY DEBUG LOGGING
+    console.log('[DEBUG] knowledgeBasedBiomarkers:', knowledgeBasedBiomarkers.length);
+    console.log('[DEBUG] patternBasedBiomarkers:', patternBasedBiomarkers.length);
     
     // Combine and deduplicate
     const allBiomarkers = [...knowledgeBasedBiomarkers, ...patternBasedBiomarkers];
@@ -137,19 +143,82 @@ export class GenericBiomarkerExtractor {
    * Extract biomarkers using pattern matching for common lab report layouts
    */
   private static patternBasedExtraction(text: string): ExtractedBiomarker[] {
-    // Debug logging disabled
+    console.log('[GenericBiomarkerExtractor] patternBasedExtraction called with text length:', text.length);
     const biomarkers: ExtractedBiomarker[] = [];
     
     // Split text into lines for processing
     const lines = text.split('\n');
+    console.log('[GenericBiomarkerExtractor] Processing', lines.length, 'lines');
     
     // Generate random ID for the biomarker
     const generateId = () => `bio-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     
+    // Look for specific biomarkers in the text
+    const knownBiomarkers = [
+      'Sodium', 'Potassium', 'Chloride', 'Calcium', 'Magnesium', 'Phosphate', 'Phosphorus',
+      'Creatinine', 'BUN', 'Urea', 'Glucose', 'HbA1c', 'eGFR', 'GFR', 
+      'TSH', 'T3', 'T4', 'Free T3', 'Free T4',
+      'Cholesterol', 'HDL', 'LDL', 'Triglycerides', 'VLDL',
+      'ALT', 'AST', 'ALP', 'GGT', 'Bilirubin', 'Total Protein', 'Albumin', 'Globulin',
+      'Hemoglobin', 'Hematocrit', 'RBC', 'WBC', 'Platelets', 'MCV', 'MCH', 'MCHC',
+      'Vitamin D', 'Vitamin B12', 'Folate', 'Ferritin', 'Iron'
+    ];
+    
+    // Log presence of some common biomarkers for debugging
+    for (const marker of ['Sodium', 'Creatinine', 'Glucose', 'Potassium', 'Hemoglobin']) {
+      const markerIndex = lines.findIndex(l => new RegExp(`\\b${marker}\\b`, 'i').test(l));
+      if (markerIndex >= 0) {
+        console.log(`[GenericBiomarkerExtractor] Found ${marker} line:`, lines[markerIndex]);
+      }
+    }
+  
+    // First, try a more direct approach for the known biomarkers
+    for (const biomarkerName of knownBiomarkers) {
+      // Look for lines that contain this biomarker name
+      for (const line of lines) {
+        if (new RegExp(`\\b${biomarkerName}\\b`, 'i').test(line)) {
+          // Check if the line contains a number (potential value)
+          const valueMatch = line.match(/\b(\d+\.?\d*)\b/g);
+          if (valueMatch && valueMatch.length > 0) {
+            // Try to find a unit in the line
+            const unitMatch = line.match(/\b(mg\/d[Ll]|g\/d[Ll]|mmol\/[Ll]|U\/[Ll]|IU\/[Ll]|meq\/[Ll]|µ?g\/[Ll]|%|µIU\/m[Ll]|ng\/m[Ll]|pg\/m[Ll]|f[Ll]|x10\^\d+\/[µu][Ll])\b/i);
+            const value = parseFloat(valueMatch[0]);
+            const unit = unitMatch ? unitMatch[0] : '';
+            
+            if (!isNaN(value)) {
+              // Try to find a reference range in the line
+              const rangeMatch = line.match(/\b(\d+\.?\d*\s*[-–—]\s*\d+\.?\d*)\b/);
+              const refRange = rangeMatch ? rangeMatch[0] : '';
+              
+              biomarkers.push({
+                name: biomarkerName,
+                standardName: biomarkerName,
+                value: value,
+                unit: unit,
+                referenceRange: refRange,
+                confidence: 0.9, // High confidence for known biomarkers
+                category: this.determineCategoryFromName(biomarkerName),
+                rawLineText: line
+              });
+              
+              console.log(`[GenericBiomarkerExtractor] Found ${biomarkerName}: ${value} ${unit}`);
+            }
+          }
+        }
+      }
+    }
+    
+    // Now process line by line with pattern matching
     for (const line of lines) {
+      // Log potential biomarker lines for debugging
+      if (line.includes('mg/') || line.includes('meq') || line.includes('g/dl') || 
+          line.includes('mmol') || line.includes('U/L') || line.includes('%')) {
+        console.log('[GenericBiomarkerExtractor] Potential biomarker line:', line);
+      }
+      
       // Skip lines that are clearly headers, footers, or formatting
       if (line.length < 4 || 
-          line.match(/page|date|laboratory|report|address|sample|collected|name|sex|age|mr|phone/i)) {
+          line.match(/page|date|laboratory|report|address|contact|printed|methodology|methadology/i)) {
         continue;
       }
       
@@ -157,59 +226,181 @@ export class GenericBiomarkerExtractor {
       
       // Pattern 1: Name followed by number and unit, then reference range
       // Example: "Glucose 95 mg/dL 70-99"
-      const pattern1 = line.match(/([A-Za-z][A-Za-z\s]+)\s+(\d+\.?\d*)\s+([A-Za-z/%]+)(?:\s+([0-9<>.-]+|[0-9.]+-[0-9.]+))?/);
+      const pattern1 = line.match(/([A-Za-z][A-Za-z\s\-.,()]+)\s+(\d+\.?\d*)\s+([A-Za-z/%µ]+\/?[A-Za-z0-9]*|me\/[^\s]+|mea\/[^\s]+|u\/ml|iu\/ml|x10\^\d+\/[µu]l)(?:\s+([0-9<>.,\-–—]+|[0-9.,]+\s*[\-–—]\s*[0-9.,]+))?/i);
       if (pattern1) {
-        const [_, name, valueStr, unit, refRange] = pattern1;
+        const [_, name, valueStr, unitRaw, refRange] = pattern1;
         const value = parseFloat(valueStr);
         
+        // Normalize unit with common OCR errors
+        let unit = unitRaw.trim();
+        // Fix common OCR errors in units
+        if (unit.match(/me\/[eél]/i) || unit.match(/mea\//i)) {
+          unit = 'mg/dL'; // Common substitution error
+        } else if (unit.match(/mea?q\/?[!1iIl]/i)) {
+          unit = 'meq/L'; // Common substitution error
+        } else if (unit.match(/[uµ]\/ml/i)) {
+          unit = 'U/mL'; // Fix for microunits
+        } else if (unit.match(/i[uµ]\/ml/i)) {
+          unit = 'IU/mL'; // Fix for international units
+        }
+        
         if (!isNaN(value) && name.trim()) {
+          const normalizedName = name.trim().replace(/\s+/g, ' ');
           const biomarker: ExtractedBiomarker = {
-            name: name.trim(),
-            standardName: name.trim(),
+            name: normalizedName,
+            standardName: normalizedName,
             value,
-            unit: unit.trim(),
+            unit: unit,
             referenceRange: refRange ? refRange.trim() : '',
             confidence: 0.8,
-            category: this.determineCategoryFromName(name.trim()),
+            category: this.determineCategoryFromName(normalizedName),
             rawLineText: line
           };
           
           biomarkers.push(biomarker);
-          // Debug logging disabled
+          console.log(`[GenericBiomarkerExtractor] Pattern 1 match: ${normalizedName}: ${value} ${unit}`);
           continue;
         }
       }
       
       // Pattern 2: Name and value with delimiter (colon, equals)
-      // Example: "Creatinine: 0.9 mg/dL"
-      const pattern2 = line.match(/([A-Za-z][A-Za-z\s]+)[:\s=]+(\d+\.?\d*)\s*([A-Za-z/%]+)/i);
+      // Example: "Creatinine: 0.9 mg/dL" or "Creatinine = 0.9 mg/dL"
+      const pattern2 = line.match(/([A-Za-z][A-Za-z\s\-.,()]+)\s*[:=]\s*(\d+\.?\d*)\s*([A-Za-z/%µ]+\/?[A-Za-z0-9]*|me\/[^\s]+|mea\/[^\s]+|u\/ml|iu\/ml|x10\^\d+\/[µu]l)(?:\s+([0-9<>.,\-–—]+|[0-9.,]+\s*[\-–—]\s*[0-9.,]+))?/i);
       if (pattern2) {
-        const [_, name, valueStr, unit] = pattern2;
+        const [_, name, valueStr, unitRaw, refRange] = pattern2;
         const value = parseFloat(valueStr);
         
+        // Normalize unit with common OCR errors
+        let unit = unitRaw.trim();
+        // Fix common OCR errors in units
+        if (unit.match(/me\/[eél]/i) || unit.match(/mea\//i)) {
+          unit = 'mg/dL'; // Common substitution error
+        } else if (unit.match(/mea?q\/?[!1iIl]/i)) {
+          unit = 'meq/L'; // Common substitution error
+        } else if (unit.match(/[uµ]\/ml/i)) {
+          unit = 'U/mL'; // Fix for microunits
+        } else if (unit.match(/i[uµ]\/ml/i)) {
+          unit = 'IU/mL'; // Fix for international units
+        }
+        
         if (!isNaN(value) && name.trim()) {
+          const normalizedName = name.trim().replace(/\s+/g, ' ');
           const biomarker: ExtractedBiomarker = {
-            name: name.trim(),
-            standardName: name.trim(),
+            name: normalizedName,
+            standardName: normalizedName,
             value,
-            unit: unit.trim(),
-            referenceRange: '',  // No reference range in this pattern
-            confidence: 0.7,
-            category: this.determineCategoryFromName(name.trim()),
+            unit: unit,
+            referenceRange: refRange ? refRange.trim() : '',  // Now we capture reference range if present
+            confidence: 0.75,
+            category: this.determineCategoryFromName(normalizedName),
             rawLineText: line
           };
           
           biomarkers.push(biomarker);
-          // Debug logging disabled
+          console.log(`[GenericBiomarkerExtractor] Pattern 2 match: ${normalizedName}: ${value} ${unit}`);
           continue;
         }
       }
       
-      // Pattern 3: Isolated number followed by unit in a line with biomarker name
-      // Example: "Creatinine (Serum) 0.9 mg/dL"
-      const pattern3 = line.match(/([A-Za-z][A-Za-z\s()]+)\s+(\d+\.?\d*)\s+([A-Za-z/%]+)/i);
+      // Pattern 3: Tabular format with name at start, value in middle, and reference range
+      // Example: "Sodium s41mea/! 136-145 mea/!" or "Potassium 4.2 meq/L 3.5-5.0"
+      const pattern3 = line.match(/^\s*([A-Za-z][A-Za-z\s\-.,()]+)\s+([s!1]?\d+\.?\d*)\s*([A-Za-z/%µ]+\/?[A-Za-z!1]*|me\/[^\s]+|mea\/[^\s]+|u\/ml|iu\/ml|x10\^\d+\/[µu]l)\s+([0-9<>.,\-–—]+|[0-9.,]+\s*[\-–—]\s*[0-9.,]+)/i);
       if (pattern3) {
-        const [_, name, valueStr, unit] = pattern3;
+        const [_, name, valueStrRaw, unitRaw, refRange] = pattern3;
+        // Fix common OCR errors in values
+        let valueStr = valueStrRaw;
+        if (valueStr.startsWith('s') || valueStr.startsWith('!')) {
+          valueStr = '1' + valueStr.substring(1); // Fix common OCR error for '1'
+        }
+        const value = parseFloat(valueStr);
+        
+        // Normalize unit with common OCR errors
+        let unit = unitRaw.trim();
+        // Fix common OCR errors in units
+        if (unit.match(/me\/[eél]/i) || unit.match(/mea\//i)) {
+          unit = 'mg/dL'; // Common substitution error
+        } else if (unit.match(/mea?q\/?[!1iIl]/i)) {
+          unit = 'meq/L'; // Common substitution error
+        } else if (unit.match(/[uµ]\/ml/i)) {
+          unit = 'U/mL'; // Fix for microunits
+        } else if (unit.match(/i[uµ]\/ml/i)) {
+          unit = 'IU/mL'; // Fix for international units
+        }
+        
+        if (!isNaN(value) && name.trim()) {
+          const normalizedName = name.trim().replace(/\s+/g, ' ');
+          const biomarker: ExtractedBiomarker = {
+            name: normalizedName,
+            standardName: normalizedName,
+            value,
+            unit: unit,
+            referenceRange: refRange ? refRange.trim() : '',
+            confidence: 0.8, // Increased confidence as tabular formats are usually reliable
+            category: this.determineCategoryFromName(normalizedName),
+            rawLineText: line
+          };
+          
+          biomarkers.push(biomarker);
+          console.log(`[GenericBiomarkerExtractor] Pattern 3 match: ${normalizedName}: ${value} ${unit}, range: ${refRange}`);
+          continue;
+        }
+      }
+      
+      // Pattern 4: Isolated biomarker with value and unit
+      // Example: "Creatinine (Serum) 0.9 mg/dL" or "Creatinine  0.9"
+      const pattern4 = line.match(/([A-Za-z][A-Za-z\s\-.,()]+)\s+(\d+\.?\d*)\s*([A-Za-z/%µ]+\/?[A-Za-z0-9]*|me\/[^\s]+|mea\/[^\s]+|u\/ml|iu\/ml|x10\^\d+\/[µu]l)?/i);
+      if (pattern4 && !pattern1 && !pattern2 && !pattern3) { // Only if other patterns didn't match
+        const [_, name, valueStr, unitRaw] = pattern4;
+        const value = parseFloat(valueStr);
+        
+        // Only continue if the name matches a known biomarker to avoid false positives
+        const normalizedName = name.trim().replace(/\s+/g, ' ');
+        
+        // Check if this is likely a real biomarker - match against parts of known biomarker names
+        if (!this.isLikelyBiomarker(normalizedName)) {
+          continue;
+        }
+        
+        // Normalize unit with common OCR errors
+        let unit = unitRaw ? unitRaw.trim() : '';
+        // Fix common OCR errors in units
+        if (unit.match(/me\/[eél]/i) || unit.match(/mea\//i)) {
+          unit = 'mg/dL'; // Common substitution error
+        } else if (unit.match(/mea?q\/?[!1iIl]/i)) {
+          unit = 'meq/L'; // Common substitution error
+        } else if (unit.match(/[uµ]\/ml/i)) {
+          unit = 'U/mL'; // Fix for microunits
+        } else if (unit.match(/i[uµ]\/ml/i)) {
+          unit = 'IU/mL'; // Fix for international units
+        }
+        
+        // Try to infer unit if missing, based on the biomarker name
+        if (!unit) {
+          unit = this.inferUnitFromName(normalizedName);
+        }
+        
+        if (!isNaN(value)) {
+          const biomarker: ExtractedBiomarker = {
+            name: normalizedName,
+            standardName: normalizedName,
+            value,
+            unit: unit,
+            referenceRange: '',
+            confidence: 0.65,
+            category: this.determineCategoryFromName(normalizedName),
+            rawLineText: line
+          };
+          
+          biomarkers.push(biomarker);
+          console.log(`[GenericBiomarkerExtractor] Pattern 4 match: ${normalizedName}: ${value} ${unit}`);
+        }
+      }
+      
+      // Pattern 5: Handle hormone tests with U/mL or IU/mL units
+      // Example: "TSH 4.23 U/mL" or "TSH 4.23 uU/mL"
+      const pattern5 = line.match(/([A-Za-z][A-Za-z\s()]+)\s+(\d+\.?\d*)\s+([uU]+\/m[lL]|[iI][uU]\/m[lL])/i);
+      if (pattern5) {
+        const [_, name, valueStr, unit] = pattern5;
         const value = parseFloat(valueStr);
         
         if (!isNaN(value) && name.trim()) {
@@ -219,7 +410,7 @@ export class GenericBiomarkerExtractor {
             value,
             unit: unit.trim(),
             referenceRange: '',
-            confidence: 0.65,
+            confidence: 0.75,
             category: this.determineCategoryFromName(name.trim()),
             rawLineText: line
           };
@@ -279,6 +470,72 @@ export class GenericBiomarkerExtractor {
     
     // Default category
     return 'general';
+  }
+  
+  /**
+   * Check if a name is likely to be a biomarker by comparing with common biomarker names
+   */
+  private static isLikelyBiomarker(name: string): boolean {
+    const normalizedName = name.toLowerCase();
+    
+    // Check against common biomarker patterns to avoid false positives
+    return (
+      /creatinine|urea|bun|egfr|gfr|glucose|hba1c|insulin|glyco|sodium|potassium|chloride|calcium|magnesium|phosph|cholesterol|triglyceride|hdl|ldl|vldl|tsh|t3|t4|thyroid|hemoglobin|hematocrit|wbc|rbc|platelets|mch|mchc|mcv|vitamin|vit |folate|b12|b6|b1|d3|a |e |k |c |alt|ast|alp|ggt|bilirubin|protein|albumin|globulin|testosterone|estrogen|estradiol|progesterone|lh|fsh/.test(normalizedName)
+    );
+  }
+  
+  /**
+   * Infer a unit for a biomarker based on its name
+   */
+  private static inferUnitFromName(name: string): string {
+    const normalizedName = name.toLowerCase();
+    
+    // Electrolytes typically use meq/L
+    if (/sodium|potassium|chloride|bicarbonate|co2/.test(normalizedName)) {
+      return 'meq/L';
+    }
+    
+    // Blood glucose and related typically use mg/dL in US
+    if (/glucose|sugar|creatinine|urea|bun/.test(normalizedName)) {
+      return 'mg/dL';
+    }
+    
+    // Cholesterol and lipids typically use mg/dL in US
+    if (/cholesterol|lipid|triglyceride|hdl|ldl|vldl/.test(normalizedName)) {
+      return 'mg/dL';
+    }
+    
+    // Thyroid hormones
+    if (/tsh/.test(normalizedName)) {
+      return 'µIU/mL';
+    }
+    
+    if (/t3|t4/.test(normalizedName)) {
+      return 'ng/dL';
+    }
+    
+    // Hemoglobin
+    if (/hemoglobin|hgb/.test(normalizedName)) {
+      return 'g/dL';
+    }
+    
+    // White blood cell counts
+    if (/wbc|white/.test(normalizedName)) {
+      return '10^3/µL';
+    }
+    
+    // Red blood cell counts
+    if (/rbc|red/.test(normalizedName)) {
+      return '10^6/µL';
+    }
+    
+    // Percentages
+    if (/hematocrit|lymphocyte|neutrophil|monocyte|eosinophil|basophil|percentage/.test(normalizedName)) {
+      return '%';
+    }
+    
+    // Default
+    return 'mg/dL';
   }
   
   /**

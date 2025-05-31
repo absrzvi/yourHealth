@@ -18,6 +18,16 @@
   - [x] Disable performance logging output while preserving tracking functionality.
   - [x] Document changes in blood-ocr-parsing.md file.
 
+- [x] Advanced Blood Test OCR Parsing Enhancements
+  - [x] Fix biomarker name normalization in BloodTestParser.normalizeBiomarkerObjects method
+  - [x] Enhance BloodTestParser.extractBiomarkers to always run both traditional and generic extractors
+  - [x] Improve GenericBiomarkerExtractor with more flexible pattern matching for diverse lab formats
+  - [x] Add direct biomarker name recognition for common biomarkers (Creatinine, Sodium, etc.)
+  - [x] Enhance OCR error correction for unit normalization (mg/dL, meq/L, U/mL, etc.)
+  - [x] Add intelligence for missing information (unit inference, biomarker validation)
+  - [x] Improve logging for easier debugging
+  - [ ] Investigate and fix incorrect biomarker values
+
 ## Phase 2: (To be defined - placeholder based on mvp-code-implementation.md)
 - [ ] Database Schema Update (Checkpoint 1.1 from mvp-code-implementation.md)
 - [ ] Authentication Update (Checkpoint 1.2 from mvp-code-implementation.md)

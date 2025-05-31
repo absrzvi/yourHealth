@@ -502,3 +502,59 @@ Console logs were disabled using one of these approaches:
 - **More Reliable Tests:** Clean output makes it easier to identify actual test failures
 
 Implementing these recommendations would further enhance the robustness and reliability of the blood test OCR parsing system, particularly when handling large or complex inputs in production environments.
+
+## 13. Advanced Biomarker Extraction Improvements
+
+We have made significant enhancements to the biomarker extraction process to improve recognition of biomarkers across diverse lab report formats.
+
+### 13.1. BloodTestParser Improvements
+
+#### 1. Fixed Biomarker Name Normalization
+
+- **Issue:** The `BloodTestParser.normalizeBiomarkerObjects` method was calling a non-existent `OcrNormalizer.normalizeBiomarkerName` function causing runtime errors.
+- **Solution:** Imported and used the correct `normalizeBiomarkerName` function from `biomarkerDictionary.ts`.
+- **Implementation:** Added error handling and fallback logic to ensure robust normalization without crashes.
+
+#### 2. Enhanced Extraction Strategy
+
+- **Issue:** The `BloodTestParser.extractBiomarkers` method was conditionally skipping the generic biomarker extractor if high-confidence biomarkers were found by the traditional extractor, limiting biomarker coverage.
+- **Solution:** Modified the method to always run both traditional and generic biomarker extractors regardless of confidence levels.
+- **Benefits:** This ensures maximum biomarker coverage by combining results from both extractors.
+
+### 13.2. GenericBiomarkerExtractor Improvements
+
+#### 1. Direct Biomarker Name Recognition
+
+- **Implementation:** Added proactive searching for a comprehensive list of known biomarkers (Creatinine, Sodium, Potassium, TSH, etc.) rather than relying solely on pattern matching.
+- **Method:** Implemented a direct first-pass extraction that looks for known biomarker names in each line and extracts associated values and units.
+
+#### 2. Improved Pattern Matching Flexibility
+
+- **Enhanced regex patterns:** Updated all pattern matching to handle more diverse lab report formats.
+- **Added support for:** Different dash types (-, –, —), spacing variations, and separator styles.
+- **Better handling:** Improved extraction of biomarker names with punctuation and special characters.
+
+#### 3. Enhanced OCR Error Correction
+
+- **Unit normalization:** Added comprehensive handling for different unit formats (mg/dL, meq/L, U/mL, etc.).
+- **OCR substitution handling:** Added specific handling for common OCR substitution errors in values and units.
+- **International units:** Added better support for international and micro units (μIU/mL, μg/dL).
+
+#### 4. Intelligence for Missing Information
+
+- **Unit inference:** Added the ability to infer appropriate units based on biomarker names when units are missing.
+- **Biomarker validation:** Implemented validation against known biomarker patterns to filter out false positives.
+- **Reference range handling:** Improved reference range detection with support for various formats.
+
+#### 5. Better Debugging Support
+
+- **Enhanced logging:** Added more detailed logging of matched biomarkers and their properties.
+- **Descriptive log prefixes:** Added clear prefixes for easier tracing through the extraction process.
+
+### 13.3. Future Work
+
+- **Value accuracy:** Further investigation is needed to verify the accuracy of extracted biomarker values.
+- **Edge case handling:** Additional pattern variations may be needed for less common lab report formats.
+- **Unit testing:** Comprehensive unit tests should be developed to verify these improvements across diverse real-world examples.
+
+These improvements maintain the generic approach while adding targeted handling for common biomarkers, striking a good balance between flexibility and accuracy in the biomarker extraction process.
