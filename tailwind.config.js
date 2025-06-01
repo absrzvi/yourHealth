@@ -32,8 +32,16 @@ module.exports = {
         'gradient-accent': 'linear-gradient(135deg, #FF7A59 0%, #EF6A49 100%)',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        montserrat: ['Montserrat', 'sans-serif'],
+        sans: ['var(--font-montserrat)', 'sans-serif'],
+      },
+      fontWeight: {
+        light: '300',
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
+        extrabold: '800',
+        black: '900',
       },
       boxShadow: {
         'xl': '0 20px 40px rgba(0, 0, 0, 0.1)',
