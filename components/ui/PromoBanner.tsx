@@ -1,67 +1,130 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Gift, ArrowRight } from 'lucide-react';
 import { Button } from './button';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function PromoBanner() {
   const [isVisible, setIsVisible] = useState(true);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
+  // Check local storage for previously dismissed state
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('promoBannerDismissed');
+      if (dismissed) {
+        const dismissedTime = new Date(dismissed).getTime();
+        const currentTime = new Date().getTime();
+        // Show again after 24 hours if previously dismissed
+        if (currentTime - dismissedTime < 24 * 60 * 60 * 1000) {
+          setIsVisible(false);
+        }
+      }
+    }
   }, []);
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    // Store dismissal in local storage with timestamp
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('promoBannerDismissed', new Date().toISOString());
+    }
+  };
+
+  // Animation variants
+  const bannerVariants = {
+    hidden: { opacity: 0, y: 100, scale: 0.95 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: {
+        type: 'spring',
+        damping: 25,
+        stiffness: 300
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      y: 100,
+      scale: 0.95,
+      transition: {
+        duration: 0.3
+      }
+    }
+  };
 
   if (!isVisible) return null;
 
   return (
-    <div 
-      className={`fixed right-6 bottom-6 z-50 transition-all duration-300 transform ${
-        isScrolled ? 'translate-y-0' : 'translate-y-2'
-      }`}
-    >
-      <div className="relative bg-gradient-to-r from-blue-500 to-cyan-400 text-white rounded-xl shadow-2xl overflow-hidden w-80">
-        {/* Close button */}
-        <button
-          onClick={() => setIsVisible(false)}
-          className="absolute right-2 top-2 p-1 rounded-full hover:bg-white/20 transition-colors"
-          aria-label="Close banner"
-        >
-          <X className="h-4 w-4" />
-        </button>
+    <AnimatePresence>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        variants={bannerVariants}
+        className="fixed right-6 bottom-6 z-50"
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+      >
+        <div className="relative bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-2xl shadow-2xl overflow-hidden w-80 sm:w-96 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20">
+          {/* Decorative elements */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/10 rounded-full mix-blend-overlay"></div>
+          <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-white/5 rounded-full mix-blend-overlay"></div>
+          
+          {/* Close button */}
+          <button
+            onClick={handleDismiss}
+            className="absolute right-3 top-3 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200 z-10"
+            aria-label="Close banner"
+          >
+            <X className="h-4 w-4" />
+          </button>
 
-        {/* Banner content */}
-        <div className="p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              <div className="bg-yellow-300 text-blue-600 rounded-full p-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+          {/* Banner content */}
+          <div className="relative z-10 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <motion.div 
+                  className="bg-yellow-300 text-blue-600 rounded-2xl p-3"
+                  animate={isHovered ? { rotate: [0, -10, 10, -5, 0] } : {}}
+                  transition={{ duration: 0.6 }}
+                >
+                  <Gift className="h-6 w-6" />
+                </motion.div>
               </div>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-1">Special Offer! 🎉</h3>
-              <p className="text-sm mb-3">Get 20% off your first DNA test kit. Limited time only!</p>
-              <Button 
-                className="w-full bg-white text-blue-600 hover:bg-blue-50 font-medium"
-                onClick={() => window.location.href = '/products'}
-              >
-                Claim Your Discount
-              </Button>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-montserrat font-bold text-xl">Special Offer!</h3>
+                  <motion.span
+                    animate={isHovered ? { scale: [1, 1.2, 1] } : {}}
+                    transition={{ duration: 0.5 }}
+                  >
+                    🎉
+                  </motion.span>
+                </div>
+                <p className="text-sm text-white/90 mb-4 leading-relaxed">
+                  <span className="font-semibold">Get 20% OFF</span> your first DNA test kit.
+                </p>
+                <p className="text-xs font-medium text-yellow-200 mb-4 flex items-center">
+                  <span className="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></span>
+                  Limited time only!
+                </p>
+                <Button 
+                  variant="secondary"
+                  className="w-full bg-white text-blue-600 hover:bg-blue-50 font-semibold transition-all duration-300 group"
+                  size="sm"
+                  onClick={() => window.location.href = '/products'}
+                >
+                  Claim Your Discount
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-yellow-300 rounded-full opacity-20"></div>
-        <div className="absolute -top-4 -left-4 w-16 h-16 bg-pink-300 rounded-full opacity-20"></div>
-      </div>
-    </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
