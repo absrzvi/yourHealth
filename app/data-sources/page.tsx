@@ -34,7 +34,9 @@ export default function DataSourcesPage() {
     formData.append("file", file);
     formData.append("userId", session.user.id);
     formData.append("type", reportType);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    // Use the new working endpoint instead of the problematic one
+    // Use the new working endpoint that has been confirmed to work properly
+    const res = await fetch("/api/upload-v2", { method: "POST", body: formData });
     const data = await res.json();
     if (data.success) setMessage("Upload successful!");
     else setMessage(`Upload failed: ${data.error}`);
@@ -61,17 +63,37 @@ export default function DataSourcesPage() {
             required
           >
             <option value="" disabled>Select report type</option>
-            <option value="blood">Blood test report</option>
-            <option value="dna">DNA Report</option>
-            <option value="microbiome">Microbiome Report</option>
+            <option value="BLOOD_TEST">Blood test report</option>
+            <option value="DNA">DNA Report</option>
+            <option value="MICROBIOME">Microbiome Report</option>
           </select>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.csv,.txt,.json,.xml,.xlsx,.xls"
+            accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.csv,.txt,.json,.xml,.xlsx,.xls"
             className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
             required
           />
+          <div className="space-y-1 mt-2">
+            <p className="text-sm font-medium">Supported File Types:</p>
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+              <div>
+                <p className="font-semibold">OCR Processing:</p>
+                <ul className="list-disc pl-4">
+                  <li>Images (JPG, PNG, HEIC)</li>
+                  <li>Scanned PDFs</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold">Direct Parsing:</p>
+                <ul className="list-disc pl-4">
+                  <li>CSV, Excel files</li>
+                  <li>Text files</li>
+                  <li>Digital PDFs</li>
+                </ul>
+              </div>
+            </div>
+          </div>
           <button
             type="submit"
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"

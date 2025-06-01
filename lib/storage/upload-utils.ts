@@ -7,7 +7,16 @@ export class UploadError extends Error {
   }
 }
 
-export function validateFile(file: Express.Multer.File): void {
+// Define a simplified file type for server-side validation that matches Multer's file structure
+interface ServerFile {
+  size: number;
+  mimetype: string;
+  originalname: string;
+  path?: string;
+  buffer?: Buffer;
+}
+
+export function validateFile(file: ServerFile): void {
   // Check file size
   if (file.size > storageConfig.maxFileSize) {
     throw new UploadError(413, `File too large. Max size: ${storageConfig.maxFileSize / (1024 * 1024)}MB`);
@@ -28,6 +37,12 @@ export async function validateImageDimensions(file: File): Promise<{
   const warnings: string[] = [];
   const errors: string[] = [];
   
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof Image === 'undefined') {
+    console.warn('Image validation skipped: not in browser environment');
+    return { isValid: true, warnings: [], errors: [] };
+  }
+  
   // Skip validation for PDFs
   if (file.type === 'application/pdf') {
     return { isValid: true, warnings: [], errors: [] };
@@ -39,39 +54,47 @@ export async function validateImageDimensions(file: File): Promise<{
   }
   
   return new Promise((resolve) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
+    try {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
       
-      if (img.width < storageConfig.minImageWidth || img.height < storageConfig.minImageHeight) {
-        warnings.push(`Image resolution (${img.width}x${img.height}) is below recommended minimum (${storageConfig.minImageWidth}x${storageConfig.minImageHeight}). This may affect OCR accuracy.`);
-      }
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        
+        if (img.width < storageConfig.minImageWidth || img.height < storageConfig.minImageHeight) {
+          warnings.push(`Image resolution (${img.width}x${img.height}) is below recommended minimum (${storageConfig.minImageWidth}x${storageConfig.minImageHeight}). This may affect OCR accuracy.`);
+        }
+        
+        // Check if image is too small for reliable OCR
+        if (img.width < 400 || img.height < 400) {
+          errors.push('Image resolution is too low for accurate processing');
+          resolve({ isValid: false, warnings, errors });
+        } else {
+          resolve({ isValid: true, warnings, errors });
+        }
+      };
       
-      // Check if image is too small for reliable OCR
-      if (img.width < 400 || img.height < 400) {
-        errors.push('Image resolution is too low for accurate processing');
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        errors.push('Failed to load image for validation');
         resolve({ isValid: false, warnings, errors });
-      } else {
-        resolve({ isValid: true, warnings, errors });
-      }
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      errors.push('Failed to load image for validation');
-      resolve({ isValid: false, warnings, errors });
-    };
-    
-    img.src = objectUrl;
+      };
+      
+      img.src = objectUrl;
+    } catch (error) {
+      console.warn('Image validation error:', error);
+      resolve({ isValid: true, warnings, errors: [] }); // Proceed anyway in case of errors
+    }
   });
 }
 
 // Client-side image compression
 export async function compressImage(file: File, maxSizeMB = 1): Promise<File> {
-  // Import dynamically to avoid server-side issues
-  const imageCompression = (await import('browser-image-compression')).default;
+  // Make sure we're in a browser environment
+  if (typeof window === 'undefined' || typeof FileReader === 'undefined') {
+    console.warn('Image compression skipped: not in browser environment');
+    return file;
+  }
   
   // Skip compression for non-images
   if (!file.type.startsWith('image/')) {
@@ -79,6 +102,9 @@ export async function compressImage(file: File, maxSizeMB = 1): Promise<File> {
   }
   
   try {
+    // Import dynamically to avoid server-side issues
+    const imageCompression = (await import('browser-image-compression')).default;
+    
     const options = {
       maxSizeMB,
       maxWidthOrHeight: 2000,

@@ -1,0 +1,17 @@
+# DNA Report for John Doe
+# Analysis Date: 2025-05-30
+# Format: 23andMe
+
+RSID        CHROMOSOME  POSITION    GENOTYPE
+rs7412      19          44908822    C/T
+rs429358    19          44908684    T/T
+rs1801133   1           11778965    C/T
+rs1801131   1           11777063    A/A
+rs9939609   16          53786615    T/T
+rs7903146   10          112998590   C/T
+rs1799971   6           154039662   A/A
+rs4680      22          19963748    G/A
+rs6265      11          27658369    G/A
+rs53576     3           8762685     G/G
+rs1815739   11          66328095    C/T
+rs1800497   11          113400106   G/A

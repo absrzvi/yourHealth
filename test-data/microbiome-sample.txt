@@ -1,0 +1,23 @@
+MICROBIOME ANALYSIS REPORT
+Patient: John Doe
+Date: 2025-05-30
+
+TAXON                          RELATIVE ABUNDANCE (%)    BENEFICIAL
+-------------------------------------------------------------------
+Lactobacillus acidophilus      12.4                      Yes
+Bifidobacterium longum         9.3                       Yes
+Akkermansia muciniphila        5.2                       Yes
+Bacteroides fragilis           8.7                       Yes
+Escherichia coli               4.1                       No
+Faecalibacterium prausnitzii   11.6                      Yes
+Prevotella copri               7.8                       Yes
+Ruminococcus bromii            6.2                       Yes
+Clostridium difficile          0.2                       No
+Roseburia intestinalis         7.5                       Yes
+Eubacterium rectale            6.8                       Yes
+Methanobrevibacter smithii     4.9                       Neutral
+Enterococcus faecalis          1.3                       No
+Streptococcus thermophilus     2.1                       Yes
+Bacteroides thetaiotaomicron   5.4                       Yes
+Firmicutes (phylum)            45.2                      -
+Bacteroidetes (phylum)         38.6                      -

@@ -4,6 +4,24 @@ import { BaseParser } from './baseParser';
 export class MicrobiomeParser extends BaseParser<MicrobiomeReportData> {
   async parse(): Promise<ParserResult> {
     try {
+      // First try OCR-based extraction with regex - optimized for scanned documents and images
+      const bacteriaFromOcr = this.extractWithRegex();
+      
+      if (bacteriaFromOcr && bacteriaFromOcr.length > 0) {
+        return this.success({
+          type: 'MICROBIOME',
+          bacteria: bacteriaFromOcr,
+          metadata: {
+            parsedAt: new Date().toISOString(),
+            parser: 'MicrobiomeParser',
+            bacteriaCount: bacteriaFromOcr.length,
+            source: this.file.name,
+            format: 'OCR'
+          }
+        });
+      }
+      
+      // Fallback to structured data extraction for CSV, TSV, JSON files
       const bacteria = this.extractBacteria();
       
       if (bacteria.length === 0) {
@@ -17,7 +35,8 @@ export class MicrobiomeParser extends BaseParser<MicrobiomeReportData> {
           parsedAt: new Date().toISOString(),
           parser: 'MicrobiomeParser',
           bacteriaCount: bacteria.length,
-          source: this.file.name
+          source: this.file.name,
+          format: 'STRUCTURED'
         }
       });
     } catch (error) {

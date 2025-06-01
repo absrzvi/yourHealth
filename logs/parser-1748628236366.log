@@ -1,0 +1,46 @@
+2025-05-30T18:03:56.367Z - BloodTestParser initialized with 4224 characters
+2025-05-30T18:03:56.369Z - Content preview: BIOCHEMISTRY InvestigationValuesReference Ranges* Last Available Results 25-Hydroxy Vitamin-D Sample: 20-Apr-2025  25 OH Vitamin D Total21.18 ng/mlVitamin D Defficiency : <20 Vitamin D Insufficiency : 21-29 Vitamin D Sufficiency : 30- 150 Vitamin D Intoxification:>150 RemarksVitamin D helps regula...
+2025-05-30T18:03:56.371Z - Starting blood test report parsing with multi-strategy approach
+2025-05-30T18:03:56.373Z - Strategy 1: Attempting CSV parsing
+2025-05-30T18:03:56.383Z - CSV parsing failed: Invalid Record Length: columns length is 1, got 2 on line 12
+2025-05-30T18:03:56.392Z - Strategy 2: Checking for Investigation-Values column format
+2025-05-30T18:03:56.395Z - Checking for column-based format
+2025-05-30T18:03:56.396Z - Investigation-Values column format detected, analyzing data
+2025-05-30T18:03:56.397Z - Found header at line 3
+2025-05-30T18:03:56.401Z - Found biomarker: 30- = 150 
+2025-05-30T18:03:56.403Z - Found biomarker: MethadologyThe cobas e = 411 analyzer
+2025-05-30T18:03:56.405Z - Found biomarker: Impaired - = 5.7 
+2025-05-30T18:03:56.406Z - Found biomarker: indicator of glycemic control over the previous = 2 
+2025-05-30T18:03:56.408Z - Found biomarker: HbA1c level is an indicator of blood glucose levels over the previous = 2 
+2025-05-30T18:03:56.409Z - Found biomarker: 0 - = 1 mg/dl
+2025-05-30T18:03:56.410Z - Found biomarker: 0 - = 0.25 mg/dl
+2025-05-30T18:03:56.412Z - Found biomarker: Male   40 - = 129 U/l
+2025-05-30T18:03:56.413Z - Found biomarker: Female   35 - = 140 U/l
+2025-05-30T18:03:56.415Z - Found biomarker: ALT/SGPT15 U/lMale = 0 
+2025-05-30T18:03:56.417Z - Found biomarker: Female = 0 
+2025-05-30T18:03:56.419Z - Found biomarker: Aspartate Aminotransferase (AST/SGOT)20 U/lMale  0 - = 35 U/l
+2025-05-30T18:03:56.434Z - Found biomarker: Female  0 - = 31 U/l
+2025-05-30T18:03:56.440Z - Found biomarker: Gamma - Glutamyl Transferase (GGT)12 U/lMale  11 - = 61 U/l
+2025-05-30T18:03:56.445Z - Found biomarker: Female  9 - = 39 U/l
+2025-05-30T18:03:56.454Z - Found biomarker: MethadologyTest performed on Cobas c = 111 automated
+2025-05-30T18:03:56.458Z - Found biomarker: MethadologyTest performed on Cobas c = 111 automated
+2025-05-30T18:03:56.462Z - Found biomarker: Precinct = 19 
+2025-05-30T18:03:56.466Z - Found biomarker: 111 111 = 284 
+2025-05-30T18:03:56.471Z - Found biomarker: 111 111 = 284 
+2025-05-30T18:03:56.476Z - Found biomarker:  = 10 
+2025-05-30T18:03:56.483Z - Found biomarker: 61Y 02Mo = 23 D
+2025-05-30T18:03:56.489Z - Found biomarker:  = 3040120425 
+2025-05-30T18:03:56.492Z - Found biomarker: RemarksTest performed on Cobas c = 111 automated
+2025-05-30T18:03:56.497Z - Found biomarker: 49 uIU/mLBirth - 4 Days = 1 
+2025-05-30T18:03:56.503Z - Found biomarker: 2 weeks - 20 weeks = 1.7 
+2025-05-30T18:03:56.507Z - Found biomarker: 21 weeks - 20 years = 0.7 
+2025-05-30T18:03:56.511Z - Found biomarker: Adult 21 - 54 years = 0.4 
+2025-05-30T18:03:56.516Z - Found biomarker: Adult 55 - 87 years = 0.5 
+2025-05-30T18:03:56.521Z - Found biomarker: MethadologyThe cobas e = 411 analyzer
+2025-05-30T18:03:56.525Z - Found biomarker: Precinct = 19 
+2025-05-30T18:03:56.528Z - Found biomarker: 111 111 = 284 
+2025-05-30T18:03:56.533Z - Found biomarker: 111 111 = 284 
+2025-05-30T18:03:56.538Z - Found biomarker:  = 10 
+2025-05-30T18:03:56.543Z - Found biomarker: 61Y 02Mo = 23 D
+2025-05-30T18:03:56.548Z - Found biomarker:  = 3040120425 
+2025-05-30T18:03:56.553Z - Successfully extracted 36 biomarkers from column format

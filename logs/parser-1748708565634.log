@@ -1,0 +1,34 @@
+2025-05-31T16:22:45.641Z - BloodTestParser initialized with 15 characters
+2025-05-31T16:22:45.643Z - Processing file: undefined, size: undefined bytes
+2025-05-31T16:22:45.645Z - Starting BloodTestParser.parse method for reportType: generic
+2025-05-31T16:22:45.646Z - Starting blood test report parsing
+2025-05-31T16:22:45.647Z - Raw OCR Text (BloodTestParser Start - First 500 chars):
+[object Object]...
+2025-05-31T16:22:45.648Z - Step 1: Normalizing OCR text
+2025-05-31T16:22:45.652Z - Text normalized from 15 to 15 chars
+2025-05-31T16:22:45.654Z - Normalized OCR Text (After OcrNormalizer.normalize - First 500 chars):
+[object Object]...
+2025-05-31T16:22:45.657Z - Step 2: Preprocessing content
+2025-05-31T16:22:45.660Z - Step 3: Parsing document sections
+2025-05-31T16:22:45.662Z - Step 4: Extracting metadata
+2025-05-31T16:22:45.663Z - Extracting metadata from content
+2025-05-31T16:22:45.665Z - Extracted patient info: {}
+2025-05-31T16:22:45.667Z - Extracted lab info: {}
+2025-05-31T16:22:45.669Z - Step 5: Extracting biomarkers
+2025-05-31T16:22:45.672Z - Extracting biomarkers
+2025-05-31T16:22:45.692Z - Traditional extractor found 0 biomarkers
+2025-05-31T16:22:45.694Z - Normalizing biomarker objects
+2025-05-31T16:22:45.696Z - Normalized traditional biomarkers: 0 remaining
+2025-05-31T16:22:45.707Z - Generic extractor found 0 biomarkers
+2025-05-31T16:22:45.709Z - Normalizing biomarker objects
+2025-05-31T16:22:45.711Z - Normalized generic biomarkers: 0 remaining
+2025-05-31T16:22:45.715Z - Validated generic biomarkers: 0 remaining after dictionary validation
+2025-05-31T16:22:45.717Z - Combined and deduped 0 to 0 biomarkers
+2025-05-31T16:22:45.719Z - Extracted 0 potential biomarkers
+2025-05-31T16:22:45.720Z - Step 6: Extracting clinical remarks
+2025-05-31T16:22:45.723Z - Starting remarks extraction (BloodTestParser)
+2025-05-31T16:22:45.752Z - No remarks data found or remarks array was empty/falsy in external result.
+2025-05-31T16:22:45.755Z - Extracted 0 remarks
+2025-05-31T16:22:45.757Z - Step 7: Validating results
+2025-05-31T16:22:45.760Z - Step 8: Preparing final result
+2025-05-31T16:22:45.761Z - Parsing completed successfully. Found 0 biomarkers and 0 remarks.

@@ -76,6 +76,37 @@ bashnpx prisma migrate dev --name add_chat_and_password
 npx prisma generate
 🛑 CHECKPOINT 1.1: Test database migration works, then commit
 
+Phase 2: OCR Normalization Enhancements
+Checkpoint 2.1: Implement SafeOcrNormalizer and Refactor OcrNormalizer
+File: lib/parsers/ocrNormalizer.ts
+Status: Completed
+Details:
+- Moved substitution rules to `protected static readonly substitutions` in `OcrNormalizer`.
+- Implemented `SafeOcrNormalizer` class with chunk-based processing logic, which calls static methods of `OcrNormalizer` for individual normalization steps or uses its own chunking for large inputs.
+- Removed leftover debugging code and stray lines from `OcrNormalizer.fixCharacterSubstitutions`.
+- Verified that all `OcrNormalizer` methods called by `SafeOcrNormalizer` are static.
+- `SafeOcrNormalizer` unit tests were confirmed to be passing as part of the full test suite execution.
+Next Steps:
+- Monitor performance and error rates with diverse production data.
+- Continuously refine substitution rules and chunking parameters as needed.
+🛑 CHECKPOINT 2.1: `SafeOcrNormalizer` implemented and basic integration tested.
+
+Checkpoint 2.1.1: Resolve Jest Mock and Memory Stability Issues
+Files: 
+- `lib/parsers/bloodTestParser.ts`
+- `test/bloodTestParser.test.ts`
+- `test/simple-parser.test.ts`
+Status: Completed
+Details:
+- Integrated `SafeOcrNormalizer` into `BloodTestParser` by instantiating `SafeOcrNormalizer` and calling its `normalize` method. This resolved critical JavaScript heap out of memory errors during test runs with large OCR inputs.
+- Refactored Jest mocks in `bloodTestParser.test.ts` and `simple-parser.test.ts` to correctly initialize mocks within the `jest.mock` factory, resolving `ReferenceError` and issues with mocking static methods.
+- Corrected lint errors in `bloodTestParser.ts` related to `ExtractedBiomarker` type properties (`rawText` vs `rawLineText`).
+- All Jest tests are now passing, confirming stability.
+Next Steps:
+- Maintain vigilance for any new Jest mock issues as the codebase evolves.
+- Ensure test coverage remains high for parser components.
+🛑 CHECKPOINT 2.1.1: Jest mocks fixed, memory issues resolved, and all tests passing. Commit changes.
+
 Checkpoint 1.2: Authentication Update
 File: app/api/auth/[...nextauth]/route.ts
 typescriptimport NextAuth from "next-auth";
@@ -624,6 +655,21 @@ export async function parseDNAReport(filePath: string): Promise<DNAResult> {
     throw new Error("Failed to parse DNA report");
   }
 }
+🛑 CHECKPOINT 2.1: Test basic parsing foundation for all report types, then commit.
+
+Checkpoint 2.1.1: Advanced Blood Test OCR Parsing Enhancements
+Description: Implemented significant enhancements to blood test report parsing, moving beyond basic regex to a more robust, multi-stage OCR processing and biomarker extraction pipeline. This addresses critical issues with specific biomarker value extraction and improves overall accuracy and resilience to varying report formats, aligning with the generic parsing strategy (see MEMORY[12646bf3-9f3a-4423-a568-c15232d5ff5f] and `blood-ocr-parsing.md` - MEMORY[2133d9d4-e1b9-484b-8d31-5f696f1d4550]). The core of this is `lib/parsers/BiomarkerExtractor.ts`, supported by `lib/parsers/biomarkerDictionary.ts` and `lib/parsers/ocrNormalizer.ts`.
+
+Key improvements include:
+- **Creatinine Decimal Inference**: `BiomarkerExtractor.validateAndEnhanceBiomarkers` now includes a heuristic to infer decimal points for Creatinine values (e.g., correcting OCR-extracted "14" to "1.4" mg/dL) when the integer value is significantly above the valid range but plausible if divided by 10. A `remarkId` of `'decimal_inferred_creatinine'` is added.
+- **TSH Deduplication and Prioritization**: Implemented logic in `BiomarkerExtractor.validateAndEnhanceBiomarkers` to handle multiple TSH (`Thyroid Stimulating Hormone`) entries. It prioritizes entries not suspected to be date components (via `'date_component_suspected'` `remarkId` set in `createBiomarker`) and then selects the entry with the highest confidence score. This prevents misinterpretation of date components as TSH values.
+- **Enhanced `createBiomarker`**: Modified to add `'date_component_suspected'` `remarkId` and include `remarkIds` in its return type, improving contextual information for downstream processing.
+- **Comprehensive Dictionary and Normalization**: Leverages an expanded `BIOMARKER_DICTIONARY` (MEMORY[4fc54a74-34bd-40ba-aad3-2f039f296a08]) and improved OCR normalization rules in `ocrNormalizer.ts` (MEMORY[5a10782b-1649-46f9-8240-7e601ce3febd]) for better biomarker recognition and value validation.
+
+This advanced system effectively supersedes the simplistic regex-based `lib/parsers/blood.ts` outlined earlier in Checkpoint 2.1 for blood test reports.
+
+🛑 CHECKPOINT 2.1.1: Test advanced blood test parsing, especially Creatinine and TSH extraction, then commit.
+
 File: lib/parsers/microbiome.ts
 typescriptimport { readFile } from "fs/promises";
 import pdf from "pdf-parse";

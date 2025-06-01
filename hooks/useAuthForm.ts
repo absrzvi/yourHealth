@@ -89,16 +89,33 @@ export function useAuthForm(mode: AuthMode = 'login') {
             // HIPAA-compliant: Don't log credentials
             console.log('Attempting authentication with credentials provider...');
             
-            // Use redirect: true to let NextAuth handle the redirect properly
-            // This will redirect to callbackUrl on success or show the error on failure
-            // We don't need to handle the redirect manually anymore
-            await signIn('credentials', {
-              redirect: true,
+            console.log('Login attempt with email:', values.email);
+            
+            // Use redirect: false to handle the redirect ourselves after checking the result
+            // This gives us more control over the authentication flow
+            const result = await signIn('credentials', {
+              redirect: false,
               email: values.email,
               password: values.password, // Password never logged
-              rememberMe: values.rememberMe ? 'true' : 'false',
-              callbackUrl
+              rememberMe: values.rememberMe ? 'true' : 'false'
             });
+            
+            console.log('Login result:', result ? 'Success' : 'Failed');
+            
+            // Check the result and handle accordingly
+            if (result?.error) {
+              console.error('Authentication error:', result.error);
+              setError(result.error === 'CredentialsSignin' 
+                ? 'Invalid email or password' 
+                : result.error);
+              return false;
+            }
+            
+            if (result?.ok) {
+              console.log('Authentication successful, redirecting to:', callbackUrl);
+              window.location.href = callbackUrl;
+              return true;
+            }
             
             // This code will only execute if the redirect fails for some reason
             // In normal cases, NextAuth will redirect before we reach this point

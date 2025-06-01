@@ -1,0 +1,64 @@
+2025-05-31T07:56:23.108Z - BloodTestParser initialized with 3480 characters
+2025-05-31T07:56:23.111Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL KARACHI BRANCH Precinct 19, Phase 1, Bahria Town Karachi 111 111 284  LABORATORY REPORT  MR. NO : 010-022-521    NAME : SABA RIZVI W/O HASSAN ABBAS RIZVI    SEX : F REF BY :                ADDRES : VILLA NO-370, QUAID VILLA BAHRIA TOWN KARACHI    AGE : 61Y 02Mo 23D...
+2025-05-31T07:56:23.114Z - Starting blood test report parsing
+2025-05-31T07:56:23.115Z - Detected specialized hospital report format
+2025-05-31T07:56:23.117Z - Parsing specialized lab report format
+2025-05-31T07:56:23.121Z - Analyzing potential biomarker line: BAHRIA TOWN INTERNATIONAL HOSPITAL
+2025-05-31T07:56:23.123Z - Analyzing potential biomarker line: KARACHI BRANCH
+2025-05-31T07:56:23.124Z - Analyzing potential biomarker line: Precinct 19, Phase 1, Bahria Town Karachi
+2025-05-31T07:56:23.126Z - Analyzing potential biomarker line: 111 111 284
+2025-05-31T07:56:23.128Z - Analyzing potential biomarker line: LABORATORY REPORT
+2025-05-31T07:56:23.129Z - Analyzing potential biomarker line: MR. NO : 010-022-521    NAME : SABA RIZVI W/O HASSAN ABBAS RIZVI    SEX : F
+2025-05-31T07:56:23.131Z - Analyzing potential biomarker line: REF BY :                ADDRES : VILLA NO-370, QUAID VILLA BAHRIA TOWN KARACHI    AGE : 61Y 02Mo 23D
+2025-05-31T07:56:23.132Z - Analyzing potential biomarker line: S                                                 CONTACT : 03040120425
+2025-05-31T07:56:23.134Z - Set default section: BIOCHEMISTRY
+2025-05-31T07:56:23.137Z - Analyzing potential biomarker line: BIOCHEMISTRY
+2025-05-31T07:56:23.138Z - Found section: 25-Hydroxy Vitamin-D
+2025-05-31T07:56:23.140Z - Analyzing potential biomarker line: 25-Hydroxy Vitamin-D
+2025-05-31T07:56:23.142Z - Analyzing potential biomarker line: 25 OH Vitamin D Total              21.18 ng/ml         Vitamin D Deficiency :<20
+2025-05-31T07:56:23.144Z - Found biomarker: OH Vitamin D Total = 21.18 ng/ml
+2025-05-31T07:56:23.146Z - Found section: Vitamin D Insufficiency : 21-29
+2025-05-31T07:56:23.148Z - Analyzing potential biomarker line: Vitamin D Insufficiency : 21-29
+2025-05-31T07:56:23.150Z - Found section: Vitamin D Sufficiency : 30-150
+2025-05-31T07:56:23.152Z - Analyzing potential biomarker line: Vitamin D Sufficiency : 30-150
+2025-05-31T07:56:23.155Z - Found section: Vitamin D Intoxification:>150
+2025-05-31T07:56:23.156Z - Analyzing potential biomarker line: Vitamin D Intoxification:>150
+2025-05-31T07:56:23.159Z - Found remark: deformities such as rickets in children, and bone ...
+2025-05-31T07:56:23.161Z - Analyzing potential biomarker line: deformities such as rickets in children, and bone pain caused by a condition called osteomalacia in adults.
+2025-05-31T07:56:23.163Z - Analyzing potential biomarker line: technology for immunoassay analysis.
+2025-05-31T07:56:23.164Z - Found section: HbA1C (Glycosylated Hemoglobin)
+2025-05-31T07:56:23.166Z - Analyzing potential biomarker line: HbA1C (Glycosylated Hemoglobin)
+2025-05-31T07:56:23.169Z - Found section: HbA1C (Glycosylated Hemoglobin)    5.8 %               Diabetic - >= 6.5 %
+2025-05-31T07:56:23.171Z - Analyzing potential biomarker line: HbA1C (Glycosylated Hemoglobin)    5.8 %               Diabetic - >= 6.5 %
+2025-05-31T07:56:23.173Z - Found biomarker: HbA1C (Glycosylated Hemoglobin) = 5.8 %
+2025-05-31T07:56:23.175Z - Analyzing potential biomarker line: Impaired - 5.7-6.4 %
+2025-05-31T07:56:23.178Z - Found remark: diagnosis of Diabetes Mellitus. Patients already d...
+2025-05-31T07:56:23.179Z - Analyzing potential biomarker line: diagnosis of Diabetes Mellitus. Patients already diagnosed with Diabetes Mellitus should monitor HbA1c level as an
+2025-05-31T07:56:23.180Z - Analyzing potential biomarker line: indicator of glycemic control over the previous 2-3 months time. The optimum HbA1c level is based on the health
+2025-05-31T07:56:23.181Z - Analyzing potential biomarker line: status of the individual.
+2025-05-31T07:56:23.182Z - Found section: Liver Function Test With GGT (LFT)
+2025-05-31T07:56:23.183Z - Analyzing potential biomarker line: Liver Function Test With GGT (LFT)
+2025-05-31T07:56:23.184Z - Analyzing potential biomarker line: Total Bilirubin                    0.42 mg/dl          0.0 - 1.0 mg/dl
+2025-05-31T07:56:23.186Z - Found biomarker: Total Bilirubin = 0.42 mg/dl
+2025-05-31T07:56:23.188Z - Analyzing potential biomarker line: Direct Bilirubin                   0.20 mg/dl          0.0 - 0.25 mg/dl
+2025-05-31T07:56:23.189Z - Found biomarker: Direct Bilirubin = 0.2 mg/dl
+2025-05-31T07:56:23.191Z - Analyzing potential biomarker line: Alkaline Phosphatase (ALP)         117 U/l             Adults:
+2025-05-31T07:56:23.192Z - Found biomarker: Alkaline Phosphatase (ALP) = 117 U/l
+2025-05-31T07:56:23.194Z - Analyzing potential biomarker line: Male  40 - 129 U/l
+2025-05-31T07:56:23.196Z - Analyzing potential biomarker line: Female 35 - 140 U/l
+2025-05-31T07:56:23.197Z - Analyzing potential biomarker line: ALT/SGPT                           15 U/l              Male   0-41 U/l
+2025-05-31T07:56:23.199Z - Found biomarker: ALT/SGPT = 15 U/l
+2025-05-31T07:56:23.200Z - Analyzing potential biomarker line: Female 0-33 U/l
+2025-05-31T07:56:23.202Z - Analyzing potential biomarker line: AST/SGOT                           22 U/l              Male   0-40 U/l
+2025-05-31T07:56:23.203Z - Found biomarker: AST/SGOT = 22 U/l
+2025-05-31T07:56:23.205Z - Analyzing potential biomarker line: Female 0-32 U/l
+2025-05-31T07:56:23.206Z - Analyzing potential biomarker line: GGT                                22 U/l              Male   11-50 U/l
+2025-05-31T07:56:23.207Z - Found biomarker: GGT = 22 U/l
+2025-05-31T07:56:23.209Z - Analyzing potential biomarker line: Female 7-32 U/l
+2025-05-31T07:56:23.210Z - Analyzing potential biomarker line: Total Protein                      7.8 g/dl            6.6 - 8.7 g/dl
+2025-05-31T07:56:23.211Z - Found biomarker: Total Protein = 7.8 g/dl
+2025-05-31T07:56:23.212Z - Analyzing potential biomarker line: Albumin                            4.5 g/dl            3.5 - 5.2 g/dl
+2025-05-31T07:56:23.213Z - Found biomarker: Albumin = 4.5 g/dl
+2025-05-31T07:56:23.214Z - Analyzing potential biomarker line: Globulin                           3.3 g/dl            2.3 - 3.5 g/dl
+2025-05-31T07:56:23.215Z - Found biomarker: Globulin = 3.3 g/dl
+2025-05-31T07:56:23.215Z - Analyzing potential biomarker line: A/G Ratio                          1.4                 1.0 - 2.0

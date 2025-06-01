@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Pipeline Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            color: #1a56db;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .panel {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .upload-form {
+            flex: 1;
+            min-width: 300px;
+        }
+        .results {
+            flex: 2;
+            min-width: 500px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #1a56db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0f46c3;
+        }
+        button:disabled {
+            background: #8ca3d8;
+            cursor: not-allowed;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 15px;
+            overflow: auto;
+            max-height: 500px;
+            white-space: pre-wrap;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            margin-bottom: -1px;
+        }
+        .tab.active {
+            border-color: #dee2e6 #dee2e6 #fff;
+            background-color: #fff;
+            color: #1a56db;
+            font-weight: 500;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>OCR Pipeline Test</h1>
+    <p>Use this page to test file uploads and view the OCR parsing results.</p>
+
+    <div class="container">
+        <div class="upload-form panel">
+            <h2>Upload File</h2>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="reportType">Report Type:</label>
+                    <select id="reportType" required>
+                        <option value="">-- Select Report Type --</option>
+                        <option value="BLOOD_TEST">Blood Test Report</option>
+                        <option value="DNA">DNA Report</option>
+                        <option value="MICROBIOME">Microbiome Report</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fileInput">Select File:</label>
+                    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.csv,.txt,.json,.xml,.xlsx,.xls" required>
+                </div>
+                <div class="form-group">
+                    <label for="userId">User ID:</label>
+                    <input type="text" id="userId" value="clmmrabts0000upt1lh7gszaw" style="width: 100%; padding: 8px;">
+                    <small style="color: #666;">Default ID provided for testing. Change if needed.</small>
+                </div>
+                <button type="submit" id="uploadButton">Upload File</button>
+                <div id="uploadStatus" class="status"></div>
+            </form>
+        </div>
+
+        <div class="results panel">
+            <h2>Results</h2>
+            <div class="tabs">
+                <div class="tab active" data-tab="parsedData">Parsed Data</div>
+                <div class="tab" data-tab="rawResponse">Raw Response</div>
+                <div class="tab" data-tab="fileInfo">File Info</div>
+            </div>
+            <div id="parsedData" class="tab-content active">
+                <pre id="parsedDataContent">Upload a file to see parsed data.</pre>
+            </div>
+            <div id="rawResponse" class="tab-content">
+                <pre id="rawResponseContent">Upload a file to see raw API response.</pre>
+            </div>
+            <div id="fileInfo" class="tab-content">
+                <pre id="fileInfoContent">Upload a file to see file information.</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('uploadForm');
+            const uploadButton = document.getElementById('uploadButton');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const parsedDataContent = document.getElementById('parsedDataContent');
+            const rawResponseContent = document.getElementById('rawResponseContent');
+            const fileInfoContent = document.getElementById('fileInfoContent');
+            
+            // Tab functionality
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab).classList.add('active');
+                });
+            });
+
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('fileInput');
+                const reportType = document.getElementById('reportType');
+                const userId = document.getElementById('userId');
+                
+                if (!fileInput.files.length) {
+                    showStatus('Please select a file', 'error');
+                    return;
+                }
+                
+                if (!reportType.value) {
+                    showStatus('Please select a report type', 'error');
+                    return;
+                }
+                
+                if (!userId.value) {
+                    showStatus('Please enter a user ID', 'error');
+                    return;
+                }
+                
+                setLoading(true);
+                showStatus('Uploading...', '');
+                
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('type', reportType.value);
+                formData.append('userId', userId.value);
+                
+                try {
+                    const response = await fetch('/api/upload-v2', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showStatus('Upload successful!', 'success');
+                        
+                        // Display parsed data
+                        try {
+                            // Handle both string and object parsed data
+                            let parsedDataObj = data.parsedData;
+                            if (typeof parsedDataObj === 'string') {
+                                try {
+                                    parsedDataObj = JSON.parse(parsedDataObj);
+                                } catch (e) {
+                                    // Leave as string if not valid JSON
+                                }
+                            }
+                            parsedDataContent.textContent = JSON.stringify(parsedDataObj, null, 2);
+                        } catch (e) {
+                            parsedDataContent.textContent = 'Error parsing data: ' + e.message;
+                        }
+                        
+                        // Display raw response
+                        rawResponseContent.textContent = JSON.stringify(data, null, 2);
+                        
+                        // Display file info
+                        if (data.fileInfo) {
+                            fileInfoContent.textContent = JSON.stringify(data.fileInfo, null, 2);
+                        } else {
+                            fileInfoContent.textContent = 'No file info available';
+                        }
+                    } else {
+                        showStatus(`Upload failed: ${data.error || 'Unknown error'}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    showStatus('Upload failed: ' + (error.message || 'Network error'), 'error');
+                } finally {
+                    setLoading(false);
+                }
+            });
+            
+            function showStatus(message, type) {
+                uploadStatus.textContent = message;
+                uploadStatus.className = 'status';
+                if (type) {
+                    uploadStatus.classList.add(type);
+                }
+            }
+            
+            function setLoading(isLoading) {
+                if (isLoading) {
+                    uploadButton.disabled = true;
+                    uploadButton.innerHTML = '<span class="spinner"></span>Uploading...';
+                } else {
+                    uploadButton.disabled = false;
+                    uploadButton.innerHTML = 'Upload File';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

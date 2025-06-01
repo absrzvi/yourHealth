@@ -5,16 +5,33 @@ import { prisma } from "./db";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 
-// Extend the built-in session types
+// Extend the built-in types for NextAuth
 declare module "next-auth" {
+  /**
+   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
   interface Session {
-    user: DefaultSession["user"] & {
+    user: {
       id: string;
+      email: string;
+      name?: string;
+      image?: string;
+      rememberMe?: boolean; // Add here for completeness
     };
-    rememberMe?: boolean;
+    rememberMe?: boolean; // This is the main one for the session object itself
   }
-  
-  // Add rememberMe to the JWT token
+
+  interface User { // This augments the base User type from next-auth
+    id: string; // Explicitly include standard fields
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+    rememberMe?: boolean; 
+  }
+
+  /**
+   * The shape of the JWT token
+   */
   interface JWT {
     id?: string;
     rememberMe?: boolean;
@@ -28,13 +45,14 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   // Add debug mode in development
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Force debug mode to see detailed logs
   providers: [
     CredentialsProvider({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember me", type: "checkbox" } // Good to define it here
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -58,35 +76,32 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Log the received rememberMe value from credentials
+        console.log(`Authorize: Credentials received rememberMe: ${credentials.rememberMe}`);
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-        } as User;
+          // Pass rememberMe from credentials; ensure it's a boolean
+          rememberMe: String(credentials.rememberMe).toLowerCase() === 'true'
+        };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account, trigger, session }) {
-      // Initial sign in
-      if (user) {
+    async jwt({ token, user, trigger, session }) { // Removed 'account' as it was causing confusion here
+      if (user) { // 'user' here is the object returned from 'authorize'
         token.id = user.id;
+        // 'user' should now correctly have the 'rememberMe' type from the augmented interface
+        token.rememberMe = user.rememberMe; // No cast needed
+        console.log(`JWT callback (initial signIn): user.id=${user.id}, user.rememberMe=${user.rememberMe}. Set token.rememberMe to ${token.rememberMe}`);
       }
       
-      // Handle the rememberMe flag during sign in
-      if (trigger === 'signIn' && account) {
-        const isRemembered = account.rememberMe === 'true';
-        token.rememberMe = isRemembered;
-        console.log(`JWT callback: Setting rememberMe to ${isRemembered}`);
-      }
-      
-      // Update session if needed
-      if (trigger === 'update' && session) {
-        // Handle session updates if needed
-        if (session.rememberMe !== undefined) {
-          token.rememberMe = session.rememberMe;
-          console.log(`JWT callback: Updated rememberMe to ${session.rememberMe}`);
-        }
+      // This handles updates if you ever implement changing rememberMe status mid-session
+      if (trigger === 'update' && session?.rememberMe !== undefined) {
+        token.rememberMe = session.rememberMe;
+        console.log(`JWT callback (update): Updated token.rememberMe to ${session.rememberMe}`);
       }
       
       return token;
@@ -98,14 +113,17 @@ export const authOptions: NextAuthOptions = {
       
       // Pass rememberMe state to the session
       session.rememberMe = token.rememberMe as boolean;
-      
+      // Log the rememberMe value being set on the session object
+      console.log(`Session callback: Setting session.rememberMe to ${session.rememberMe} from token.rememberMe`);
       return session;
     },
   },
   pages: {
-    signIn: "/login",
+    signIn: "/auth/login",
+    error: "/auth/error",
   },
-  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key',
+  // HIPAA-SECURITY-ISSUE: In production, use only environment variable
+  secret: process.env.NEXTAUTH_SECRET || 'development-secret-key-replace-in-production',
 };
 
 export { default } from "next-auth";

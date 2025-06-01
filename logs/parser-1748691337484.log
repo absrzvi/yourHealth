@@ -1,0 +1,46 @@
+2025-05-31T11:35:37.485Z - BloodTestParser initialized with 1557 characters
+2025-05-31T11:35:37.486Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
+2025-05-31T11:35:37.487Z - Starting blood test report parsing
+2025-05-31T11:35:37.488Z - Step 1: Normalizing OCR text
+2025-05-31T11:35:37.501Z - Text normalized from 1557 to 1458 chars
+2025-05-31T11:35:37.507Z - Step 2: Preprocessing content
+2025-05-31T11:35:37.523Z - Step 3: Parsing document sections
+2025-05-31T11:35:37.533Z - Step 4: Extracting metadata
+2025-05-31T11:35:37.535Z - Extracting metadata from content
+2025-05-31T11:35:37.541Z - Extracted patient info: {"age":"65"}
+2025-05-31T11:35:37.548Z - Extracted lab info: {}
+2025-05-31T11:35:37.553Z - Step 5: Extracting biomarkers
+2025-05-31T11:35:37.563Z - Extracting biomarkers
+2025-05-31T11:35:37.594Z - Traditional extractor found 37 biomarkers
+2025-05-31T11:35:37.606Z - Normalizing biomarker objects
+2025-05-31T11:35:37.627Z - Normalized biomarker name: "8 AHR" → "AHR"
+2025-05-31T11:35:37.662Z - Skipping invalid biomarker name: 111
+2025-05-31T11:35:37.669Z - Normalized biomarker name: "MR.N 0" → "MR.N"
+2025-05-31T11:35:37.679Z - Skipping invalid biomarker name: 03040120825
+2025-05-31T11:35:37.686Z - Normalized biomarker name: "1 nvestigati" → "nvestigati"
+2025-05-31T11:35:37.694Z - Normalized biomarker name: "5 amp 1 e" → "amp e"
+2025-05-31T11:35:37.700Z - Normalized biomarker name: "CREAT 1 N 1 NE (5 erum)" → "CREATININE ( erum"
+2025-05-31T11:35:37.710Z - Normalized biomarker name: "Magnesium (5 erum) 5 amp 1 e" → "MAGNESIUM"
+2025-05-31T11:35:37.715Z - Normalized biomarker name: "Magnesium" → "MAGNESIUM"
+2025-05-31T11:35:37.722Z - Normalized biomarker name: "5 ERUM ELECTR" → "ERUM ELECTR"
+2025-05-31T11:35:37.726Z - Normalized biomarker name: "5 amp 1 e" → "amp e"
+2025-05-31T11:35:37.729Z - Normalized biomarker name: "50 D" → "D"
+2025-05-31T11:35:37.736Z - Normalized biomarker name: "8 icarb" → "icarb"
+2025-05-31T11:35:37.742Z - Normalized biomarker name: "5 amp 1 e" → "amp e"
+2025-05-31T11:35:37.748Z - Normalized biomarker name: "weeks -20 weeks" → "weeks - weeks"
+2025-05-31T11:35:37.755Z - Normalized biomarker name: "21 weeks -20 years" → "weeks - years"
+2025-05-31T11:35:37.758Z - Normalized biomarker name: "(ECL) techn" → "ECL) techn"
+2025-05-31T11:35:37.761Z - Normalized biomarker name: "UREA (5 erum) 5 amp 1 e" → "UREA"
+2025-05-31T11:35:37.763Z - Normalized traditional biomarkers: 35 remaining
+2025-05-31T11:35:37.811Z - Generic extractor found 19 biomarkers
+2025-05-31T11:35:37.813Z - Normalizing biomarker objects
+2025-05-31T11:35:37.819Z - Normalized generic biomarkers: 19 remaining
+2025-05-31T11:35:37.820Z - Combined and deduped 54 to 30 biomarkers
+2025-05-31T11:35:37.821Z - Extracted 30 potential biomarkers
+2025-05-31T11:35:37.822Z - Step 6: Extracting clinical remarks
+2025-05-31T11:35:37.823Z - Starting remarks extraction (BloodTestParser)
+2025-05-31T11:35:37.827Z - No remarks data found or remarks array was empty/falsy in external result.
+2025-05-31T11:35:37.829Z - Extracted 0 remarks
+2025-05-31T11:35:37.830Z - Step 7: Validating results
+2025-05-31T11:35:37.834Z - Step 8: Preparing final result
+2025-05-31T11:35:37.836Z - Parsing completed successfully. Found 30 biomarkers and 0 remarks.

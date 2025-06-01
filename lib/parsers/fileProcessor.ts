@@ -3,7 +3,13 @@ import { ParserResult, ReportType } from './types';
 import { validateImageDimensions } from '@/lib/storage';
 
 export class FileProcessor {
-  static async processFile(file: File): Promise<ParserResult> {
+  /**
+   * Process a file by validating, reading content, and determining report type
+   * @param file The file to process
+   * @param preExtractedContent Optional pre-extracted content (used for server-side PDF processing)
+   * @returns A parser result object
+   */
+  static async processFile(file: File, preExtractedContent?: string): Promise<ParserResult> {
     try {
       // Validate file
       const validation = this.validateFile(file);
@@ -11,17 +17,41 @@ export class FileProcessor {
         throw new Error(validation.error || 'Invalid file');
       }
       
+      // Make sure we're in a browser environment before proceeding
+      const isBrowser = typeof window !== 'undefined';
+      
       // Check if file is an image or PDF that requires OCR
       const needsOcr = this.needsOcrProcessing(file);
       
       if (needsOcr) {
         // For images and PDFs that need OCR, use the OCR upload endpoint
+        if (!isBrowser) {
+          console.warn('OCR processing requires browser environment');
+          return {
+            success: false,
+            error: 'OCR processing requires browser environment'
+          };
+        }
         return this.processWithOcr(file);
       }
       
       // For structured files, use the normal parser flow
-      // Read file content
-      const content = await this.readFileAsText(file);
+      // Use pre-extracted content if available, otherwise read from file
+      const content = preExtractedContent || await this.readFileAsText(file);
+      
+      // If content is empty after extraction attempts, throw an error
+      if (!content || content.trim() === '') {
+        console.error('Empty or null content after extraction');
+        throw new Error('Could not extract content from file');
+      }
+      
+      // Log key patterns found in the content to help with debugging
+      console.log('Key patterns found:', {
+        hasInvestigation: content.includes('Investigation'),
+        hasValues: content.includes('Values'),
+        hasVitaminD: content.includes('Vitamin D') || content.includes('25-Hydroxy'),
+        hasHbA1C: content.includes('HbA1C') || content.includes('Glycosylated Hemoglobin')
+      });
       
       // Detect report type
       const detectedType = await ParserFactory.detectReportType(file, content);
@@ -50,50 +80,66 @@ export class FileProcessor {
   }
   
   private static async readFileAsText(file: File): Promise<string> {
+    // Check if we're in a browser environment
+    // Don't use mock content on server-side anymore since we have pdf-parse
+    if (typeof window === 'undefined' && !file.text) {
+      console.log(`Warning: Reading file in server environment without text() method`);
+      // Allow the process to continue as we might have pre-extracted content
+    } 
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        if (!event.target?.result) {
-          reject(new Error('Failed to read file'));
-          return;
-        }
+      try {
+        const reader = new FileReader();
         
-        if (typeof event.target.result === 'string') {
-          resolve(event.target.result);
-        } else {
-          // Handle binary data (e.g., PDF, Excel)
-          if (file.name.toLowerCase().endsWith('.pdf')) {
-            // For PDFs, we'll need to use a PDF parser
-            this.parsePdfFile(file)
-              .then(resolve)
-              .catch(reject);
-          } else if (file.name.toLowerCase().match(/\.(xls|xlsx)$/)) {
-            // For Excel files
-            this.parseExcelFile(file)
-              .then(resolve)
-              .catch(reject);
-          } else {
-            // Try to decode as text
-            const decoder = new TextDecoder('utf-8');
-            const text = decoder.decode(event.target.result);
-            resolve(text);
+        reader.onload = (event) => {
+          if (!event.target?.result) {
+            reject(new Error('Failed to read file'));
+            return;
           }
+          
+          if (typeof event.target.result === 'string') {
+            resolve(event.target.result);
+          } else {
+            // Handle binary data (e.g., PDF, Excel)
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+              // For PDFs, we'll need to use a PDF parser
+              this.parsePdfFile(file)
+                .then(resolve)
+                .catch(reject);
+            } else if (file.name.toLowerCase().match(/\.(xls|xlsx)$/)) {
+              // For Excel files
+              this.parseExcelFile(file)
+                .then(resolve)
+                .catch(reject);
+            } else {
+              try {
+                // Try to decode as text
+                const decoder = new TextDecoder('utf-8');
+                const text = decoder.decode(event.target.result);
+                resolve(text);
+              } catch (error) {
+                console.warn('Text decoding error:', error);
+                resolve(''); // Return empty string on decode error
+              }
+            }
+          }
+        };
+        
+        reader.onerror = () => {
+          reject(new Error('Error reading file'));
+        };
+        
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+          reader.readAsArrayBuffer(file);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                  file.name.toLowerCase().match(/\.(xls|xlsx)$/)) {
+          reader.readAsArrayBuffer(file);
+        } else {
+          // Default to text for other file types
+          reader.readAsText(file);
         }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error('Error reading file'));
-      };
-      
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        reader.readAsArrayBuffer(file);
-      } else if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-                file.name.toLowerCase().match(/\.(xls|xlsx)$/)) {
-        reader.readAsArrayBuffer(file);
-      } else {
-        // Default to text for other file types
-        reader.readAsText(file);
+      } catch (error) {
+        console.error('FileReader error:', error);
+        reject(new Error('Failed to initialize file reader'));
       }
     });
   }
@@ -218,60 +264,79 @@ export class FileProcessor {
   
   // Process a file using the OCR pipeline
   static async processWithOcr(file: File): Promise<ParserResult> {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') {
+      console.warn('OCR processing requires browser environment');
+      return {
+        success: false,
+        error: 'OCR processing requires browser environment'
+      };
+    }
+
     try {
       // For images, validate dimensions
       if (file.type.startsWith('image/')) {
-        const dimensionCheck = await validateImageDimensions(file);
-        if (!dimensionCheck.isValid) {
-          return {
-            success: false,
-            error: dimensionCheck.errors.join('. ')
-          };
+        try {
+          const dimensionCheck = await validateImageDimensions(file);
+          if (!dimensionCheck.isValid) {
+            return {
+              success: false,
+              error: dimensionCheck.errors.join('. ')
+            };
+          }
+          
+          // Show warnings but proceed
+          if (dimensionCheck.warnings.length > 0) {
+            console.warn('Image warnings:', dimensionCheck.warnings);
+          }
+        } catch (validationError) {
+          console.warn('Image validation error (continuing anyway):', validationError);
+          // Continue even if validation fails - it might be a server-side issue
+        }
+      }
+      
+      try {
+        // Create form data for the API request
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Send to OCR API
+        const response = await fetch('/api/ocr-upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`OCR processing failed: ${errorText}`);
         }
         
-        // Show warnings but proceed
-        if (dimensionCheck.warnings.length > 0) {
-          console.warn('Image warnings:', dimensionCheck.warnings);
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'OCR processing failed');
         }
-      }
-      
-      // Create form data for the API request
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // Send to OCR API
-      const response = await fetch('/api/ocr-upload', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OCR processing failed: ${errorText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'OCR processing failed');
-      }
-      
-      // Return in ParserResult format
-      return {
-        success: true,
-        data: {
-          type: 'BLOOD_TEST', // Default type for OCR results
-          biomarkers: result.tests || [],
-          metadata: {
-            confidence: result.confidence,
-            needsReview: result.needsReview,
-            reportId: result.reportId,
-            parsedAt: new Date().toISOString(),
-            parser: 'OCR',
-            testCount: result.testCount
+        
+        // Return in ParserResult format
+        return {
+          success: true,
+          data: {
+            type: 'BLOOD_TEST', // Default type for OCR results
+            biomarkers: result.tests || [],
+            metadata: {
+              confidence: result.confidence,
+              needsReview: result.needsReview,
+              reportId: result.reportId,
+              parsedAt: new Date().toISOString(),
+              parser: 'OCR',
+              format: 'OCR',
+              testCount: result.testCount
+            }
           }
-        }
-      };
+        };
+      } catch (fetchError) {
+        throw new Error(`OCR API request failed: ${fetchError.message}`);
+      }
     } catch (error) {
       console.error('OCR processing error:', error);
       return {

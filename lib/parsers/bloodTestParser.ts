@@ -112,12 +112,21 @@ export class BloodTestParser {
    */
   private error(message: string, error?: Error): ParserResult {
     this.logMessage(`Error: ${message}${error ? ` - ${error.message}` : ''}`);
-    if (error?.stack) {
-      this.logMessage(`Stack trace: ${error.stack}`);
-    }
-    // Log performance report even on error, then reset
     if (this.performanceMonitor) {
-      this.performanceMonitor.logReport();
+      this.performanceMonitor.reset();
+    }
+    return {
+      success: false,
+      error: message
+    };
+  }
+
+  /**
+   * Handle validation errors or safety check failures [REH]
+   */
+  private handleError(message: string): ParserResult {
+    console.error(`[BloodTestParser] Error: ${message}`);
+    if (this.performanceMonitor) {
       this.performanceMonitor.reset();
     }
     return {
@@ -128,24 +137,50 @@ export class BloodTestParser {
 
   /**
    * Main parsing method that coordinates the parsing process
+   * Enhanced with improved safety checks for OCR text processing [REH]
    */
   async parse(reportType: string = 'generic'): Promise<ParserResult> { 
-    // Debug logging disabled
+    // Start performance monitoring for the overall parsing process
     const endOverallParse = this.performanceMonitor?.startPhase('BloodTestParser.parse_overall', this.content.length);
+    
+    // Validate input content
+    if (!this.content || this.content.length === 0) {
+      console.error('[BloodTestParser] Cannot parse empty content');
+      return this.handleError('Empty content provided to parser');
+    }
+    
     try {
-      // Debug logging disabled
+      // Keep original content as backup for safety
+      const originalContent = this.content;
+      console.log(`[BloodTestParser] Starting parse with content length: ${originalContent.length}`);
       
       // Step 1: Normalize OCR text to handle common OCR issues
-      // Debug logging disabled
       const endNormalization = this.performanceMonitor?.startPhase('BloodTestParser.normalize', this.content.length);
       const safeNormalizer = new SafeOcrNormalizer();
-      const normalizedContent = safeNormalizer.normalize(this.content);
+      let normalizedContent = safeNormalizer.normalize(this.content);
       endNormalization?.(normalizedContent.length);
-      // Debug logging disabled
+      
+      // SAFETY CHECK: If normalization resulted in empty content, use original
+      if (normalizedContent.length === 0 && this.content.length > 0) {
+        console.warn('[BloodTestParser] Normalization resulted in empty content - using original content');
+        normalizedContent = originalContent;
+      }
       
       // Step 2: Preprocess the normalized content
-      // Debug logging disabled
-      const preprocessedContent = TextPreprocessor.preprocess(normalizedContent);
+      // Detailed logging for debugging
+      console.log('[DEBUG] normalizedContent length before preprocessing:', normalizedContent.length);
+      console.log('[DEBUG] normalizedContent first 100 chars:', normalizedContent.substring(0, 100));
+      
+      let preprocessedContent = TextPreprocessor.preprocess(normalizedContent);
+      
+      // SAFETY CHECK: If preprocessing resulted in empty content, use normalized content
+      if (preprocessedContent.length === 0 && normalizedContent.length > 0) {
+        console.warn('[BloodTestParser] Preprocessing resulted in empty content - using normalized content');
+        preprocessedContent = normalizedContent;
+      }
+      
+      console.log('[DEBUG] preprocessedContent length after preprocessing:', preprocessedContent.length);
+      console.log('[DEBUG] preprocessedContent first 100 chars:', preprocessedContent.substring(0, 100));
       
       // Step 3: Parse document sections
       // Debug logging disabled
@@ -156,9 +191,17 @@ export class BloodTestParser {
       this.extractMetadata(preprocessedContent);
       
       // Step 5: Extract biomarkers
-      // Debug logging disabled
       const biomarkers = this.extractBiomarkers(preprocessedContent);
-      // Debug logging disabled
+      console.log(`[BloodTestParser] Extracted ${biomarkers.length} biomarkers before validation`);
+      if (biomarkers.length > 0) {
+        console.log(`[BloodTestParser] First biomarker: ${JSON.stringify({
+          name: biomarkers[0].name,
+          standardName: biomarkers[0].standardName,
+          value: biomarkers[0].value,
+          unit: biomarkers[0].unit,
+          confidence: biomarkers[0].confidence
+        })}`);
+      }
       
       // Step 6: Extract and associate remarks
       // Debug logging disabled
@@ -174,8 +217,29 @@ export class BloodTestParser {
       }
       
       // Step 7: Validate results
-      // Debug logging disabled
+      console.log(`[BloodTestParser] Validating ${updatedBiomarkers.length} biomarkers after remarks extraction`);
+      if (updatedBiomarkers.length > 0) {
+        console.log(`[BloodTestParser] First biomarker before validation: ${JSON.stringify({
+          name: updatedBiomarkers[0].name,
+          standardName: updatedBiomarkers[0].standardName,
+          value: updatedBiomarkers[0].value,
+          unit: updatedBiomarkers[0].unit,
+          confidence: updatedBiomarkers[0].confidence
+        })}`);
+      }
+      
       const validatedBiomarkers = BiomarkerValidator.validateAndFilter(updatedBiomarkers);
+      console.log(`[BloodTestParser] After validation: ${validatedBiomarkers.length} biomarkers remain`);
+      if (validatedBiomarkers.length > 0) {
+        console.log(`[BloodTestParser] First validated biomarker: ${JSON.stringify({
+          name: validatedBiomarkers[0].name,
+          standardName: validatedBiomarkers[0].standardName,
+          value: validatedBiomarkers[0].value,
+          unit: validatedBiomarkers[0].unit,
+          confidence: validatedBiomarkers[0].confidence
+        })}`);
+      }
+      
       const validationReport = BiomarkerValidator.generateValidationReport(validatedBiomarkers, remarks);
       
       // Step 8: Prepare final result
@@ -234,38 +298,65 @@ export class BloodTestParser {
    */
   private extractBiomarkers(content: string): ExtractedBiomarker[] {
     try {
-      // Debug logging disabled
+      console.log(`[BloodTestParser.extractBiomarkers] Starting extraction with content length: ${content.length}`);
       
       // Use the traditional extraction mechanism
       let traditionalBiomarkers = BiomarkerExtractor.extractBiomarkers(content);
-      // Debug logging disabled
+      console.log(`[BloodTestParser.extractBiomarkers] Traditional extractor found ${traditionalBiomarkers.length} biomarkers`);
+      
+      // Log all traditionally extracted biomarkers for debugging
+      if (traditionalBiomarkers.length > 0) {
+        traditionalBiomarkers.forEach((b, i) => {
+          console.log(`[BloodTestParser.extractBiomarkers] Traditional biomarker ${i+1}: ${b.name || 'unnamed'}, value: ${b.value}, unit: ${b.unit}, confidence: ${b.confidence}`);
+        });
+      }
       
       // Normalize traditional biomarkers
       traditionalBiomarkers = this.normalizeBiomarkerObjects(traditionalBiomarkers);
-      // Debug logging disabled
+      console.log(`[BloodTestParser.extractBiomarkers] After normalization: ${traditionalBiomarkers.length} traditional biomarkers`);
       
-      // Use the new generic extraction mechanism
-      let genericBiomarkers = GenericBiomarkerExtractor.extractBiomarkers(content);
-      // Debug logging disabled
+      // ALWAYS use generic extraction regardless of traditional results
+      // This ensures maximum biomarker coverage across different lab formats
+      let genericBiomarkers: ExtractedBiomarker[] = [];
+      
+      // Use the generic extraction mechanism
+      genericBiomarkers = GenericBiomarkerExtractor.extractBiomarkers(content);
+      console.log(`[BloodTestParser.extractBiomarkers] Generic extractor found ${genericBiomarkers.length} biomarkers`);
       
       // Normalize generic biomarkers
       genericBiomarkers = this.normalizeBiomarkerObjects(genericBiomarkers);
-      // Debug logging disabled
-
-      // Validate generic biomarkers against the dictionary
+      console.log(`[BloodTestParser.extractBiomarkers] After normalization: ${genericBiomarkers.length} generic biomarkers`);
+      
+      // Validate generic biomarkers even if we have traditional ones
+      // This ensures we don't miss biomarkers in different formats
       genericBiomarkers = BiomarkerExtractor.validateAndEnhanceBiomarkers(genericBiomarkers);
-      // Debug logging disabled
+      console.log(`[BloodTestParser.extractBiomarkers] After validation: ${genericBiomarkers.length} generic biomarkers`);
       
       // Combine biomarkers from both extractors
-      const allBiomarkers = [...genericBiomarkers, ...traditionalBiomarkers];
+      const allBiomarkers = [...traditionalBiomarkers, ...genericBiomarkers];
+      console.log(`[BloodTestParser.extractBiomarkers] Combined ${allBiomarkers.length} biomarkers`);
+      
+      // If we have no biomarkers at this point, try one more approach - direct extraction with lenient validation
+      if (allBiomarkers.length === 0) {
+        console.log(`[BloodTestParser.extractBiomarkers] No biomarkers found, trying lenient extraction`);
+        let fallbackBiomarkers = BiomarkerExtractor.extractBiomarkers(content);
+        // Include biomarkers even with low confidence for lenient validation
+        console.log(`[BloodTestParser.extractBiomarkers] Lenient extraction found ${fallbackBiomarkers.length} biomarkers`);
+        if (fallbackBiomarkers.length > 0) {
+          return fallbackBiomarkers;
+        }
+      }
       
       // Deduplicate biomarkers by standardName (case-insensitive)
       const biomarkerMap = new Map<string, ExtractedBiomarker>();
       
       for (const biomarker of allBiomarkers) {
-        if (!biomarker.standardName) continue;
+        // Skip biomarkers without names entirely
+        if (!biomarker.name && !biomarker.standardName) continue;
         
-        const normalizedName = biomarker.standardName.toLowerCase().trim();
+        // Use name if standardName is not available
+        const normalizedName = (biomarker.standardName || biomarker.name || '').toLowerCase().trim();
+        if (!normalizedName) continue;
         
         if (!biomarkerMap.has(normalizedName)) {
           biomarkerMap.set(normalizedName, biomarker);
@@ -298,10 +389,12 @@ export class BloodTestParser {
       }
       
       const dedupedBiomarkers = Array.from(biomarkerMap.values());
+      console.log(`[BloodTestParser.extractBiomarkers] After deduplication: ${dedupedBiomarkers.length} biomarkers`);
+      
       // Return the deduplicated biomarkers
       return dedupedBiomarkers;
     } catch (error) {
-      // Debug logging disabled
+      console.error(`[BloodTestParser.extractBiomarkers] Error extracting biomarkers:`, error);
       return [];
     }
   } // <<< Closing brace for extractBiomarkers
@@ -783,13 +876,13 @@ export class BloodTestParser {
 
 
   /**
-   * Determine the category of a biomarker based on the section and name
-   */
-  /**
    * Normalize biomarker objects to clean up names and ensure consistency
    */
   private normalizeBiomarkerObjects(biomarkers: ExtractedBiomarker[]): ExtractedBiomarker[] {
-    this.logMessage('Normalizing biomarker objects');
+    console.log('[BloodTestParser] Normalizing biomarker objects:', biomarkers.length);
+    
+    // Import the correct normalization function
+    const { normalizeBiomarkerName } = require('./biomarkerDictionary');
     
     return biomarkers.map(biomarker => {
       // Skip if no name
@@ -798,32 +891,38 @@ export class BloodTestParser {
       // Create a copy of the biomarker to avoid mutation
       const normalizedBiomarker = { ...biomarker };
       
-      // Use enhanced biomarker name normalization
-      const cleanName = OcrNormalizer.normalizeBiomarkerName(biomarker.name);
-      
-      // Update the biomarker with normalized name
-      normalizedBiomarker.name = cleanName;
-      
-      // Also normalize the standardName using the specialized normalizer
-      if (normalizedBiomarker.standardName) {
-        normalizedBiomarker.standardName = OcrNormalizer.normalizeBiomarkerName(biomarker.standardName);
-      } else {
-        // If no standard name exists, use the normalized name as standard name
-        normalizedBiomarker.standardName = cleanName;
+      try {
+        // Use biomarker dictionary's normalization function
+        const cleanName = normalizeBiomarkerName(biomarker.name);
+        
+        // Update the biomarker with normalized name
+        normalizedBiomarker.name = cleanName || biomarker.name; // Fallback to original if normalization fails
+        
+        // Also normalize the standardName
+        if (normalizedBiomarker.standardName) {
+          normalizedBiomarker.standardName = normalizeBiomarkerName(biomarker.standardName) || biomarker.standardName;
+        } else {
+          // If no standard name exists, use the normalized name as standard name
+          normalizedBiomarker.standardName = cleanName || biomarker.name;
+        }
+        
+        // If name is still pure garbage (e.g., just contains numbers or symbols), skip it
+        if (!/[a-z]/i.test(normalizedBiomarker.name)) {
+          console.log(`[BloodTestParser] Skipping invalid biomarker name: ${biomarker.name}`);
+          return null;
+        }
+        
+        // Log successful normalization for debugging
+        if (biomarker.name !== normalizedBiomarker.name) {
+          console.log(`[BloodTestParser] Normalized biomarker name: "${biomarker.name}" → "${normalizedBiomarker.name}"`);
+        }
+        
+        return normalizedBiomarker;
+      } catch (error) {
+        console.error(`[BloodTestParser] Error normalizing biomarker ${biomarker.name}:`, error);
+        // On error, return the original biomarker to ensure we don't lose data
+        return biomarker;
       }
-      
-      // If name is still pure garbage (e.g., just contains numbers or symbols), skip it
-      if (!/[a-z]/i.test(normalizedBiomarker.name)) {
-        this.logMessage(`Skipping invalid biomarker name: ${biomarker.name}`);
-        return null;
-      }
-      
-      // Log successful normalization for debugging
-      if (biomarker.name !== normalizedBiomarker.name) {
-        this.logMessage(`Normalized biomarker name: "${biomarker.name}" → "${normalizedBiomarker.name}"`);
-      }
-      
-      return normalizedBiomarker;
     }).filter(Boolean) as ExtractedBiomarker[]; // Remove null entries
   }
 
