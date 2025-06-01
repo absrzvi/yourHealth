@@ -1,19 +1,15 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Montserrat, Open_Sans } from 'next/font/google'
+import { Montserrat } from 'next/font/google'
 import { Navigation } from '@/components/layout/Navigation'
 import { AuthProvider } from '@/components/providers/AuthProvider'
+import { PromoBanner } from '@/components/ui/PromoBanner'
 
 const montserrat = Montserrat({
   subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
   variable: '--font-montserrat',
-})
-
-const openSans = Open_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-open-sans',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -27,12 +23,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${openSans.variable}`}>
-      <body className="font-open-sans bg-background text-foreground">
+    <html lang="en" className={montserrat.variable}>
+      <body className="font-sans bg-background text-foreground">
         <AuthProvider>
           <Navigation />
           <main className="pt-16">
             {children}
+            <PromoBanner />
           </main>
         </AuthProvider>
       </body>

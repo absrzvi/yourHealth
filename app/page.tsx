@@ -6,7 +6,6 @@ import { Testimonials } from '@/components/home/Testimonials';
 import { ProvidersTeaser } from '@/components/home/ProvidersTeaser';
 import { PersonalizedHealthcareSection } from '@/components/home/PersonalizedHealthcareSection';
 import { IntegrationsSection } from '@/components/home/IntegrationsSection';
-import { PromoBanner } from '@/components/home/PromoBanner';
 
 export default function HomePage() {
   return (
@@ -19,7 +18,6 @@ export default function HomePage() {
       <ProductTeaser />
       <Testimonials />
       <ProvidersTeaser />
-      <PromoBanner />
     </>
   );
 }

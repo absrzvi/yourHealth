@@ -47,32 +47,36 @@ export function HeroSection() {
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
-            {/* Gradient overlay */}
-            <div className="absolute bottom-0 left-0 p-8 z-20 text-white">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 font-montserrat">
-                Your Health Journey<br />
-                <span className="text-secondary">Starts Here</span>
-              </h1>
-              <p className="text-lg md:text-xl mb-6 max-w-lg opacity-90">
-                Discover personalized health insights tailored to your unique biology and lifestyle.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link href="/register">
-                  <Button 
-                    size="lg"
-                    className="bg-secondary hover:bg-secondary-dark text-white rounded-full px-8 py-6 text-lg font-semibold shadow-lg transform hover:scale-105 transition-all"
-                  >
-                    Get Started
-                  </Button>
-                </Link>
-                <Link href="/science">
-                  <Button 
-                    variant="outline"
-                    className="bg-white/20 hover:bg-white/30 backdrop-blur text-white rounded-full px-8 py-6 text-lg font-semibold border-white/30"
-                  >
-                    Learn How It Works
-                  </Button>
-                </Link>
+            {/* Hero Content Overlay */}
+            <div className="absolute inset-0 flex items-center z-10">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+                <div className="max-w-3xl">
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+                    Your Personalized Health Journey Starts Here
+                  </h1>
+                  <p className="text-lg md:text-xl text-gray-100/90 mb-8 max-w-2xl leading-relaxed">
+                    Discover how your unique biology can guide you to better health with our advanced DNA and microbiome analysis.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Link href="/register">
+                      <Button 
+                        size="lg" 
+                        className="bg-white text-primary hover:bg-gray-100 transition-colors font-semibold tracking-wide"
+                      >
+                        Get Started
+                      </Button>
+                    </Link>
+                    <Link href="/science">
+                      <Button 
+                        size="lg" 
+                        variant="outline" 
+                        className="border-white text-white hover:bg-white/10 transition-colors font-medium tracking-wide"
+                      >
+                        Learn More
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -90,9 +94,9 @@ export function HeroSection() {
                 priority
                 sizes="(max-width: 1024px) 100vw, 34vw"
               />
-              <div className="absolute bottom-0 left-0 p-6 z-20 text-white">
-                <h2 className="text-2xl font-bold font-montserrat">Push Your Limits</h2>
-                <p className="text-sm opacity-90">Personalized fitness plans based on your DNA</p>
+              <div className="absolute bottom-0 left-0 p-6 z-20">
+                <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]">Push Your Limits</h2>
+                <p className="text-sm text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Personalized fitness plans based on your DNA</p>
               </div>
             </div>
 
@@ -107,9 +111,9 @@ export function HeroSection() {
                 priority
                 sizes="(max-width: 1024px) 100vw, 34vw"
               />
-              <div className="absolute bottom-0 left-0 p-6 z-20 text-white">
-                <h2 className="text-2xl font-bold font-montserrat">Achieve Together</h2>
-                <p className="text-sm opacity-90">Shared goals for better health outcomes</p>
+              <div className="absolute bottom-0 left-0 p-6 z-20">
+                <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]">Achieve Together</h2>
+                <p className="text-sm text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Shared goals for better health outcomes</p>
               </div>
             </div>
           </div>
