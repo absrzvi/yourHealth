@@ -23,6 +23,7 @@ export async function middleware(request: NextRequest) {
   const isDev = process.env.NODE_ENV === 'development'
   // Public routes
   const publicPaths = [
+    '/', // Home page is public
     '/auth/login', 
     '/auth/register', 
     '/auth/error', 
@@ -176,15 +177,15 @@ export async function middleware(request: NextRequest) {
         return response;
       }
       // === END NEW LOGIC ===
-      // We're on a public path (like login) with a token, but we need to check if we're in the
-      // process of redirecting due to session invalidation
+      // We're on a public path with a token
+      // Only redirect to dashboard if coming from auth pages (login/register)
+      const isAuthPage = ['/auth/login', '/auth/register', '/auth/error', '/auth/debug-login'].includes(pathname);
       const isRedirectingForInvalidSession = pathname === '/auth/login' && 
         request.nextUrl.searchParams.has('callbackUrl');
       
-      // If we're not redirecting for session invalidation, and we have a token on a public path,
-      // redirect to dashboard, except for specific public paths we want to allow
-      if (!isRedirectingForInvalidSession && !pathname.startsWith('/ai-coach')) {
-        debug('User is logged in on public path - redirecting to dashboard');
+      // Only redirect to dashboard if coming from an auth page and not in the middle of session invalidation
+      if (isAuthPage && !isRedirectingForInvalidSession) {
+        debug('User is logged in on auth page - redirecting to dashboard');
         // Don't redirect if already on the dashboard
         if (pathname === '/dashboard') {
           return NextResponse.next()
