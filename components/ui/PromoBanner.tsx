@@ -6,23 +6,37 @@ import { Button } from './button';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function PromoBanner() {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  // Check local storage for previously dismissed state
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Handle initial mount and visibility state
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const dismissed = localStorage.getItem('promoBannerDismissed');
-      if (dismissed) {
-        const dismissedTime = new Date(dismissed).getTime();
-        const currentTime = new Date().getTime();
-        // Show again after 24 hours if previously dismissed
-        if (currentTime - dismissedTime < 24 * 60 * 60 * 1000) {
-          setIsVisible(false);
-        }
+    setIsMounted(true);
+    
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
+    const dismissed = localStorage.getItem('promoBannerDismissed');
+    if (dismissed) {
+      const dismissedTime = new Date(dismissed).getTime();
+      const currentTime = new Date().getTime();
+      // Show again after 24 hours if previously dismissed
+      if (currentTime - dismissedTime >= 24 * 60 * 60 * 1000) {
+        localStorage.removeItem('promoBannerDismissed');
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
       }
+    } else {
+      setIsVisible(true);
     }
   }, []);
+  
+  // Don't render anything on server-side to prevent hydration mismatch
+  if (!isMounted) {
+    return null;
+  }
 
   const handleDismiss = () => {
     setIsVisible(false);
@@ -55,10 +69,9 @@ export function PromoBanner() {
     }
   };
 
-  if (!isVisible) return null;
-
   return (
     <AnimatePresence>
+      {isVisible && (
       <motion.div
         initial="hidden"
         animate="visible"
@@ -125,6 +138,7 @@ export function PromoBanner() {
           </div>
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }

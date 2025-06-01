@@ -24,8 +24,8 @@ export function SciencePreview() {
             data-aos="fade-right"
             data-aos-delay="100"
           >
-            <div className="inline-block px-4 py-2 bg-blue-50 rounded-full mb-6">
-              <span className="text-sm font-semibold text-primary uppercase tracking-wider">The Science Behind Your Health</span>
+            <div className="inline-block px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-6">
+              <span className="text-sm font-semibold text-white uppercase tracking-wider drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">The Science Behind Your Health</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
               Precision Wellness,<br />
@@ -54,8 +54,7 @@ export function SciencePreview() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/science" className="w-full sm:w-auto">
                 <Button 
-                  size="lg"
-                  className="w-full sm:w-auto bg-primary hover:bg-primary-dark text-white rounded-xl px-8 py-6 text-base font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
+                  className="btn btn-primary btn-lg w-full sm:w-auto"
                 >
                   Explore Our Approach
                 </Button>
@@ -63,8 +62,7 @@ export function SciencePreview() {
               <Link href="/research" className="w-full sm:w-auto">
                 <Button 
                   variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto border-2 border-gray-200 hover:border-primary text-gray-700 hover:text-primary rounded-xl px-8 py-6 text-base font-semibold transition-all duration-300"
+                  className="btn btn-outline btn-lg w-full sm:w-auto"
                 >
                   View Research
                 </Button>

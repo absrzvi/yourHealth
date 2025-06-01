@@ -47,6 +47,39 @@
     @apply mb-4 leading-[1.7];
   }
 
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-60 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary border-2 border-transparent hover:bg-gray-50 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent hover:bg-gray-100 text-gray-700 border-2 border-transparent;
+  }
+  
+  .btn-lg {
+    @apply text-base px-6 py-3 h-12;
+  }
+  
+  .btn-md {
+    @apply text-sm px-5 py-2.5 h-10;
+  }
+  
+  .btn-sm {
+    @apply text-xs px-4 py-2 h-8;
+  }
+  
   /* Links */
   a {
     @apply text-primary font-medium transition-colors hover:text-primary-dark underline-offset-4 hover:underline;
