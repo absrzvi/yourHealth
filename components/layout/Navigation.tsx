@@ -43,8 +43,11 @@ export function Navigation() {
             <Link href="/products" className="text-neutral-700 hover:text-primary transition">
               Products
             </Link>
-            <Link href="/providers" className="text-neutral-600 hover:text-primary transition text-sm">
-              For Providers
+            <Link 
+              href="/providers" 
+              className="text-neutral-600 hover:text-primary transition text-sm"
+            >
+              AI Coach
             </Link>
             <Link href="/blog" className="text-neutral-700 hover:text-primary transition">
               Resources
