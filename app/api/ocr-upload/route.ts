@@ -16,6 +16,7 @@ export const routeSegmentConfig = {
 };
 
 export async function POST(request: Request) {
+  console.log('[API /api/ocr-upload] Received request');
   try {
     // HIPAA compliance: Verify authentication
     const session = await getServerSession(authOptions);
@@ -107,11 +108,11 @@ export async function POST(request: Request) {
       }
     ]);
 
-    const response = await result.response;
-    const text = response.text();
+    const geminiResponse = await result.response;
+    const ocrText = geminiResponse.text(); // Capture raw OCR text
 
     // Extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonMatch = ocrText.match(/\{[\s\S]*\}/); // Use ocrText here
     if (!jsonMatch) {
       throw new Error('Could not extract JSON from AI response');
     }
@@ -142,24 +143,41 @@ export async function POST(request: Request) {
     });
 
     // Return the processed data
+    console.log('[API /api/ocr-upload] Processing successful, returning data:', { 
+      success: true, 
+      reportId: report.id,
+      testCount: reportData.tests?.length || 0,
+      confidence: reportData.metadata?.confidence || 'unknown',
+      needsReview: (reportData.metadata?.confidence || 0) < 0.8,
+      tests: reportData.tests,
+      ocrText: ocrText,
+      patientName: reportData.metadata?.patient_name, 
+      labName: reportData.metadata?.lab_name 
+    });
     return NextResponse.json({ 
       success: true, 
       reportId: report.id,
       testCount: reportData.tests?.length || 0,
       confidence: reportData.metadata?.confidence || 'unknown',
       needsReview: (reportData.metadata?.confidence || 0) < 0.8,
+      patientName: reportData.metadata?.patient_name, // Pass patient_name
+      labName: reportData.metadata?.lab_name, // Pass lab_name
       tests: reportData.tests?.map((t: any) => ({
         name: t.name,
         value: t.value,
         unit: t.unit,
-        flag: t.flag
-      }))
+        flag: t.flag,
+        referenceRange: t.reference_range, // Pass reference_range
+        itemConfidence: t.confidence_score // Pass per-item confidence_score
+      })),
+      ocrText: ocrText // Add raw OCR text to the actual response
     });
 
   } catch (error) {
     console.error('Error processing upload:', error);
     return new NextResponse(
       JSON.stringify({ 
+        success: false, // Ensure success flag is explicitly false on error
         error: 'Failed to process upload', 
         details: error instanceof Error ? error.message : 'Unknown error' 
       }),

@@ -45,10 +45,12 @@ export async function middleware(request: NextRequest) {
     url: request.url 
   })
 
-  // Skip middleware for API routes, static files, _next paths and public files
-  if (pathname.startsWith('/api/') || pathname.startsWith('/_next') || isPublicFile) {
-    debug('Skipping middleware for API or static path:', pathname);
-    return NextResponse.next()
+  debug(`[Path Check for ${pathname}]: isApiAuthRoute=${isApiAuthRoute}, startsWithNext=${pathname.startsWith('/_next')}, isPublicFile=${isPublicFile}`);
+
+  // Skip middleware for NextAuth API routes, static files (except ocr-test.html), and _next paths
+  if (isApiAuthRoute || pathname.startsWith('/_next') || (isPublicFile && pathname !== '/ocr-test.html')) {
+    debug('Skipping middleware for NextAuth API, static, or _next path:', pathname);
+    return NextResponse.next();
   }
 
   // Declare token variable outside the try block so it's available throughout the middleware

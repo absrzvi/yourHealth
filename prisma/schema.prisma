@@ -16,6 +16,7 @@ model User {
   updatedAt DateTime @updatedAt
   reports   Report[]
   insights  WeeklyInsight[]
+  chatSessions ChatSession[] // Added relation to ChatSession
 }
 
 model Report {
@@ -26,7 +27,7 @@ model Report {
   filePath  String
   parsedData String?
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WeeklyInsight {
@@ -42,4 +43,28 @@ model WeeklyInsight {
   user                  User     @relation(fields: [userId], references: [id])
 }
 
+// New Models for Chat Functionality
+model ChatSession {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?     // Optional title for the chat session
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  
+  role          String      @default("USER") // Changed from MessageRole to String
+  content       String      // Actual message content, potentially PHI
+  
+  llmProvider   String?     // e.g., "openai", "anthropic"
+  llmModel      String?     // e.g., "gpt-4o", "claude-3-opus"
+  
+  createdAt     DateTime    @default(now())
+}
 

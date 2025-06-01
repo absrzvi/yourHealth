@@ -10,10 +10,11 @@
   - [x] Test and ensure login/registration (`app/api/auth/...` routes) are fully functional
   - [x] Verify basic session persistence
 - [ ] **Database Operational Readiness**
-  - [ ] Run pending Prisma migrations (e.g., `npx prisma migrate dev --name add_chat_and_password` - verify name)
-  - [ ] Run `npx prisma generate`
+  - [x] Run pending Prisma migrations (`npx prisma migrate dev --name add_chat_functionality_and_cascade_deletes`)
+  - [x] Run `npx prisma generate`
 - [ ] **File Upload & OCR Pipeline Verification**
-  - [ ] Ensure `components/upload/UploadCard.tsx` successfully calls `app/api/upload/route.ts`
+  - [x] Refactor and fix `components/upload/UploadCard.tsx` (ready for API call verification)
+  - [ ] Verify `components/upload/UploadCard.tsx` successfully calls `app/api/upload/route.ts` and `app/api/ocr-upload/route.ts`
   - [ ] Confirm upload triggers `parseReport` and extracts data (visible via console/basic UI)
 - [ ] **AI Coach Page - Basic UI & Chat Functionality**
   - [ ] Create `app/ai-coach/page.tsx` with simple layout for Aria visual and chat interface
@@ -25,6 +26,7 @@
 - [ ] **UI Polish for Demoed Features**
   - [ ] Ensure smooth navigation flows
   - [ ] Basic styling and usability improvements for Upload and AI Coach pages
+  - [x] Enhance `ocr-test.html` results table: remove confidence, add dictionary-based reference ranges, color-code suggestions, and fix result tab display issues.
 - [ ] **(Optional) Basic Ollama connection for Aria's response**
 
 ---
