@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Test Tool</h1>
+    <p>This page tests various API endpoints to help diagnose issues.</p>
+    
+    <div>
+        <h2>Test API Endpoints</h2>
+        <button id="testNewApi">Test GET /api/test</button>
+        <button id="testUploadApi">Test GET /api/upload</button>
+        <div id="getResult" class="result">Results will appear here...</div>
+    </div>
+
+    <div>
+        <h2>Test POST Request</h2>
+        <button id="testPostApi">Test POST /api/test</button>
+        <div id="postResult" class="result">Results will appear here...</div>
+    </div>
+
+    <div>
+        <h2>Request Headers</h2>
+        <div id="headersResult" class="result">Headers information will appear here...</div>
+    </div>
+
+    <script>
+        // Helper function to display response details
+        async function displayResponse(response, resultElement) {
+            resultElement.textContent = `Status: ${response.status} ${response.statusText}\n`;
+            
+            // Show all headers
+            resultElement.textContent += "Response Headers:\n";
+            response.headers.forEach((value, key) => {
+                resultElement.textContent += `${key}: ${value}\n`;
+            });
+            
+            resultElement.textContent += "\n";
+            
+            // Try to parse as JSON
+            try {
+                const data = await response.json();
+                resultElement.textContent += `Response data: ${JSON.stringify(data, null, 2)}`;
+            } catch (parseError) {
+                // If not JSON, show text
+                const text = await response.text();
+                resultElement.textContent += `Response could not be parsed as JSON.\nRaw response (first 1000 chars):\n${text.substring(0, 1000)}${text.length > 1000 ? '...' : ''}`;
+            }
+        }
+
+        // Display request headers
+        function showRequestHeaders() {
+            const resultEl = document.getElementById('headersResult');
+            const headers = {};
+            
+            // This will show what headers the browser would send
+            const req = new Request('https://example.com');
+            req.headers.forEach((value, key) => {
+                headers[key] = value;
+            });
+            
+            resultEl.textContent = `Browser Request Headers:\n${JSON.stringify(headers, null, 2)}`;
+        }
+        
+        // Run on page load
+        showRequestHeaders();
+
+        // Test GET to new API endpoint
+        document.getElementById('testNewApi').addEventListener('click', async () => {
+            const resultEl = document.getElementById('getResult');
+            resultEl.textContent = 'Making GET request to /api/test...';
+            
+            try {
+                const response = await fetch('/api/test');
+                await displayResponse(response, resultEl);
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Test GET to upload API
+        document.getElementById('testUploadApi').addEventListener('click', async () => {
+            const resultEl = document.getElementById('getResult');
+            resultEl.textContent = 'Making GET request to /api/upload...';
+            
+            try {
+                const response = await fetch('/api/upload');
+                await displayResponse(response, resultEl);
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Test POST to new API
+        document.getElementById('testPostApi').addEventListener('click', async () => {
+            const resultEl = document.getElementById('postResult');
+            resultEl.textContent = 'Making POST request to /api/test...';
+            
+            try {
+                const response = await fetch('/api/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'Test payload',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                await displayResponse(response, resultEl);
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

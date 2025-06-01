@@ -9,6 +9,16 @@
   min-height: 100vh;
 }
 
+.app-container.full-width {
+  display: block;
+  width: 100%;
+}
+
+.app-container.full-width .main-content {
+  width: 100%;
+  min-height: 100vh;
+}
+
 .sidebar {
   width: 240px;
   background: #fff;

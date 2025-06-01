@@ -11,13 +11,14 @@ const customJestConfig = {
   // Test files should be in __tests__ folders or end with .test.ts(x) or .spec.ts(x)
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
-    '**/?(*.)+(spec|test).[jt]s?(x)'
+    '**/?(*.)+(spec|test).[jt]s?(x)',
+    '**/test/**/*.test.ts' // Include our test directory
   ],
   setupFilesAfterEnv: [
     '<rootDir>/jest.setup.js',
     '<rootDir>/__tests__/setup.ts',
   ],
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: 'jsdom', // Changed from node to jsdom to support window object in tests
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@/components/(.*)$': '<rootDir>/components/$1',

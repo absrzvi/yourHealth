@@ -1,0 +1,20 @@
+COMPREHENSIVE METABOLIC PANEL
+Patient: John Doe
+Date: 2025-05-30
+
+TEST            RESULT      REFERENCE RANGE     FLAG
+---------------------------------------------------------
+Glucose         105 mg/dL   70-99 mg/dL         HIGH
+Cholesterol     198 mg/dL   <200 mg/dL          
+HDL             45 mg/dL    >40 mg/dL           
+LDL             120 mg/dL   <100 mg/dL          HIGH
+Triglycerides   150 mg/dL   <150 mg/dL          
+Hemoglobin      14.5 g/dL   13.0-17.0 g/dL      
+WBC             7.2 K/uL    4.5-11.0 K/uL       
+RBC             5.1 M/uL    4.5-5.9 M/uL        
+Platelets       250 K/uL    150-450 K/uL        
+ALT             30 U/L      10-40 U/L           
+AST             25 U/L      10-40 U/L           
+Creatinine      0.9 mg/dL   0.6-1.2 mg/dL       
+BUN             15 mg/dL    7-20 mg/dL          
+eGFR            >90 mL/min  >60 mL/min

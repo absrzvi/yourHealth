@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input, select {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload API Test</h1>
+    <p>This page tests the direct connection to the upload API endpoint.</p>
+    
+    <div>
+        <h2>Test 1: Simple GET Request</h2>
+        <button id="testGet">Test GET /api/upload</button>
+        <div id="getResult" class="result">Results will appear here...</div>
+    </div>
+
+    <div>
+        <h2>Test 2: File Upload POST Request</h2>
+        <form id="uploadForm">
+            <select id="reportType">
+                <option value="BLOOD_TEST">Blood Test Report</option>
+                <option value="DNA">DNA Report</option>
+                <option value="MICROBIOME">Microbiome Report</option>
+            </select>
+            <input type="file" id="fileInput">
+            <button type="submit">Test POST /api/upload</button>
+        </form>
+        <div id="postResult" class="result">Results will appear here...</div>
+    </div>
+
+    <script>
+        // Test GET request
+        document.getElementById('testGet').addEventListener('click', async () => {
+            const resultEl = document.getElementById('getResult');
+            resultEl.textContent = 'Making GET request...';
+            
+            try {
+                const response = await fetch('/api/upload');
+                
+                // Display response status
+                resultEl.textContent = `Status: ${response.status} ${response.statusText}\n`;
+                resultEl.textContent += `Content-Type: ${response.headers.get('content-type')}\n\n`;
+                
+                // Try to parse as JSON
+                try {
+                    const data = await response.json();
+                    resultEl.textContent += `Response data: ${JSON.stringify(data, null, 2)}`;
+                } catch (parseError) {
+                    // If not JSON, show text
+                    const text = await response.text();
+                    resultEl.textContent += `Response could not be parsed as JSON.\nRaw response:\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
+                }
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Test POST request with file upload
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultEl = document.getElementById('postResult');
+            resultEl.textContent = 'Making POST request...';
+            
+            const fileInput = document.getElementById('fileInput');
+            const reportType = document.getElementById('reportType').value;
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultEl.textContent = 'Please select a file first.';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('type', reportType);
+            formData.append('userId', 'test-user-id'); // Mock user ID for testing
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                // Display response status
+                resultEl.textContent = `Status: ${response.status} ${response.statusText}\n`;
+                resultEl.textContent += `Content-Type: ${response.headers.get('content-type')}\n\n`;
+                
+                // Try to parse as JSON
+                try {
+                    const data = await response.json();
+                    resultEl.textContent += `Response data: ${JSON.stringify(data, null, 2)}`;
+                } catch (parseError) {
+                    // If not JSON, show text
+                    const text = await response.text();
+                    resultEl.textContent += `Response could not be parsed as JSON.\nRaw response:\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`;
+                }
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

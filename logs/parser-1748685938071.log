@@ -1,0 +1,31 @@
+2025-05-31T10:05:38.072Z - BloodTestParser initialized with 1557 characters
+2025-05-31T10:05:38.077Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
+2025-05-31T10:05:38.079Z - Starting blood test report parsing
+2025-05-31T10:05:38.081Z - Step 1: Normalizing OCR text
+2025-05-31T10:05:38.091Z - Text normalized from 1557 to 1328 chars
+2025-05-31T10:05:38.095Z - Step 2: Preprocessing content
+2025-05-31T10:05:38.101Z - Step 3: Parsing document sections
+2025-05-31T10:05:38.104Z - Step 4: Extracting metadata
+2025-05-31T10:05:38.106Z - Extracting metadata from content
+2025-05-31T10:05:38.109Z - Extracted patient info: {"age":"65"}
+2025-05-31T10:05:38.113Z - Extracted lab info: {}
+2025-05-31T10:05:38.117Z - Step 5: Extracting biomarkers
+2025-05-31T10:05:38.120Z - Extracting biomarkers
+2025-05-31T10:05:38.124Z - Traditional extractor found 1 biomarkers
+2025-05-31T10:05:38.126Z - Normalizing biomarker objects
+2025-05-31T10:05:38.135Z - Normalized biomarker name: "REF 8 Y: V 1 LLA#1 7 5 TREET#3 1 5 P 0 RT 5 C 1 TY AGE 65 Y 0 4 M 0 0 3 0 C 0 NTACT: 0 3 0 40 1 2 0 82 5 810 CHEM 15 TRY 1 nvestigati 0 n Va 1 ues Reference Ranges * Last Avai 1 ab 1 e Resu 1 ts CREAT 1 N 1 NE (5 erum) 5 amp 1 e: 1 5-Apr-2 0 2 5 CREAT 1 N 1 NE (5 erum) 1" → "REF B Y: V I LLA#I S TREET# I S P O RT S C I TY AGE S Y O M O O O C O
+NTACT:
+O O O I O B S I CHEM I TRY I nvestigati O n Va I ues Reference Ranges * Last Avai I ab I e Resu I ts CREATININE (S erum) S amp I e: I S-Apr- O S CREATININE (S erum) I"
+2025-05-31T10:05:38.138Z - Normalized traditional biomarkers: 1 remaining
+2025-05-31T10:05:38.146Z - Generic extractor found 0 biomarkers
+2025-05-31T10:05:38.152Z - Normalizing biomarker objects
+2025-05-31T10:05:38.161Z - Normalized generic biomarkers: 0 remaining
+2025-05-31T10:05:38.164Z - Combined and deduped 1 to 1 biomarkers
+2025-05-31T10:05:38.168Z - Extracted 1 potential biomarkers
+2025-05-31T10:05:38.171Z - Step 6: Extracting clinical remarks
+2025-05-31T10:05:38.176Z - Starting remarks extraction (BloodTestParser)
+2025-05-31T10:05:38.187Z - No remarks data found or remarks array was empty/falsy in external result.
+2025-05-31T10:05:38.192Z - Extracted 0 remarks
+2025-05-31T10:05:38.194Z - Step 7: Validating results
+2025-05-31T10:05:38.200Z - Step 8: Preparing final result
+2025-05-31T10:05:38.206Z - Parsing completed successfully. Found 1 biomarkers and 0 remarks.

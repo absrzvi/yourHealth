@@ -13,22 +13,27 @@ export class OcrNormalizer {
    * Main normalization method - FIXED to prevent infinite loops
    */
   public static normalize(content: string): string {
+    // Basic input validation
     if (!content || typeof content !== 'string') {
+      console.log('[OcrNormalizer] Received empty or non-string input');
       return '';
     }
+
+    // Log the content length we're processing
+    console.log(`[OcrNormalizer] Processing content with length: ${content.length}`);
 
     // Emergency fix: Prevent infinite recursion
     const currentDepth = this.normalizationDepth.get(content) || 0;
     if (currentDepth >= this.MAX_NORMALIZATION_DEPTH) {
-      if (this.ENABLE_DEBUG_LOGGING) {
-        console.warn(`[EMERGENCY] Normalization depth exceeded for: ${content.substring(0, 50)}...`);
-      }
+      console.warn(`[EMERGENCY] Normalization depth exceeded for: ${content.substring(0, 50)}...`);
       return content; // Return as-is to break the loop
     }
 
     // Emergency fix: Check cache first
     if (this.normalizationCache.has(content)) {
-      return this.normalizationCache.get(content)!;
+      const cachedResult = this.normalizationCache.get(content)!;
+      console.log(`[OcrNormalizer] Returning cached result with length: ${cachedResult.length}`);
+      return cachedResult;
     }
 
     // Emergency fix: Track recursion depth
@@ -37,23 +42,25 @@ export class OcrNormalizer {
     let result = content;
     
     try {
-      // FIXED: Removed excessive debug logging that was causing memory issues
-      if (this.ENABLE_DEBUG_LOGGING) {
-        console.log(`[DEBUG_NORMALIZE] Input to normalize (first 100 chars): ${result.substring(0, 100)}...`);
+      console.log(`[OcrNormalizer] Starting normalization steps for content: ${result.substring(0, 100)}...`);
+
+      // Apply normalization steps in order with safety checks
+      result = this.safelyApplyStep('reassembleSpacedWords', result);
+      result = this.safelyApplyStep('fixCharacterSubstitutions', result);
+      result = this.safelyApplyStep('normalizeSpacing', result);
+      result = this.safelyApplyStep('normalizeLineBreaks', result);
+      result = this.safelyApplyStep('standardizeUnits', result);
+      result = this.safelyApplyStep('removeHeadersAndFooters', result);
+      result = this.safelyApplyStep('trimLines', result);
+
+      // Final safety check - don't return empty string for non-empty input
+      if (result.length === 0 && content.length > 0) {
+        console.warn('[OcrNormalizer] Normalization resulted in empty string - returning original content');
+        result = content;
       }
 
-      // Apply normalization steps in order
-      result = this.reassembleSpacedWords(result);
-      result = this.fixCharacterSubstitutions(result);
-      result = this.normalizeSpacing(result);
-      result = this.normalizeLineBreaks(result);
-      result = this.standardizeUnits(result);
-      result = this.removeHeadersAndFooters(result);
-      result = this.trimLines(result);
-
-      if (this.ENABLE_DEBUG_LOGGING) {
-        console.log(`[DEBUG_NORMALIZE] Final result (first 100 chars): ${result.substring(0, 100)}...`);
-      }
+      console.log(`[OcrNormalizer] Completed normalization, result length: ${result.length}`);
+      console.log(`[OcrNormalizer] First 100 chars of result: ${result.substring(0, 100)}...`);
 
     } catch (error) {
       console.error(`[EMERGENCY] Normalization failed for: ${content.substring(0, 50)}...`, error);
@@ -122,22 +129,8 @@ export class OcrNormalizer {
       [/\s*\)\s*/g, ') '],
     ];
 
-    // Apply substitutions safely
     for (const [pattern, replacement] of substitutions) {
-      try {
-        const before = result.length;
-        result = result.replace(pattern, replacement);
-        const after = result.length;
-        
-        // Safety check: prevent massive string expansion
-        if (after > before * 3) {
-          console.warn(`[SAFETY] Substitution caused large expansion, reverting`);
-          result = text; // Revert to original
-          break;
-        }
-      } catch (error) {
-        console.warn(`[SAFETY] Substitution failed, skipping:`, error);
-      }
+      result = result.replace(pattern, replacement);
     }
 
     return result;
@@ -148,12 +141,14 @@ export class OcrNormalizer {
    */
   private static normalizeSpacing(text: string): string {
     if (!text) return '';
-
-    return text
-      .replace(/\s+/g, ' ') // Multiple spaces to single space
-      .replace(/\s*\n\s*/g, '\n') // Clean up around line breaks
-      .replace(/\s*\t\s*/g, ' ') // Replace tabs with spaces
-      .trim();
+    
+    // Remove multiple spaces, tabs, etc.
+    let result = text.replace(/\s+/g, ' ');
+    
+    // Trim start and end
+    result = result.trim();
+    
+    return result;
   }
 
   /**
@@ -161,26 +156,28 @@ export class OcrNormalizer {
    */
   private static reassembleSpacedWords(text: string): string {
     if (!text) return '';
-
+    
     let result = text;
-
-    // Common medical terms that get split
-    const termsToReassemble = [
-      ['G L U C O S E', 'GLUCOSE'],
-      ['C H O L E S T E R O L', 'CHOLESTEROL'],
-      ['T R I G L Y C E R I D E S', 'TRIGLYCERIDES'],
-      ['C R E A T I N I N E', 'CREATININE'],
-      ['H E M O G L O B I N', 'HEMOGLOBIN'],
+    
+    // Common terms that might be split by OCR
+    const termsToFix: [string, string][] = [
+      ['Tri glycerides', 'Triglycerides'],
+      ['Chol esterol', 'Cholesterol'],
+      ['Hemo globin', 'Hemoglobin'],
+      ['Glo bulin', 'Globulin'],
+      ['Bili rubin', 'Bilirubin'],
+      ['Creat inine', 'Creatinine'],
+      ['Alb umin', 'Albumin'],
     ];
-
-    for (const [spaced, normal] of termsToReassemble) {
+    
+    for (const [spaced, normal] of termsToFix) {
       result = result.replace(new RegExp(spaced, 'gi'), normal);
     }
-
+    
     // General pattern: rejoin single letters with spaces
     result = result.replace(/\b([A-Z])\s+([A-Z])\s+([A-Z])\b/g, '$1$2$3');
     result = result.replace(/\b([A-Z])\s+([A-Z])\b/g, '$1$2');
-
+    
     return result;
   }
 
@@ -189,12 +186,14 @@ export class OcrNormalizer {
    */
   private static normalizeLineBreaks(text: string): string {
     if (!text) return '';
-
-    return text
-      .replace(/\r\n/g, '\n') // Windows to Unix line endings
-      .replace(/\r/g, '\n') // Mac to Unix line endings
-      .replace(/\n{3,}/g, '\n\n') // Multiple line breaks to double
-      .trim();
+    
+    // Standardize all line breaks to \n
+    let result = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // Remove excessive line breaks
+    result = result.replace(/\n{3,}/g, '\n\n');
+    
+    return result;
   }
 
   /**
@@ -202,40 +201,50 @@ export class OcrNormalizer {
    */
   private static standardizeUnits(text: string): string {
     if (!text) return '';
-
+    
     let result = text;
-
-    // Unit standardization patterns
+    
+    // Define unit standardizations
     const unitStandardizations: [RegExp, string][] = [
-      // Blood glucose units
-      [/mg\/dl/gi, 'mg/dL'],
-      [/mmol\/l/gi, 'mmol/L'],
+      [/\bul\b/gi, 'µL'],
+      [/\buL\b/g, 'µL'],
+      [/\bmicro[Ll]\b/g, 'µL'],
       
-      // Cholesterol units  
-      [/mg\/dl/gi, 'mg/dL'],
+      [/\bmg\/dl\b/gi, 'mg/dL'],
+      [/\bmg\/dL\b/g, 'mg/dL'], // Ensure consistent capitalization
       
-      // Electrolyte units
-      [/meq\/l/gi, 'meq/L'],
-      [/mmol\/l/gi, 'mmol/L'],
+      [/\bng\/ml\b/gi, 'ng/mL'],
+      [/\bng\/mL\b/g, 'ng/mL'], // Ensure consistent capitalization
       
-      // Blood count units
-      [/10\^3\/ul/gi, '10^3/µL'],
-      [/10\^6\/ul/gi, '10^6/µL'],
-      [/cells\/ul/gi, 'cells/µL'],
+      [/\bpg\/ml\b/gi, 'pg/mL'],
+      [/\bpg\/mL\b/g, 'pg/mL'], // Ensure consistent capitalization
       
-      // Protein units
-      [/g\/dl/gi, 'g/dL'],
-      [/g\/l/gi, 'g/L'],
+      [/\biu\/l\b/gi, 'IU/L'],
+      [/\bIU\/L\b/g, 'IU/L'], // Ensure consistent capitalization
       
-      // Percentage
-      [/percent/gi, '%'],
-      [/pct/gi, '%'],
+      [/\bu\/l\b/gi, 'U/L'],
+      [/\bU\/L\b/g, 'U/L'], // Ensure consistent capitalization
+      
+      [/\bmmol\/l\b/gi, 'mmol/L'],
+      [/\bmmol\/L\b/g, 'mmol/L'], // Ensure consistent capitalization
+      
+      [/\bumol\/l\b/gi, 'µmol/L'],
+      [/\bµmol\/L\b/g, 'µmol/L'], // Ensure consistent capitalization
+      
+      [/\bmeq\/l\b/gi, 'mEq/L'],
+      [/\bmEq\/L\b/g, 'mEq/L'], // Ensure consistent capitalization
+      
+      [/\bmosm\/kg\b/gi, 'mOsm/kg'],
+      [/\bmOsm\/kg\b/g, 'mOsm/kg'], // Ensure consistent capitalization
+      
+      [/\bpct\b/gi, '%'],
+      [/\bpercent\b/gi, '%'],
     ];
-
+    
     for (const [pattern, replacement] of unitStandardizations) {
       result = result.replace(pattern, replacement);
     }
-
+    
     return result;
   }
 
@@ -244,9 +253,9 @@ export class OcrNormalizer {
    */
   private static removeHeadersAndFooters(text: string): string {
     if (!text) return '';
-
+    
     let result = text;
-
+    
     // Common header/footer patterns to remove
     const patternsToRemove = [
       /^.*?laboratory.*$/gmi,
@@ -254,13 +263,18 @@ export class OcrNormalizer {
       /^.*?confidential.*$/gmi,
       /^.*?printed on.*$/gmi,
       /^.*?report date.*$/gmi,
-      /^.*?lab director.*$/gmi,
+      /^.*?lab report.*$/gmi,
+      /^.*?patient:.*$/gmi,
+      /^.*?doctor:.*$/gmi,
+      /^.*?specimen:.*$/gmi,
+      /^.*?collected:.*$/gmi,
+      /^.*?ordered:.*$/gmi,
     ];
-
+    
     for (const pattern of patternsToRemove) {
       result = result.replace(pattern, '');
     }
-
+    
     return result;
   }
 
@@ -269,20 +283,57 @@ export class OcrNormalizer {
    */
   private static trimLines(text: string): string {
     if (!text) return '';
-
-    return text
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .join('\n');
+    
+    // Split by line, trim each line, then join non-empty lines
+    const lines = text.split('\n');
+    const trimmedLines = lines.map(line => line.trim()).filter(line => line !== '');
+    
+    return trimmedLines.join('\n');
   }
 
   /**
-   * Clear normalization cache - call this periodically or between tests
+   * Clear the normalization cache
    */
   public static clearCache(): void {
     this.normalizationCache.clear();
     this.normalizationDepth.clear();
+  }
+
+  /**
+   * Safely applies a normalization step with safety checks and logging
+   * @param stepName The name of the normalization step method to apply
+   * @param text The text to normalize
+   * @returns The normalized text, or the original if the step fails
+   */
+  private static safelyApplyStep(stepName: string, text: string): string {
+    if (!text || text.length === 0) {
+      console.log(`[OcrNormalizer] Skipping ${stepName} for empty text`);
+      return text;
+    }
+
+    try {
+      console.log(`[OcrNormalizer] Applying ${stepName} to text of length ${text.length}`);
+      const method = this[stepName] as (text: string) => string;
+      
+      if (typeof method !== 'function') {
+        console.error(`[OcrNormalizer] ${stepName} is not a valid normalization method`);
+        return text;
+      }
+      
+      const result = method.call(this, text);
+      
+      // Safety check for this step
+      if (!result && text.length > 0) {
+        console.warn(`[OcrNormalizer] ${stepName} returned empty result for non-empty input - using original`);
+        return text;
+      }
+      
+      console.log(`[OcrNormalizer] ${stepName} produced result of length ${result?.length || 0}`);
+      return result || text;
+    } catch (error) {
+      console.error(`[OcrNormalizer] Error in ${stepName}:`, error);
+      return text; // Return original on error
+    }
   }
 
   /**
@@ -305,5 +356,128 @@ export class OcrNormalizer {
     if (enabled) {
       console.warn('[OcrNormalizer] Debug logging is disabled for memory safety');
     }
+  }
+}
+
+/**
+ * A safer version of OcrNormalizer that handles memory constraints
+ * for large text blocks by processing in chunks to prevent memory issues.
+ */
+export class SafeOcrNormalizer {
+  private maxChunkSize: number = 5000; // Process in chunks to avoid memory issues
+
+  constructor() {
+    console.log('[DEBUG] SafeOcrNormalizer instantiated');
+  }
+
+  /**
+   * Normalize OCR text using chunked processing to prevent memory issues
+   * @param content The OCR text to normalize
+   * @returns Normalized text
+   */
+  public normalize(content: string): string {
+    console.log('[DEBUG] SafeOcrNormalizer.normalize called with content length:', content?.length || 0);
+    if (!content || typeof content !== 'string') {
+      console.log('[DEBUG] SafeOcrNormalizer.normalize received empty or non-string input');
+      return '';
+    }
+    
+    // Keep a copy of the original content for safety
+    const originalContent = content;
+    console.log('[DEBUG] First 100 chars of original content:', originalContent.substring(0, 100));
+    
+    // For small content, process directly
+    if (content.length < this.maxChunkSize) {
+      console.log('[DEBUG] Processing small content directly');
+      const result = OcrNormalizer.normalize(content);
+      console.log('[DEBUG] Direct normalization result length:', result?.length || 0);
+      
+      // SAFETY CHECK: If normalization resulted in empty string from non-empty input
+      if (result.length === 0 && content.length > 0) {
+        console.log('[DEBUG] Warning: Direct normalization resulted in empty string - returning original');
+        return originalContent; // Return the original content
+      }
+      
+      return result || originalContent; // Return result if not empty/null, otherwise original
+    }
+    
+    // For larger content, process in chunks
+    console.log('[DEBUG] Processing large content in chunks');
+    const chunks: string[] = this.splitIntoChunks(content, this.maxChunkSize);
+    console.log('[DEBUG] Split into', chunks.length, 'chunks');
+    const normalizedChunks: string[] = [];
+    
+    for (const chunk of chunks) {
+      // Process each chunk individually
+      let normalizedChunk = OcrNormalizer.normalize(chunk);
+      
+      // Safety check for each chunk
+      if (normalizedChunk.length === 0 && chunk.length > 0) {
+        console.log('[DEBUG] Warning: Chunk normalization resulted in empty string - using original chunk');
+        normalizedChunk = chunk; // Use original chunk if normalization failed
+      }
+      
+      normalizedChunks.push(normalizedChunk);
+      
+      // Clear cache between chunks to prevent memory buildup
+      OcrNormalizer.clearCache();
+    }
+    
+    // Join the chunks back together with double newlines to preserve paragraph structure
+    const result = normalizedChunks.join('\n\n');
+    console.log('[DEBUG] Final normalized result length:', result.length);
+    
+    // Final SAFETY CHECK: If normalization resulted in empty string from non-empty input
+    if (result.length === 0 && content.length > 0) {
+      console.log('[DEBUG] Critical Warning: Normalization resulted in empty string - returning original');
+      return originalContent; // Return the original content
+    }
+    
+    // Log sample of final result for debugging
+    console.log('[DEBUG] First 100 chars of normalized result:', result.substring(0, 100));
+    
+    return result;
+  }
+
+  /**
+   * Split text into chunks of approximately equal size
+   * Tries to split at paragraph boundaries when possible
+   */
+  private splitIntoChunks(text: string, maxChunkSize: number): string[] {
+    const chunks: string[] = [];
+    
+    // Try to split at paragraph boundaries
+    const paragraphs = text.split(/\n\s*\n/);
+    let currentChunk = '';
+    
+    for (const paragraph of paragraphs) {
+      // If adding this paragraph would exceed max size, save current chunk and start a new one
+      if (currentChunk.length + paragraph.length > maxChunkSize && currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = paragraph;
+      } else {
+        // Otherwise add to current chunk
+        if (currentChunk.length > 0) {
+          currentChunk += '\n\n';
+        }
+        currentChunk += paragraph;
+      }
+    }
+    
+    // Add the last chunk if it's not empty
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk);
+    }
+    
+    // If we ended up with no chunks (unlikely), just split by size
+    if (chunks.length === 0) {
+      let i = 0;
+      while (i < text.length) {
+        chunks.push(text.substring(i, i + maxChunkSize));
+        i += maxChunkSize;
+      }
+    }
+    
+    return chunks;
   }
 }

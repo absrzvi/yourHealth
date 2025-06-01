@@ -1,0 +1,555 @@
+/* Dashboard Styles */
+.dashboardContainer {
+  background-color: #0F0F1E;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+
+/* Header Section */
+.header {
+  padding: 1.5rem 2rem;
+  background: rgba(20, 20, 40, 0.5);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.breadcrumbs span {
+  display: flex;
+  align-items: center;
+}
+
+.separator {
+  margin: 0 0.25rem;
+}
+
+.breadcrumbActive {
+  color: white;
+  font-weight: 500;
+}
+
+/* Main Content */
+.mainContent {
+  flex: 1;
+  display: flex;
+  padding: 2rem;
+}
+
+/* Layered Data Explorer */
+.dataExplorer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Lens Selector */
+.lensSelector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.lensButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2rem;
+  padding: 0.75rem 1.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lensButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.lensButton.active {
+  background: linear-gradient(45deg, #4facfe, #00f2fe);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
+
+.lensIcon {
+  font-size: 1.25rem;
+}
+
+/* Chart Area */
+.chartArea {
+  position: relative;
+  background: rgba(20, 20, 40, 0.5);
+  border-radius: 1rem;
+  padding: 2rem;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.chartTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chartTitle h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.chartControls {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.controlButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 0.5rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.25rem;
+}
+
+.controlButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.chartContainer {
+  flex: 1;
+  position: relative;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.chartSvg {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+}
+
+.chartGrid {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+}
+
+.chartAxis {
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
+}
+
+.chartLine {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.primaryLine {
+  stroke: #4facfe;
+  filter: drop-shadow(0 0 5px rgba(79, 172, 254, 0.5));
+}
+
+.secondaryLine {
+  stroke: #f5365c;
+  opacity: 0.8;
+}
+
+.dataPoint {
+  fill: #fff;
+  stroke-width: 2;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dataPoint:hover {
+  transform: scale(1.5);
+}
+
+.chartArea text {
+  fill: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+/* Overlay Layers */
+.overlayContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.referenceZone {
+  fill: rgba(21, 202, 128, 0.15);
+  stroke: rgba(21, 202, 128, 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 3,3;
+}
+
+.outlierMarker {
+  fill: rgba(245, 54, 92, 0.8);
+  stroke: #fff;
+  stroke-width: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.trendLine {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 4,4;
+}
+
+.annotationMarker {
+  fill: rgba(79, 172, 254, 0.9);
+  stroke: #fff;
+  stroke-width: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.tooltipContainer {
+  position: absolute;
+  background: rgba(20, 20, 40, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  width: 200px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.tooltipValue {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.tooltipLabel {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tooltipData {
+  font-weight: 500;
+}
+
+/* Insights Panel */
+.insightsPanel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.insightCard {
+  flex: 1;
+  min-width: 300px;
+  background: rgba(20, 20, 40, 0.5);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.insightHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.insightIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sleepIcon {
+  background: linear-gradient(45deg, #4facfe, #00f2fe);
+  color: white;
+}
+
+.nutritionIcon {
+  background: linear-gradient(45deg, #43e97b, #38f9d7);
+  color: white;
+}
+
+.biomarkersIcon {
+  background: linear-gradient(45deg, #fa709a, #fee140);
+  color: white;
+}
+
+.insightTitle {
+  font-weight: 600;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.insightContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insightItem {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.insightBullet {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: white;
+  margin-top: 0.25rem;
+}
+
+.insightText {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.insightHighlight {
+  color: #4facfe;
+  font-weight: 500;
+}
+
+.insightFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.insightAction {
+  background: transparent;
+  border: none;
+  color: #4facfe;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.insightAction:hover {
+  text-decoration: underline;
+}
+
+/* Control Panel */
+.controlPanel {
+  background: rgba(20, 20, 40, 0.5);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.metricSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.metricTitle {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.metricOptions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.metricOption {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.metricOption:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.metricOption.active {
+  background: linear-gradient(45deg, #4facfe, #00f2fe);
+  color: white;
+  border-color: transparent;
+}
+
+.timeRange {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timeOptions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.exportOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.exportButton {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
+  .lensSelector {
+    flex-wrap: wrap;
+  }
+  
+  .controlPanel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .metricSelector, .timeRange, .exportOptions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    padding: 1rem;
+  }
+  
+  .insightsPanel {
+    flex-direction: column;
+  }
+  
+  .insightCard {
+    width: 100%;
+  }
+  
+  .chartArea {
+    padding: 1rem;
+  }
+}
+
+/* Animation */
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+.pulsing {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+/* Transitions */
+.fadeIn {
+  opacity: 0;
+  animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Interactive States */
+.interactive {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.interactive:hover {
+  filter: brightness(1.2);
+}
