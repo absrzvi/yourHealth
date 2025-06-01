@@ -51,26 +51,24 @@ export function HeroSection() {
             <div className="absolute inset-0 flex items-center z-10">
               <div className="w-full px-4 sm:px-6 lg:px-8">
                 <div className="max-w-2xl lg:max-w-3xl">
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
                     Your Personalized Health Journey Starts Here
                   </h1>
-                  <p className="text-lg sm:text-xl text-gray-100/90 mb-8 leading-relaxed">
+                  <p className="text-lg sm:text-xl text-white/95 mb-8 leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
                     Discover how your unique biology can guide you to better health with our advanced DNA and microbiome analysis.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Link href="/register">
+                    <Link href="/get-started" className="w-full sm:w-auto">
                       <Button 
-                        size="lg" 
-                        className="bg-white text-primary hover:bg-gray-100 transition-colors font-semibold tracking-wide"
+                        className="btn btn-primary btn-lg w-full sm:w-auto"
                       >
                         Get Started
                       </Button>
                     </Link>
-                    <Link href="/science">
+                    <Link href="/how-it-works" className="w-full sm:w-auto">
                       <Button 
-                        size="lg" 
-                        variant="outline" 
-                        className="border-white text-white hover:bg-white/10 transition-colors font-medium tracking-wide"
+                        variant="outline"
+                        className="btn btn-outline btn-lg w-full sm:w-auto text-white border-white hover:bg-white/10 hover:border-white/80"
                       >
                         Learn More
                       </Button>
@@ -94,9 +92,9 @@ export function HeroSection() {
                 priority
                 sizes="(max-width: 1024px) 100vw, 34vw"
               />
-              <div className="absolute bottom-0 left-0 p-6 z-20">
-                <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]">Push Your Limits</h2>
-                <p className="text-sm text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Personalized fitness plans based on your DNA</p>
+              <div className="absolute bottom-0 left-0 p-6 z-20 w-full">
+                <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Push Your Limits</h2>
+                <p className="text-sm text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Personalized fitness plans based on your DNA</p>
               </div>
             </div>
 
@@ -111,9 +109,9 @@ export function HeroSection() {
                 priority
                 sizes="(max-width: 1024px) 100vw, 34vw"
               />
-              <div className="absolute bottom-0 left-0 p-6 z-20">
-                <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]">Achieve Together</h2>
-                <p className="text-sm text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Shared goals for better health outcomes</p>
+              <div className="absolute bottom-0 left-0 p-6 z-20 w-full">
+                <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Achieve Together</h2>
+                <p className="text-sm text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Shared goals for better health outcomes</p>
               </div>
             </div>
           </div>

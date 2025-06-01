@@ -7,6 +7,9 @@
   - Removed background from AI responses for cleaner look
   - Improved message bubble styling and alignment
   - Better input field and button styling
+  - Enhanced homepage text contrast and readability
+  - Standardized button styles and interactions
+  - Improved visual hierarchy in hero and feature sections
 - **Authentication**: Session management and security implemented
 - **Database**: Prisma schema and migrations up to date
 - **API Endpoints**: Chat API endpoint with basic functionality

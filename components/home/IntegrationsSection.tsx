@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface IntegrationCard {
   title: string;
@@ -148,7 +149,7 @@ export function IntegrationsSection() {
                   
                   {card.logos && (
                     <div className="mt-auto pt-6 border-t border-white/10">
-                      <p className="text-xs text-white/50 mb-3">COMPATIBLE WITH</p>
+                      <p className="text-xs font-medium text-white/80 mb-3 tracking-wide">COMPATIBLE WITH</p>
                       <div className="flex flex-wrap gap-3">
                         {card.logos.map((logo, i) => (
                           <motion.div
@@ -178,10 +179,10 @@ export function IntegrationsSection() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ delay: 0.3 }}
         >
-          <button className="bg-white hover:bg-gray-100 text-primary font-medium py-3 px-8 rounded-full transition-colors duration-200 shadow-lg hover:shadow-xl">
+          <Button className="btn btn-secondary btn-lg">
             Join Waitlist for Early Access
-          </button>
-          <p className="text-white/60 text-sm mt-4">
+          </Button>
+          <p className="text-white/80 text-sm mt-4">
             Be the first to know when new integrations are available
           </p>
         </motion.div>
