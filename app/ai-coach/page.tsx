@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import styles from './mandala.module.css';
 import dynamic from 'next/dynamic';
 import type { BiomarkerScores } from './SpinningBall';
+import ChatInterface from '@/components/ai-coach/ChatInterface'; // Adjust path if needed
 
 const SpinningBall = dynamic(() => import('./SpinningBall'), {
   ssr: false,
@@ -10,6 +11,8 @@ const SpinningBall = dynamic(() => import('./SpinningBall'), {
 });
 
 export default function AiCoachPage() {
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+  const chatPanelHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Placeholder for real biomarker data - this would come from your state management or API
   const [biomarkerData, setBiomarkerData] = useState<BiomarkerScores>({
     sleep: 80,
@@ -44,6 +47,23 @@ export default function AiCoachPage() {
   const handleTimelineSelect = (period: string) => {
     console.log(`Selected period: ${period}`);
     // Handle timeline selection logic
+  };
+
+  const openChatPanel = () => {
+    if (chatPanelHoverTimeoutRef.current) {
+      clearTimeout(chatPanelHoverTimeoutRef.current);
+      chatPanelHoverTimeoutRef.current = null;
+    }
+    setIsChatPanelOpen(true);
+  };
+
+  const closeChatPanelWithDelay = () => {
+    if (chatPanelHoverTimeoutRef.current) {
+      clearTimeout(chatPanelHoverTimeoutRef.current);
+    }
+    chatPanelHoverTimeoutRef.current = setTimeout(() => {
+      setIsChatPanelOpen(false);
+    }, 300); // 300ms delay before closing
   };
 
   return (
@@ -109,9 +129,19 @@ export default function AiCoachPage() {
         <span className={styles.chatIcon}>💬</span>
         <span className={styles.chatText}>Chat with Dr. Anna</span>
       </button>
+
+      <ChatInterface 
+        isOpen={isChatPanelOpen} 
+        onMouseEnter={openChatPanel} 
+        onMouseLeave={closeChatPanelWithDelay} 
+      />
       
-      {/* Sidebar Navigation */}
-      <aside className={styles.timeline}>
+      {/* Sidebar Navigation (Chat Trigger) */}
+      <aside 
+        className={styles.timeline}
+        onMouseEnter={openChatPanel}
+        onMouseLeave={closeChatPanelWithDelay}
+      >
         <div className={styles.timelineHeader}>
           <div className={styles.healthScore}>
             <div className={styles.scoreRing}>
