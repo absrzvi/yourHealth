@@ -1,0 +1,20 @@
+.aria-message {
+  background: none !important;
+  color: inherit !important;
+  padding: 0.25rem 0;
+}
+
+/* Ensure no background is applied to the message container */
+[data-role="ASSISTANT"] {
+  background: none !important;
+}
+
+/* Reset any inherited background colors */
+.bg-transparent,
+.bg-gray-800,
+.bg-gray-700,
+.bg-gray-600,
+.bg-gray-500,
+.bg-opacity-50 {
+  background: none !important;
+}

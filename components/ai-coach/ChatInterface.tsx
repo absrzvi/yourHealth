@@ -1,235 +1,515 @@
 // components/ai-coach/ChatInterface.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-// We'll create a CSS module for this component's styles
-// import styles from './ChatInterface.module.css';
+import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
+import { useSession } from 'next-auth/react';
+import { VisualizationMessage } from './VisualizationMessage';
+
+type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'error';
+type MessageRole = 'USER' | 'ASSISTANT';
+
+type MessageType = 'text' | 'chart' | 'dashboard' | 'error';
 
 interface Message {
-    id: string;
-    role: 'USER' | 'ASSISTANT'; // Aligned with backend roles
-    content: string;
-    timestamp: Date;
+  id: string;
+  role: MessageRole;
+  type: MessageType;
+  content: string | Record<string, any>;
+  timestamp: Date;
+  status?: MessageStatus;
+  chatSessionId?: string;
+}
+
+interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface ChatInterfaceProps {
-    isOpen: boolean;
-    onMouseEnter?: () => void;
-    onMouseLeave?: () => void;
-    // We'll add more props later, e.g., onSendMessage
+  isOpen: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  initialMessages?: Message[];
+  sessionId?: string;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ isOpen, onMouseEnter, onMouseLeave }) => {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [inputText, setInputText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const messagesEndRef = useRef<null | HTMLDivElement>(null);
+// Component to render different message types
+const MessageContent: FC<{ message: Message }> = ({ message }) => {
+  if (message.type === 'text' || typeof message.content === 'string') {
+    return <div className="message-content">{message.content as string}</div>;
+  }
 
-    // Mock initial message
-    useEffect(() => {
-        setMessages([
-            { id: '1', role: 'ASSISTANT', content: 'Welcome to your AI Health Coach! How can I assist you today?', timestamp: new Date() }
-        ]);
-    }, []);
+  if (message.type === 'chart' || message.type === 'dashboard' || message.type === 'error') {
+    return (
+      <div className="w-full max-w-3xl">
+        <VisualizationMessage
+          type={message.type}
+          data={message.content}
+        />
+      </div>
+    );
+  }
 
-    // Scroll to bottom when new messages are added
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+  return null;
+};
 
-    const handleSendMessage = async () => {
-        if (inputText.trim() === '') return;
+const ChatInterface: FC<ChatInterfaceProps> = ({
+  isOpen = true,
+  onMouseEnter = () => {},
+  onMouseLeave = () => {},
+  initialMessages = [],
+  sessionId,
+}) => {
+  const { data: session } = useSession();
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-        const currentUserMessageText = inputText;
-        setInputText(''); // Clear input immediately
-
-        const userMessage: Message = {
-            id: Date.now().toString(), // Simple ID generation for local display
-            role: 'USER',
-            content: currentUserMessageText,
-            timestamp: new Date()
-        };
-        setMessages(prev => [...prev, userMessage]);
-
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: currentUserMessageText }), // Temporarily removed chatSessionId
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('API Error:', errorData.error || response.statusText);
-                // Optionally, add an error message to the chat
-                const errorMessage: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'ASSISTANT',
-                    content: `Error: ${errorData.error || 'Failed to get response from Aria.'}`,
-                    timestamp: new Date(),
-                };
-                setMessages(prev => [...prev, errorMessage]);
-                return;
-            }
-
-            const aiResponseData = await response.json();
-            
-            const aiMessage: Message = {
-                id: aiResponseData.id,
-                role: aiResponseData.role, // Should be 'ASSISTANT'
-                content: aiResponseData.content,
-                timestamp: new Date(aiResponseData.timestamp) // Convert ISO string to Date
-            };
-            setMessages(prev => [...prev, aiMessage]);
-
-        } catch (error) {
-            console.error('Failed to send message or process response:', error);
-            const errorMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: 'ASSISTANT',
-                content: 'Sorry, I encountered an issue connecting to the server. Please try again.',
-                timestamp: new Date(),
-            };
-            setMessages(prev => [...prev, errorMessage]);
-        }
-    };
-
-    // Basic inline styles for now, to be replaced by CSS module or global styles
-    const panelStyle: React.CSSProperties = {
-        position: 'fixed',
-        left: isOpen ? '0px' : '-400px',
-        top: '64px', // Position below the navigation bar (assuming standard height)
-        width: '400px',
-        height: 'calc(100vh - 64px)', // Full viewport height minus navigation height
-        backgroundColor: '#ffffff',
-        boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'left 0.3s ease-in-out',
-        zIndex: 1000,
-        borderRight: '1px solid #e0e0e0'
-    };
-
-    const messagesContainerStyle: React.CSSProperties = {
-        flexGrow: 1,
-        padding: '15px',
-        overflowY: 'auto',
-        paddingTop: '15px', // Add some top padding since we removed the header
-        fontFamily: 'var(--font-open-sans), sans-serif',
-        fontSize: '0.875rem',
-        color: '#374151' // text-neutral-700 equivalent
-    };
-
-    const inputContainerStyle: React.CSSProperties = {
-        display: 'flex',
-        padding: '15px',
-        borderTop: '1px solid #e0e0e0',
-        fontFamily: 'var(--font-open-sans), sans-serif',
-        fontSize: '0.875rem',
-        color: '#374151' // text-neutral-700 equivalent
-    };
-    
-    const inputStyle: React.CSSProperties = {
-        flexGrow: 1,
-        padding: '10px',
-        border: '1px solid #ccc',
-        borderRadius: '5px',
-        marginRight: '10px',
-        fontFamily: 'var(--font-open-sans), sans-serif',
-        fontSize: '0.875rem',
-        color: '#374151', // text-neutral-700 equivalent
-        backgroundColor: '#fff',
-        transition: 'border-color 0.2s ease',
-        outline: 'none'
-    };
-
-    // Base button style
-    const buttonStyle: React.CSSProperties = {
-        padding: '10px 15px',
-        backgroundColor: '#007bff',
-        color: 'white',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-open-sans), sans-serif',
-        fontSize: '0.875rem',
-        fontWeight: 500,
-        transition: 'background-color 0.2s ease',
-    };
-
-    const buttonHoverStyle: React.CSSProperties = {
-        backgroundColor: '#0056b3'
-    };
-
-    const buttonFocusStyle: React.CSSProperties = {
-        outline: '2px solid #93c5fd',
-        outlineOffset: '2px'
+  // Message status component
+  const MessageStatusIndicator = ({ status }: { status: MessageStatus }) => {
+    const getStatusIcon = () => {
+      switch (status) {
+        case 'sending':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4m0 12v4m-8-8H2m20 0h-4m-1.6-6.4l-2.8 2.8m-11.2 0L4.4 7.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'sent':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'delivered':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'read':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'error':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        default:
+          return null;
+      }
     };
 
     return (
-        <div style={panelStyle} className={/* styles.chatPanel */ ''} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-            <div style={messagesContainerStyle} className={/* styles.messagesContainer */ ''}>
-                {messages.map((msg) => (
-                    <div key={msg.id} style={{
-                        marginBottom: '12px',
-                        display: 'flex',
-                        justifyContent: msg.role === 'USER' ? 'flex-end' : 'flex-start',
-                        fontFamily: 'var(--font-open-sans), sans-serif',
-                        fontSize: '0.875rem',
-                        color: '#374151' // text-neutral-700 equivalent
-                    }}>
-                        <div style={{
-                            padding: '8px 12px',
-                            borderRadius: '15px',
-                            backgroundColor: msg.role === 'USER' ? '#007bff' : '#e9ecef',
-                            color: msg.role === 'USER' ? 'white' : '#333',
-                            maxWidth: '80%',
-                            wordWrap: 'break-word'
-                        }}>
-                            <div><strong>{msg.role === 'USER' ? 'You' : 'Aria'}</strong></div>
-                            <div>{msg.content}</div>
-                            <div style={{ fontSize: '0.75em', color: msg.role === 'USER' ? '#f0f0f0' : '#666', textAlign: 'right', marginTop: '4px' }}>
-                                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                <div ref={messagesEndRef} />
-            </div>
-            <div style={inputContainerStyle}>
-                <input
-                    type="text"
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Type your message..."
-                    style={inputStyle}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <button 
-                    onClick={handleSendMessage}
-                    style={buttonStyle}
-                    onMouseEnter={() => {
-                        Object.assign(buttonStyle, buttonHoverStyle);
-                    }}
-                    onMouseLeave={() => {
-                        delete buttonStyle.backgroundColor;
-                    }}
-                    onFocus={() => {
-                        Object.assign(buttonStyle, buttonFocusStyle);
-                    }}
-                    onBlur={() => {
-                        delete buttonStyle.outline;
-                        delete buttonStyle.outlineOffset;
-                    }}
-                    disabled={isLoading}
-                >
-                    {isLoading ? 'Sending...' : 'Send'}
-                </button>
-            </div>
-        </div>
+      <span className="message-status" style={messageStatusStyle}>
+        {getStatusIcon()}
+      </span>
     );
+  };
+
+  // Typing indicator component
+  const TypingIndicator = () => (
+    <div style={typingIndicatorStyle}>
+      <div className="typing-dots">
+        <span className="dot dot-1" style={typingDotStyle}></span>
+        <span className="dot dot-2" style={typingDotStyle}></span>
+        <span className="dot dot-3" style={typingDotStyle}></span>
+      </div>
+      <span className="typing-text" style={typingTextStyle}>Aria is typing</span>
+    </div>
+  );
+
+    // Move formatTime outside to prevent recreation on each render
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Memoize the MessageBubble component with a custom comparison function
+  const MessageBubble = React.memo(function MessageBubble({ 
+    message, 
+    isLast 
+  }: { 
+    message: Message; 
+    isLast: boolean 
+  }) {
+    const isUser = message.role === 'USER';
+    
+    // Use useMemo for styles that don't need to be recreated on every render
+    const bubbleStyle = React.useMemo<React.CSSProperties>(() => ({
+      position: 'relative',
+      alignSelf: isUser ? 'flex-end' : 'flex-start',
+      maxWidth: '85%',
+      margin: '4px 0',
+      padding: '12px 16px',
+      borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+      backgroundColor: isUser ? '#3b82f6' : '#f3f4f6',
+      color: isUser ? 'white' : '#1f2937',
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+      transition: 'all 0.2s ease-out',
+      opacity: 1, // Always show messages as visible
+      animation: isLast ? 'fadeIn 0.3s ease-out forwards' : 'none',
+    }), [isUser, isLast]);
+
+    const timeStyle = React.useMemo<React.CSSProperties>(() => ({
+      fontSize: '0.7rem',
+      opacity: 0.7,
+      marginTop: '4px',
+      display: 'flex',
+      justifyContent: isUser ? 'flex-end' : 'flex-start',
+      alignItems: 'center',
+      gap: '4px',
+      color: isUser ? 'rgba(255, 255, 255, 0.8)' : '#9ca3af',
+    }), [isUser]);
+
+    // Only re-render if message content or status changes
+    const messageContent = React.useMemo(() => (
+      <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {message.content}
+      </div>
+    ), [message.content]);
+
+    const messageTime = React.useMemo(() => (
+      <div style={timeStyle}>
+        {formatTime(message.timestamp)}
+        {isUser && message.status && (
+          <MessageStatusIndicator status={message.status} />
+        )}
+      </div>
+    ), [isUser, message.status, message.timestamp, timeStyle]);
+
+    return (
+      <div 
+        className={`message-bubble ${isUser ? 'user' : 'assistant'}`}
+        style={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isUser ? 'flex-end' : 'flex-start',
+          margin: '8px 0',
+          contain: 'content', // Improves rendering performance
+        }}
+      >
+        <div style={bubbleStyle}>
+          {messageContent}
+          {messageTime}
+        </div>
+      </div>
+    );
+  }, (prevProps, nextProps) => {
+    // Only re-render if these specific props change
+    return (
+      prevProps.message.content === nextProps.message.content &&
+      prevProps.message.status === nextProps.message.status &&
+      prevProps.isLast === nextProps.isLast
+    );
+  });
+
+  // Message status indicator styles
+  const messageStatusStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    marginLeft: '8px',
+    opacity: 0.7,
+  };
+
+  const typingIndicatorStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    margin: '4px 0',
+  };
+
+  const typingTextStyle: React.CSSProperties = {
+    fontSize: '0.8rem',
+    color: '#6b7280',
+    marginLeft: '8px',
+  };
+
+  const typingDotStyle: React.CSSProperties = {
+    width: '6px',
+    height: '6px',
+    margin: '0 2px',
+    backgroundColor: '#6b7280',
+    borderRadius: '50%',
+    display: 'inline-block',
+  };
+
+  // Animation keyframes
+  const keyframes = `
+    @keyframes fadeIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+    
+    .message-bubble {
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      -webkit-font-smoothing: subpixel-antialiased;
+    }
+    @keyframes bounce {
+      0%, 100% { 
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+      50% { 
+        transform: translateY(-5px);
+        opacity: 1;
+      }
+    }
+    @keyframes fadeIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+    @keyframes scaleIn {
+      from { 
+        opacity: 0; 
+        transform: scale(0.95); 
+      }
+      to { 
+        opacity: 1; 
+        transform: scale(1); 
+      }
+    }
+    .message-enter {
+      animation: scaleIn 0.2s cubic-bezier(0.2, 0, 0.38, 0.9) forwards;
+    }
+    .typing-dots .dot-1 { 
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    .typing-dots .dot-2 { 
+      animation: bounce 1.2s infinite ease-in-out 0.15s;
+    }
+    .typing-dots .dot-3 { 
+      animation: bounce 1.2s infinite ease-in-out 0.3s;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .status-sending {
+      animation: pulse 1.5s infinite;
+    }
+  `;
+
+  // Fetch chat sessions and messages
+  const fetchChatSessions = useCallback(async () => {
+    if (!session?.user?.email) return;
+
+    try {
+      const response = await fetch('/api/chat');
+      if (!response.ok) throw new Error('Failed to fetch chat sessions');
+      const data = await response.json();
+      setChatSessions(data.sessions || []);
+
+      // If we have a sessionId but no messages, load that session
+      if (currentSessionId && messages.length === 0) {
+        await loadChatSession(currentSessionId);
+      } else if (data.sessions?.length > 0 && !currentSessionId) {
+        // Load the most recent session by default
+        await loadChatSession(data.sessions[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching chat sessions:', error);
+    }
+  }, [session, currentSessionId, messages.length]);
+
+  // Load messages for a specific chat session
+  const loadChatSession = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/chat?chatSessionId=${sessionId}`);
+      if (!response.ok) throw new Error('Failed to fetch chat messages');
+      const data = await response.json();
+        role: 'ASSISTANT',
+        type: 'text',
+        content: 'This is a mock response. In a real app, this would come from the API.',
+        timestamp: new Date(),
+      } as Message,
+    ]);
+  }
+};
+
+// Create a new chat session
+const createNewChat = async () => {
+  try {
+    setIsLoading(true);
+    // ... (rest of the code remains the same)
+  } catch (error) {
+    console.error('Error creating new chat:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Handle sending a message
+const handleSendMessage = async () => {
+  if (!inputText.trim()) return;
+
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    role: 'USER',
+    type: 'text',
+    content: inputText,
+    timestamp: new Date(),
+    status: 'sending',
+    chatSessionId: currentSessionId,
+  };
+
+  // Add user message to UI immediately for better UX
+  setMessages((prev) => [...prev, userMessage]);
+  setIsLoading(true);
+  setIsTyping(true);
+
+  // Create a new AbortController for this request
+  const controller = new AbortController();
+  abortControllerRef.current = controller;
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: inputText,
+        chatSessionId: currentSessionId,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Update the messages with the server's response
+    const aiMessage: Message = {
+      id: data.id || `ai-${Date.now()}`,
+      role: 'ASSISTANT',
+      type: 'text',
+      content: data.content || 'I apologize, but I encountered an issue processing your request.',
+      timestamp: new Date(data.timestamp || Date.now()),
+    };
+
+    setMessages((prev) => [...prev, aiMessage]);
+  } catch (error) {
+    // Don't show error if the request was aborted
+    if (error.name !== 'AbortError') {
+      console.error('Error sending message:', error);
+
+      // Show error message to the user
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'ASSISTANT',
+        type: 'text',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  } finally {
+    setIsLoading(false);
+    setIsTyping(false);
+    abortControllerRef.current = null;
+  }
+                  marginBottom: '12px',
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                  width: '100%',
+                }}
+              >
+                <div style={messageContentStyle('ASSISTANT')}>
+                  <TypingIndicator />
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input */}
+      <div style={inputContainerStyle}>
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Message AI Health Coach..."
+          style={{
+            ...inputStyle,
+            borderColor: isLoading ? '#e5e7eb' : '#d1d5db',
+          }}
+          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+          disabled={isLoading}
+        />
+        <button
+          onClick={handleSendMessage}
+          style={{
+            ...buttonStyles,
+            ...(isLoading ? buttonDisabledStyle : {}),
+          }}
+          onMouseEnter={handleButtonHover}
+          onMouseLeave={handleButtonLeave}
+          onFocus={handleButtonFocus}
+          onBlur={handleButtonBlur}
+          disabled={isLoading || !inputText.trim()}
+        >
+          {isLoading ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <div
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTopColor: 'white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
+              Sending...
+            </div>
+          ) : (
+            'Send'
+          )}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default ChatInterface;

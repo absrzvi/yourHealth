@@ -3,6 +3,7 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import { parseReport } from "@/lib/parsers";
 
@@ -39,13 +40,13 @@ export async function POST(request: NextRequest) {
     const reportType = formData.get("type") as "DNA" | "MICROBIOME" | "BLOOD_TEST";
     const userId = formData.get("userId") as string;
     
-    // For now, we'll use the userId provided in the form data
-    // In production, we would verify the session and use session.user.id
-    if (!userId) {
+    // Verify session and get the authenticated user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: "Missing userId" }, 
+        { success: false, error: "Unauthorized" }, 
         { 
-          status: 400,
+          status: 401,
           headers: {
             "Content-Type": "application/json",
             "Cache-Control": "no-store"

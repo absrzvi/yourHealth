@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 import { BloodTestParser } from '@/lib/parsers/bloodTestParser';
 import path from 'path';
 import fs from 'fs/promises';
@@ -22,6 +24,15 @@ function getGoogleVisionOcrService() {
  */
 export async function POST(req: NextRequest) {
   try {
+    // Verify authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Get form data
     const formData = await req.formData();
     

@@ -4,19 +4,22 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  reports   Report[]
-  insights  WeeklyInsight[]
-  chatSessions ChatSession[] // Added relation to ChatSession
+  id                String            @id @default(cuid())
+  email             String            @unique
+  password          String
+  name              String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  reports           Report[]
+  insights          WeeklyInsight[]
+  chatSessions      ChatSession[]
+  healthMetrics     HealthMetric[]
+  dnaSequences      DNASequence[]
+  microbiomeSamples MicrobiomeSample[]
 }
 
 model Report {
@@ -66,5 +69,64 @@ model ChatMessage {
   llmModel      String?     // e.g., "gpt-4o", "claude-3-opus"
   
   createdAt     DateTime    @default(now())
+}
+
+// Health Intelligence Models
+model HealthMetric {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // e.g., 'blood_test', 'vital_sign', 'lab_result'
+  name          String   // e.g., 'LDL Cholesterol', 'Blood Pressure'
+  value         String   // Store as string to handle different metric types
+  unit          String?  // e.g., 'mg/dL', 'bpm'
+  referenceRange String?  // e.g., '0-100 mg/dL'
+  date          DateTime // When the measurement was taken
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([date])
+}
+
+model DNASequence {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rsid        String   // Reference SNP cluster ID
+  chromosome  String   // Chromosome number
+  position    Int      // Base pair position
+  genotype    String   // Genotype (e.g., 'AA', 'AG', 'TT')
+  createdAt   DateTime @default(now())
+
+
+  @@index([userId])
+  @@index([rsid])
+}
+
+model MicrobiomeSample {
+  id             String               @id @default(cuid())
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sampleDate     DateTime
+  sampleType     String               // e.g., 'stool', 'oral_swab'
+  diversityScore Float?              // Alpha diversity metric
+  organisms      MicrobiomeOrganism[]
+  createdAt      DateTime             @default(now())
+
+
+  @@index([userId])
+}
+
+model MicrobiomeOrganism {
+  id                String          @id @default(cuid())
+  sampleId          String
+  sample            MicrobiomeSample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  name              String          // Organism name (e.g., 'Bacteroides fragilis')
+  taxaLevel         String          // Taxonomic level (e.g., 'species', 'genus')
+  abundance         Float           // Raw abundance count
+  relativeAbundance Float?          // Relative abundance (0-1)
+  createdAt         DateTime        @default(now())
 }
 

@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs/promises";
 import { FileProcessor, type ParserResult, type ReportType } from "@/lib/parsers";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth-options";
 // Import PDF parser for server-side
 import pdfParse from "pdf-parse";
 
