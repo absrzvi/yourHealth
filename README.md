@@ -1,6 +1,13 @@
 # For Your Health MVP
 
-Minimal personalized health platform for friends & family.
+A modern, AI-powered health platform that helps you understand and improve your wellbeing through personalized insights and recommendations.
+
+## ✨ Latest Updates (June 2024)
+
+- 🎨 **Redesigned UI** with smooth animations and modern components
+- 🎯 New interactive PromoBanner for special offers and announcements
+- 📱 Enhanced mobile responsiveness across all pages
+- 🚀 Performance optimizations and bug fixes
 
 ## 🚀 Tech Stack
 

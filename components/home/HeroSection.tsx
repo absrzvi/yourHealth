@@ -28,10 +28,10 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gray-100 py-8">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gray-100 py-8 lg:py-12">
       {/* Main Grid Layout */}
-      <div className="container mx-auto px-4 h-full max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[85vh] max-w-7xl mx-auto">
+      <div className="w-full h-full px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[85vh] max-w-7xl mx-auto">
           {/* Left Column - Main Image (Family) */}
           <div className="lg:col-span-7 h-full relative rounded-2xl overflow-hidden shadow-2xl">
             {/* Image with error handling and fallback */}
@@ -49,12 +49,12 @@ export function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
             {/* Hero Content Overlay */}
             <div className="absolute inset-0 flex items-center z-10">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                <div className="max-w-3xl">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+              <div className="w-full px-4 sm:px-6 lg:px-8">
+                <div className="max-w-2xl lg:max-w-3xl">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">
                     Your Personalized Health Journey Starts Here
                   </h1>
-                  <p className="text-lg md:text-xl text-gray-100/90 mb-8 max-w-2xl leading-relaxed">
+                  <p className="text-lg sm:text-xl text-gray-100/90 mb-8 leading-relaxed">
                     Discover how your unique biology can guide you to better health with our advanced DNA and microbiome analysis.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4">

@@ -23,8 +23,8 @@ export function Navigation() {
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
       isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white/80 backdrop-blur-sm'
     }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16 max-w-7xl mx-auto">
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span className="text-2xl font-bold font-montserrat bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -33,23 +33,23 @@ export function Navigation() {
           </Link>
           
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-neutral-700 hover:text-primary transition">
+          <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
+            <Link href="/" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Home
             </Link>
-            <Link href="/science" className="text-neutral-700 hover:text-primary transition">
+            <Link href="/science" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Our Approach
             </Link>
-            <Link href="/products" className="text-neutral-700 hover:text-primary transition">
+            <Link href="/products" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Products
             </Link>
             <Link 
               href="/providers" 
-              className="text-neutral-600 hover:text-primary transition text-sm"
+              className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200"
             >
               AI Coach
             </Link>
-            <Link href="/blog" className="text-neutral-700 hover:text-primary transition">
+            <Link href="/blog" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Resources
             </Link>
             
