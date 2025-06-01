@@ -1,39 +1,41 @@
-import './globals.css';
-import { ReactNode } from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import SessionProvider from '../components/providers/SessionProvider'; // Use local provider
-import LogoutButton from '@/components/auth/LogoutButton';
+import './globals.css'
+import type { Metadata } from 'next'
+import { Montserrat, Open_Sans } from 'next/font/google'
+import { Navigation } from '@/components/layout/Navigation'
+import { AuthProvider } from '@/components/providers/AuthProvider'
 
-// Debug log the environment variables
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
-console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '***' : 'Not set');
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-montserrat',
+})
 
-export default async function RootLayout({ 
-  children 
-}: { 
-  children: ReactNode 
+const openSans = Open_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-open-sans',
+})
+
+export const metadata: Metadata = {
+  title: 'For Your Health - Personalized Health Insights Powered by AI',
+  description: 'Advanced DNA and microbiome testing combined with AI analysis to create your personalized health roadmap.',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
 }) {
-  const session = await getServerSession(authOptions);
-  
-  // Debug log the session
-  console.log('Root layout - Session:', session ? 'Authenticated' : 'Not authenticated');
-
   return (
-    <html lang="en">
-      <body className="bg-gray-50 min-h-screen">
-        <SessionProvider session={session}>
-          <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 9999 }}>
-            {session && <LogoutButton />}{/* Only show if session exists */}
-          </div>
-          <div className="app-container full-width">
-            <main className="main-content flex-1 flex flex-col">
-              {children}
-            </main>
-          </div>
-        </SessionProvider>
+    <html lang="en" className={`${montserrat.variable} ${openSans.variable}`}>
+      <body className="font-open-sans bg-background text-foreground">
+        <AuthProvider>
+          <Navigation />
+          <main className="pt-16">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
-  );
+  )
 }
