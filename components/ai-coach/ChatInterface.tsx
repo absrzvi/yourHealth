@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
 import { useSession } from 'next-auth/react';
 import { VisualizationMessage } from './VisualizationMessage';
+import { format } from 'date-fns';
 
 type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'error';
 type MessageRole = 'USER' | 'ASSISTANT';
@@ -249,74 +250,59 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
     display: 'inline-block',
   };
 
-  // Animation keyframes
-  const keyframes = `
-    @keyframes fadeIn {
-      from { 
-        opacity: 0; 
-        transform: translateY(10px); 
-      }
-      to { 
-        opacity: 1; 
-        transform: translateY(0); 
-      }
-    }
-    
-    .message-bubble {
-      will-change: transform, opacity;
-      backface-visibility: hidden;
-      -webkit-font-smoothing: subpixel-antialiased;
-    }
-    @keyframes bounce {
-      0%, 100% { 
-        transform: translateY(0);
-        opacity: 0.4;
-      }
-      50% { 
-        transform: translateY(-5px);
-        opacity: 1;
-      }
-    }
-    @keyframes fadeIn {
-      from { 
-        opacity: 0; 
-        transform: translateY(10px); 
-      }
-      to { 
-        opacity: 1; 
-        transform: translateY(0); 
-      }
-    }
-    @keyframes scaleIn {
-      from { 
-        opacity: 0; 
-        transform: scale(0.95); 
-      }
-      to { 
-        opacity: 1; 
-        transform: scale(1); 
-      }
-    }
-    .message-enter {
-      animation: scaleIn 0.2s cubic-bezier(0.2, 0, 0.38, 0.9) forwards;
-    }
-    .typing-dots .dot-1 { 
-      animation: bounce 1.2s infinite ease-in-out;
-    }
-    .typing-dots .dot-2 { 
-      animation: bounce 1.2s infinite ease-in-out 0.15s;
-    }
-    .typing-dots .dot-3 { 
-      animation: bounce 1.2s infinite ease-in-out 0.3s;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    .status-sending {
-      animation: pulse 1.5s infinite;
-    }
-  `;
+  // Input container style
+  const inputContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1rem',
+    backgroundColor: 'var(--background)',
+    borderTop: '1px solid var(--border)'
+  };
+
+  // Message content style
+  const messageContentStyle = (role: MessageRole): React.CSSProperties => ({
+    maxWidth: '85%',
+    padding: '12px 16px',
+    borderRadius: role === 'USER' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+    backgroundColor: role === 'USER' ? '#3b82f6' : '#f3f4f6',
+    color: role === 'USER' ? 'white' : '#1f2937',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+  });
+
+  // Button styles
+  const buttonStyles: React.CSSProperties = {
+    padding: '0.5rem 1.25rem',
+    borderRadius: '9999px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  };
+
+  const buttonDisabledStyle: React.CSSProperties = {
+    ...buttonStyles,
+    opacity: 0.7,
+    cursor: 'not-allowed',
+  };
+
+  // Add missing handler functions
+  const handleButtonHover = () => {
+    // Handle button hover effect
+  };
+
+  const handleButtonLeave = () => {
+    // Handle button leave effect
+  };
+
+  const handleButtonFocus = () => {
+    // Handle button focus
+  };
+
+  const handleButtonBlur = () => {
+    // Handle button blur
+  };
 
   // Fetch chat sessions and messages
   const fetchChatSessions = useCallback(async () => {
@@ -346,115 +332,165 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
       const response = await fetch(`/api/chat?chatSessionId=${sessionId}`);
       if (!response.ok) throw new Error('Failed to fetch chat messages');
       const data = await response.json();
+      
+      if (data.messages && Array.isArray(data.messages)) {
+        setMessages(data.messages);
+      } else {
+        // Fallback to mock response if no messages found
+        setMessages([{
+          id: '1',
+          role: 'ASSISTANT',
+          type: 'text',
+          content: 'This is a mock response. In a real app, this would come from the API.',
+          timestamp: new Date(),
+        } as Message]);
+      }
+    } catch (error) {
+      console.error('Error loading chat session:', error);
+      // Set a default error message
+      setMessages([{
+        id: 'error-1',
         role: 'ASSISTANT',
         type: 'text',
-        content: 'This is a mock response. In a real app, this would come from the API.',
+        content: 'Failed to load chat messages. Please try again later.',
         timestamp: new Date(),
-      } as Message,
-    ]);
-  }
-};
-
-// Create a new chat session
-const createNewChat = async () => {
-  try {
-    setIsLoading(true);
-    // ... (rest of the code remains the same)
-  } catch (error) {
-    console.error('Error creating new chat:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-// Handle sending a message
-const handleSendMessage = async () => {
-  if (!inputText.trim()) return;
-
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    role: 'USER',
-    type: 'text',
-    content: inputText,
-    timestamp: new Date(),
-    status: 'sending',
-    chatSessionId: currentSessionId,
+      } as Message]);
+    }
   };
 
-  // Add user message to UI immediately for better UX
-  setMessages((prev) => [...prev, userMessage]);
-  setIsLoading(true);
-  setIsTyping(true);
-
-  // Create a new AbortController for this request
-  const controller = new AbortController();
-  abortControllerRef.current = controller;
-
-  try {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: inputText,
-        chatSessionId: currentSessionId,
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
+  // Create a new chat session
+  const createNewChat = async () => {
+    try {
+      setIsLoading(true);
+      // ... (rest of the code remains the same)
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const data = await response.json();
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (!inputText.trim()) return;
 
-    // Update the messages with the server's response
-    const aiMessage: Message = {
-      id: data.id || `ai-${Date.now()}`,
-      role: 'ASSISTANT',
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'USER',
       type: 'text',
-      content: data.content || 'I apologize, but I encountered an issue processing your request.',
-      timestamp: new Date(data.timestamp || Date.now()),
+      content: inputText,
+      timestamp: new Date(),
+      status: 'sending',
+      chatSessionId: currentSessionId,
     };
 
-    setMessages((prev) => [...prev, aiMessage]);
-  } catch (error) {
-    // Don't show error if the request was aborted
-    if (error.name !== 'AbortError') {
-      console.error('Error sending message:', error);
+    // Add user message to UI immediately for better UX
+    setMessages((prev => [...prev, userMessage]));
+    setIsLoading(true);
+    setIsTyping(true);
+    setInputText('');
 
-      // Show error message to the user
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
+    // Create a new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: inputText,
+          chatSessionId: currentSessionId,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Update the messages with the server's response
+      const aiMessage: Message = {
+        id: data.id || `ai-${Date.now()}`,
         role: 'ASSISTANT',
         type: 'text',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date(),
+        content: data.content || 'I apologize, but I encountered an issue processing your request.',
+        timestamp: new Date(data.timestamp || Date.now()),
       };
 
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      // Don't show error if the request was aborted
+      if (error.name !== 'AbortError') {
+        console.error('Error sending message:', error);
+
+        // Show error message to the user
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'ASSISTANT',
+          type: 'text',
+          content: 'Sorry, I encountered an error. Please try again.',
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+      abortControllerRef.current = null;
     }
-  } finally {
-    setIsLoading(false);
-    setIsTyping(false);
-    abortControllerRef.current = null;
-  }
-                  marginBottom: '12px',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  width: '100%',
-                }}
-              >
-                <div style={messageContentStyle('ASSISTANT')}>
-                  <TypingIndicator />
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </>
+  };
+
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        bottom: '1rem',
+        right: '1rem',
+        width: '400px',
+        maxHeight: '600px',
+        backgroundColor: 'white',
+        borderRadius: '0.75rem',
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 50,
+        opacity: isOpen ? 1 : 0,
+        visibility: isOpen ? 'visible' : 'hidden',
+        transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
+        transition: 'opacity 0.2s ease, transform 0.2s ease, visibility 0.2s',
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div style={{ padding: '1rem', overflowY: 'auto', flex: 1 }}>
+        {messages.map((message, index) => (
+          <MessageBubble key={message.id} message={message} isLast={index === messages.length - 1} />
+        ))}
+        {isTyping && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '8px 16px',
+            margin: '4px 0',
+          }}>
+            <div style={messageContentStyle('ASSISTANT')}>
+              <TypingIndicator />
+            </div>
+          </div>
         )}
+        
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
@@ -465,8 +501,11 @@ const handleSendMessage = async () => {
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Message AI Health Coach..."
           style={{
-            ...inputStyle,
-            borderColor: isLoading ? '#e5e7eb' : '#d1d5db',
+            padding: '0.5rem 1rem',
+            borderRadius: '9999px',
+            border: '1px solid #d1d5db',
+            width: '100%',
+            fontSize: '1rem',
           }}
           onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
           disabled={isLoading}

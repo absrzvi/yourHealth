@@ -1,23 +1,15 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import './chat-styles.css';
+import { Loader2, MessageSquare, Plus, Trash2, Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 import { VisualizationMessage } from './VisualizationMessage';
 import { useVisualization } from '@/hooks/useVisualization';
-
-type MessageRole = 'USER' | 'ASSISTANT';
-type MessageType = 'text' | 'chart' | 'dashboard' | 'error';
-
-interface Message {
-  id: string;
-  role: MessageRole;
-  type: MessageType;
-  content: string | Record<string, any>;
-  timestamp: Date;
-  status?: 'sending' | 'sent' | 'error';
-  chatSessionId?: string;
-}
+import { useChatContext, type ChatMessage } from '@/hooks/useChatContext';
 
 interface EnhancedChatInterfaceProps {
   isOpen: boolean;
@@ -31,9 +23,24 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   className = '',
 }) => {
   const { data: session } = useSession();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const {
+    sessions,
+    currentSession,
+    messages,
+    isLoading,
+    error,
+    loadSessions,
+    loadMessages,
+    createSession,
+    deleteSession,
+    sendMessage,
+    setCurrentSession,
+  } = useChatContext();
+
   const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
@@ -42,7 +49,8 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     data: visualizationData, 
     isLoading: isGeneratingVisualization, 
     error: visualizationError, 
-    generateVisualization 
+    generateVisualization,
+    clearVisualization 
   } = useVisualization();
 
   // Scroll to bottom when messages change
@@ -50,216 +58,325 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
     scrollToBottom();
   }, [messages, isGeneratingVisualization]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Load sessions when component mounts
+  useEffect(() => {
+    if (isOpen) {
+      loadSessions();
+    }
+  }, [isOpen, loadSessions]);
 
-  const handleSendMessage = async () => {
+  // Load messages when current session changes
+  useEffect(() => {
+    if (currentSession?.id) {
+      loadMessages(currentSession.id);
+    } else if (sessions.length > 0) {
+      setCurrentSession(sessions[0]);
+    } else {
+      // No sessions, create a new one
+      handleNewSession();
+    }
+  }, [currentSession?.id, sessions, loadMessages, setCurrentSession]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const handleSendMessage = useCallback(async () => {
     const messageText = inputText.trim();
     if (!messageText || isLoading) return;
 
-    // Create user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'USER',
-      type: 'text',
-      content: messageText,
-      timestamp: new Date(),
-      status: 'sending',
-    };
-
-    // Add user message to chat
-    setMessages(prev => [...prev, userMessage]);
+    // Clear input
     setInputText('');
-    setIsLoading(true);
 
-    try {
-      // First try to generate a visualization
-      await generateVisualization(messageText);
-      
-      // Update message status
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === userMessage.id 
-            ? { ...msg, status: 'sent' as const } 
-            : msg
-        )
-      );
-      
-    } catch (error) {
-      console.error('Error generating visualization:', error);
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: 'ASSISTANT',
-        type: 'error',
-        content: {
-          error: 'Failed to generate visualization. Please try again.'
-        },
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+    // First try to generate a visualization
+    const isVisualization = await generateVisualization(messageText);
+    
+    if (isVisualization) {
+      // The visualization will be added by the effect hook
+      return;
     }
-  };
 
-  // Handle visualization generation completion
-  useEffect(() => {
-    if (isGeneratingVisualization || !visualizationData) return;
+    // Send the message
+    await sendMessage(messageText, {
+      type: 'text',
+      llmProvider: 'openai',
+      llmModel: 'gpt-4',
+    });
+  }, [inputText, isLoading, generateVisualization, sendMessage]);
 
-    // Add the generated visualization to the chat
-    const visualizationMessage: Message = {
-      id: `viz-${Date.now()}`,
-      role: 'ASSISTANT',
-      type: visualizationType as MessageType,
-      content: visualizationData,
-      timestamp: new Date(),
-    };
+  const handleNewSession = useCallback(async () => {
+    const newSession = await createSession('New Chat');
+    if (newSession) {
+      setCurrentSession(newSession);
+      setNewSessionTitle('');
+      setIsCreatingSession(false);
+    }
+  }, [createSession, setCurrentSession]);
 
-    setMessages(prev => [...prev, visualizationMessage]);
-  }, [isGeneratingVisualization, visualizationData, visualizationType]);
+  const handleDeleteSession = useCallback(async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this chat session?')) {
+      await deleteSession(sessionId);
+    }
+  }, [deleteSession]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
 
   if (!isOpen) return null;
 
   return (
-    <div className={`flex flex-col h-full bg-white text-foreground rounded-lg shadow-xl overflow-hidden ${className}`}>
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-100">
-        <style jsx global>{`
-          /* Force remove background and set text color for assistant messages */
-          [data-role="ASSISTANT"] * {
-            background: transparent !important;
-            background-color: transparent !important;
-            color: #000000 !important; /* Force black text */
-          }
-          
-          /* Target common background utility classes */
-          .bg-gray-800, .bg-gray-700, .bg-gray-600, .bg-opacity-50, .bg-opacity-100 {
-            background-color: transparent !important;
-          }
-          
-          /* Target any element with inline background */
-          [style*="background"], [style*="background-color"] {
-            background: transparent !important;
-            background-color: transparent !important;
-          }`}
-        </style>
-        {messages.length === 0 ? (
-          <div className="text-center text-muted-foreground mt-8">
-            <p>Ask me anything about your health data, and I'll help you understand it better.</p>
-            <div className="mt-4 text-sm text-muted-foreground space-y-2">
-              <p>Try asking:</p>
-              <ul className="space-y-1">
-                <li>• "Show me my heart rate trends"</li>
-                <li>• "Create a dashboard of my sleep data"</li>
-                <li>• "How's my activity level this week?"</li>
-              </ul>
-            </div>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              data-role={message.role}
-              className={`flex flex-col ${
-                message.role === 'USER' ? 'items-end' : 'items-start'
-              }`}
-            >
-              <div className={`max-w-3/4 ${message.role === 'USER' ? '' : 'w-full'}`}>
-                {message.type === 'text' ? (
-                  <div className="whitespace-pre-wrap">
-                    {message.role === 'USER' ? (
-                      <span className="inline-block bg-primary text-white rounded-lg p-3">
-                        {message.content as string}
-                      </span>
-                    ) : (
-                      <div className="bg-transparent text-black">
-                        <div className="bg-transparent text-current">
-                          {message.content as string}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="w-full">
-                    <VisualizationMessage
-                      type={message.type}
-                      data={message.content}
-                      isLoading={message.status === 'sending'}
-                      error={message.status === 'error' ? 'Failed to load visualization' : undefined}
-                    />
-                  </div>
-                )}
-                <p className={`text-xs mt-1 opacity-70 ${
-                  message.role === 'USER' ? 'text-right' : 'text-left'
-                }`}>
-                  {new Date(message.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
+    <div className={cn("flex h-full bg-white text-foreground rounded-lg shadow-xl overflow-hidden", className)}>
+      {/* Sidebar */}
+      <div 
+        className={cn(
+          'w-64 border-r border-gray-200 bg-gray-50 flex flex-col transition-all duration-300',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full absolute z-10 h-full',
+          'md:relative md:translate-x-0'
+        )}
+      >
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="font-semibold text-lg">Chat Sessions</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-2">
+          {isCreatingSession ? (
+            <div className="p-2">
+              <Input
+                type="text"
+                value={newSessionTitle}
+                onChange={(e) => setNewSessionTitle(e.target.value)}
+                placeholder="Session title"
+                className="mb-2"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    createSession(newSessionTitle || 'New Chat');
+                    setIsCreatingSession(false);
+                  } else if (e.key === 'Escape') {
+                    setIsCreatingSession(false);
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    createSession(newSessionTitle || 'New Chat');
+                    setIsCreatingSession(false);
+                  }}
+                >
+                  Create
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsCreatingSession(false)}
+                >
+                  Cancel
+                </Button>
               </div>
             </div>
-          ))
-        )}
-        
-        {isGeneratingVisualization && (
-          <div className="flex items-center space-x-2 p-3 rounded-lg bg-gray-800">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2 mb-4"
+              onClick={() => setIsCreatingSession(true)}
+            >
+              <Plus className="h-4 w-4" />
+              New Chat
+            </Button>
+          )}
+          
+          <div className="space-y-1">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className={cn(
+                  'flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-100',
+                  currentSession?.id === session.id && 'bg-blue-50 border border-blue-200'
+                )}
+                onClick={() => setCurrentSession(session)}
+              >
+                <span className="truncate flex-1">
+                  {session.title}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                  onClick={(e) => handleDeleteSession(session.id, e)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
           </div>
-        )}
-        
-        <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      {/* Input */}
-      <div className="border-t border-gray-200 p-4 bg-white">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-h-[42px] bg-neutral-100 rounded-lg border border-gray-200 focus-within:border-primary flex items-center transition-colors">
-            <textarea
-              ref={inputRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-foreground placeholder-gray-500 px-3 py-2.5 resize-none"
-              rows={1}
-              style={{ height: '24px', minHeight: '24px', maxHeight: '120px' }}
-              disabled={isLoading || isGeneratingVisualization}
-            />
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col h-full">
+        {/* Header */}
+        <div className="border-b border-gray-200 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h2 className="font-semibold">
+              {currentSession?.title || 'New Chat'}
+            </h2>
           </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputText.trim() || isLoading || isGeneratingVisualization}
-            className="h-[42px] w-[42px] flex-shrink-0 bg-primary hover:bg-primary/90 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors items-center justify-center flex"
-          >
-            {isLoading || isGeneratingVisualization ? (
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            )}
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          Ask about your health data, request visualizations, or get insights
-        </p>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4 bg-white">
+          <div className="space-y-6">
+            {messages.length === 0 ? (
+              <div className="text-center text-muted-foreground mt-8">
+                <p>Ask me anything about your health data, and I'll help you understand it better.</p>
+                <div className="mt-4 text-sm text-muted-foreground space-y-2">
+                  <p>Try asking:</p>
+                  <ul className="space-y-1">
+                    <li>• "Show me my heart rate trends"</li>
+                    <li>• "Create a dashboard of my sleep data"</li>
+                    <li>• "How's my activity level this week?"</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'flex',
+                    message.role === 'USER' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'max-w-3xl rounded-lg px-4 py-2',
+                      message.role === 'USER'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    )}
+                  >
+                    {message.type === 'text' ? (
+                      <div className="prose max-w-none">
+                        {typeof message.content === 'string' ? (
+                          <p className="whitespace-pre-wrap">{message.content}</p>
+                        ) : (
+                          <p className="whitespace-pre-wrap">
+                            {JSON.stringify(message.content, null, 2)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <VisualizationMessage
+                        type={message.type}
+                        data={message.content}
+                        isLoading={message.status === 'sending'}
+                        error={
+                          message.status === 'error' ? 'Failed to load content' : undefined
+                        }
+                      />
+                    )}
+                    <div
+                      className={cn(
+                        'text-xs mt-1',
+                        message.role === 'USER' ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                      )}
+                    >
+                      {new Date(message.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="flex items-center justify-center p-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="border-t border-gray-200 p-4 bg-white">
+          <div className="relative">
+            <div className="flex items-end gap-2">
+              <div className="flex-1 min-h-[42px] bg-muted rounded-lg border border-input focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                <textarea
+                  ref={inputRef}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type your message..."
+                  className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none placeholder:text-muted-foreground px-3 py-2 resize-none"
+                  rows={1}
+                  style={{ minHeight: '42px', maxHeight: '200px' }}
+                  disabled={isLoading}
+                />
+              </div>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputText.trim() || isLoading}
+                size="icon"
+                className="h-10 w-10 flex-shrink-0"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Ask about your health data, request visualizations, or get insights
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

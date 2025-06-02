@@ -1,11 +1,39 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { format } from 'date-fns';
 
-export function PredictiveInsights() {
-  const insights = [
-    { id: 1, text: "Your current sleep pattern suggests a potential dip in cognitive performance tomorrow. Consider an earlier bedtime.", risk: "Medium" },
-    { id: 2, text: "Based on your recent activity and HRV, your body is well-recovered and primed for a challenging workout.", risk: "Low" },
-    { id: 3, text: "Elevated stress markers detected. Recommend mindfulness exercises or a short walk.", risk: "High" },
-  ];
+interface DateRange {
+  from: Date;
+  to: Date | undefined;
+}
+
+interface PredictiveInsightsProps {
+  dateRange?: DateRange;
+}
+
+export function PredictiveInsights({ dateRange }: PredictiveInsightsProps) {
+  const insights = useMemo(() => {
+    const dateRangeText = dateRange?.from 
+      ? `for ${format(dateRange.from, 'MMM d')}${dateRange.to ? ` to ${format(dateRange.to, 'MMM d')}` : ''}` 
+      : '';
+      
+    return [
+      { 
+        id: 1, 
+        text: `Your sleep pattern ${dateRangeText} suggests a potential dip in cognitive performance. Consider an earlier bedtime.`, 
+        risk: "Medium" 
+      },
+      { 
+        id: 2, 
+        text: `Based on your activity and HRV ${dateRangeText}, your body is well-recovered and primed for a challenging workout.`, 
+        risk: "Low" 
+      },
+      { 
+        id: 3, 
+        text: `Elevated stress markers detected ${dateRangeText}. Recommend mindfulness exercises or a short walk.`, 
+        risk: "High" 
+      },
+    ];
+  }, [dateRange]);
 
   return (
     <section className="mb-8">
