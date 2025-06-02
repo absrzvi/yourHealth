@@ -37,7 +37,7 @@ export function Navigation() {
             <Link href="/" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Home
             </Link>
-            <Link href="/science" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
+            <Link href="/approach" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Our Approach
             </Link>
             <Link href="/products" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
@@ -104,7 +104,7 @@ export function Navigation() {
             <Link href="/" className="block px-3 py-2 text-neutral-700 hover:text-primary">
               Home
             </Link>
-            <Link href="/science" className="block px-3 py-2 text-neutral-700 hover:text-primary">
+            <Link href="/approach" className="block px-3 py-2 text-neutral-700 hover:text-primary">
               Our Approach
             </Link>
             <Link href="/products" className="block px-3 py-2 text-neutral-700 hover:text-primary">
