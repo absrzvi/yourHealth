@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
 import { useSession } from 'next-auth/react';
 import { VisualizationMessage } from './VisualizationMessage';
+import { MessageSearch } from '../chat/MessageSearch';
+import { Search, X, Send, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'error';
@@ -70,7 +72,16 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const messageRefCallback = useCallback((node: HTMLDivElement | null, id: string) => {
+    if (node) {
+      messageRefs.current[id] = node;
+    } else {
+      delete messageRefs.current[id];
+    }
+  }, []);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Message status component
@@ -178,11 +189,16 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
     }), [isUser]);
 
     // Only re-render if message content or status changes
-    const messageContent = React.useMemo(() => (
-      <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-        {message.content}
-      </div>
-    ), [message.content]);
+    const messageContent = React.useMemo(() => {
+      const content = typeof message.content === 'string' 
+        ? message.content 
+        : JSON.stringify(message.content);
+      return (
+        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {content}
+        </div>
+      );
+    }, [message.content]);
 
     const messageTime = React.useMemo(() => (
       <div style={timeStyle}>
@@ -425,7 +441,7 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       // Don't show error if the request was aborted
-      if (error.name !== 'AbortError') {
+      if (error && typeof error === 'object' && 'name' in error && error.name !== 'AbortError') {
         console.error('Error sending message:', error);
 
         // Show error message to the user
@@ -438,11 +454,46 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
         };
 
         setMessages((prev) => [...prev, errorMessage]);
+      } else if (error) {
+        console.error('Request was aborted or encountered an unknown error:', error);
       }
     } finally {
       setIsLoading(false);
       setIsTyping(false);
       abortControllerRef.current = null;
+    }
+  };
+
+  // Scroll to a specific message
+  const scrollToMessage = (messageId: string) => {
+    const messageElement = messageRefs.current[messageId];
+    if (messageElement) {
+      messageElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      // Add highlight effect
+      messageElement.style.transition = 'background-color 0.5s ease';
+      messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+      const timer = setTimeout(() => {
+        if (messageElement) {
+          messageElement.style.backgroundColor = '';
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  };
+
+  // Handle search result click
+  const handleSearchResultClick = (sessionId: string, messageId: string) => {
+    if (sessionId !== currentSessionId) {
+      // If the message is in a different session, switch to that session
+      setCurrentSessionId(sessionId);
+      // Wait for the session to load, then scroll to the message
+      setTimeout(() => scrollToMessage(messageId), 300);
+    } else {
+      // If in the same session, just scroll to the message
+      scrollToMessage(messageId);
     }
   };
 
@@ -472,10 +523,56 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+        @keyframes highlight {
+          0% { background-color: rgba(59, 130, 246, 0.3); }
+          100% { background-color: transparent; }
+        }
       `}</style>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.75rem 1rem',
+        borderBottom: '1px solid #e5e7eb',
+      }}>
+        <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>AI Health Coach</div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              borderRadius: '0.375rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#4b5563',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <Search size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Container */}
       <div style={{ padding: '1rem', overflowY: 'auto', flex: 1 }}>
         {messages.map((message, index) => (
-          <MessageBubble key={message.id} message={message} isLast={index === messages.length - 1} />
+          <div 
+            key={message.id} 
+            ref={(el) => messageRefCallback(el, message.id)}
+            style={{
+              marginBottom: index === messages.length - 1 ? 0 : '0.5rem',
+              transition: 'background-color 0.3s ease',
+            }}
+          >
+            <MessageBubble message={message} isLast={index === messages.length - 1} />
+          </div>
         ))}
         {isTyping && (
           <div style={{
@@ -501,52 +598,108 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Message AI Health Coach..."
           style={{
-            padding: '0.5rem 1rem',
+            padding: '0.625rem 1rem',
+            paddingRight: '3.5rem',
             borderRadius: '9999px',
             border: '1px solid #d1d5db',
             width: '100%',
-            fontSize: '1rem',
+            fontSize: '0.9375rem',
+            lineHeight: '1.5',
+            outline: 'none',
+            transition: 'all 0.2s',
           }}
           onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
           disabled={isLoading}
         />
-        <button
-          onClick={handleSendMessage}
-          style={{
-            ...buttonStyles,
-            ...(isLoading ? buttonDisabledStyle : {}),
-          }}
-          onMouseEnter={handleButtonHover}
-          onMouseLeave={handleButtonLeave}
-          onFocus={handleButtonFocus}
-          onBlur={handleButtonBlur}
-          disabled={isLoading || !inputText.trim()}
-        >
-          {isLoading ? (
-            <div
+        <div style={{
+          position: 'absolute',
+          right: '0.75rem',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          display: 'flex',
+          gap: '0.25rem',
+        }}>
+          {inputText && (
+            <button
+              onClick={() => setInputText('')}
               style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                borderRadius: '0.375rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'center',
+                color: '#9ca3af',
+                transition: 'all 0.2s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#6b7280')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
             >
+              <X size={18} />
+            </button>
+          )}
+          <button
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputText.trim()}
+            style={{
+              background: isLoading || !inputText.trim() ? '#93c5fd' : '#3b82f6',
+              border: 'none',
+              cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
+              padding: '0.375rem',
+              borderRadius: '9999px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading && inputText.trim()) {
+                e.currentTarget.style.background = '#2563eb';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading && inputText.trim()) {
+                e.currentTarget.style.background = '#3b82f6';
+              }
+            }}
+          >
+            {isLoading ? (
               <div
                 style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderTopColor: 'white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
-              />
-              Sending...
-            </div>
-          ) : (
-            'Send'
-          )}
-        </button>
+              >
+                <div
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }}
+                />
+                Sending...
+              </div>
+            ) : (
+              <Send size={18} />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Search Overlay */}
+      <MessageSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        currentSessionId={currentSessionId}
+        onResultClick={handleSearchResultClick}
+      />
     </div>
   );
 };

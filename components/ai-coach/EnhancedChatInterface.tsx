@@ -17,7 +17,8 @@ interface EnhancedChatInterfaceProps {
   className?: string;
 }
 
-const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
+// Export the component as a named export for better tree-shaking
+export const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   isOpen,
   onClose,
   className = '',
@@ -382,4 +383,5 @@ const EnhancedChatInterface: React.FC<EnhancedChatInterfaceProps> = ({
   );
 };
 
+// Keep default export for backward compatibility
 export default EnhancedChatInterface;

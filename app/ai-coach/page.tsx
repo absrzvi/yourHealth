@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Loader2, MessageSquare, Bot, X } from 'lucide-react';
+import { Loader2, MessageSquare, Plus, Trash2, Menu, X, RotateCw, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/components/ui/use-toast';
@@ -45,8 +45,29 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 // Dynamically import the chat interface with no SSR
-const ChatInterface = dynamic(
-  () => import('@/components/ai-coach/EnhancedChatInterface').then(mod => mod.default),
+const ChatInterface = dynamic<{ isOpen: boolean; onClose: () => void; className?: string }>(
+  () => import('@/components/ai-coach/EnhancedChatInterface')
+    .then(mod => mod.EnhancedChatInterface || mod.default)
+    .catch(err => {
+      console.error('Failed to load ChatInterface:', err);
+      return () => (
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] p-4">
+          <div className="text-center">
+            <Bot className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-red-600 mb-2">Failed to load chat interface</h2>
+            <p className="text-gray-600 mb-4">Please refresh the page or try again later.</p>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2"
+            >
+              <RotateCw className="h-4 w-4" />
+              Reload
+            </Button>
+          </div>
+        </div>
+      );
+    }),
   { 
     ssr: false,
     loading: () => (
