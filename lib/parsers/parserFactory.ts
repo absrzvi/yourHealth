@@ -4,7 +4,7 @@ import { MicrobiomeParser } from './microbiomeParser';
 import { ParserResult, ReportType } from './types';
 
 interface ParserConstructor {
-  new (file: File, content: string): { parse: () => Promise<ParserResult> };
+  new (file: File | null, content: string): { parse: () => Promise<ParserResult> };
 }
 
 const PARSERS: Record<ReportType, ParserConstructor> = {
@@ -32,28 +32,54 @@ export class ParserFactory {
   ): Promise<ReportType | null> {
     const fileName = file.name.toLowerCase();
     const fileContent = content.toLowerCase();
-
-    // Check for DNA report indicators
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    const isImageOrPdf = ['jpg', 'jpeg', 'png', 'heic', 'heif', 'pdf'].includes(extension);
+    
+    // For OCR-processed content, use more flexible pattern matching with regex
+    // to account for potential OCR errors and spacing issues
+    
+    // Check for DNA report indicators with enhanced OCR detection
+    const dnaPatterns = [
+      /\brs\d+\b/, // rsid pattern
+      /\bgenotype\b/,
+      /\ballele\b/,
+      /\bsnp\b/,
+      /\bdna\b/,
+      /\bgenetic\b/,
+      /\bchromosome\b/,
+      /\bgenom/,    // matches genome, genomic
+      /23andme/i
+    ];
+    
     if (
       fileName.includes('dna') ||
-      fileContent.includes('genotype') ||
-      fileContent.includes('rsid') ||
-      fileContent.includes('snp')
+      dnaPatterns.some(pattern => pattern.test(fileContent))
     ) {
       return 'DNA';
     }
 
-    // Check for microbiome report indicators
+    // Check for microbiome report indicators with enhanced OCR detection
+    const microbiomePatterns = [
+      /\bbacteria\b/,
+      /\bmicrobiome\b/,
+      /\bmicrobiota\b/,
+      /\brelative\s*abundance\b/,
+      /\bgut\s*(?:flora|health|bacteria)\b/,
+      /\blactobacillus\b/,
+      /\bbifidobacterium\b/,
+      /\benterococcus\b/,
+      /\bfirmicutes\b/,
+      /\bbacteroidetes\b/
+    ];
+    
     if (
       fileName.includes('microbiome') ||
-      fileContent.includes('bacteria') ||
-      fileContent.includes('microbiota') ||
-      fileContent.includes('relative abundance')
+      microbiomePatterns.some(pattern => pattern.test(fileContent))
     ) {
       return 'MICROBIOME';
     }
 
-    // Default to blood test if common blood test markers are found
+    // Enhanced blood test markers detection for OCR content
     const bloodTestMarkers = [
       'cholesterol',
       'glucose',
@@ -73,16 +99,55 @@ export class ParserFactory {
       'creatinine',
       'egfr',
       'a1c',
+      'blood test',
+      'complete blood count',
+      'cbc',
+      'metabolic panel',
+      'comprehensive metabolic',
+      'lipid panel',
+      'liver function',
+      'kidney function',
+      'reference range',
+      'normal range',
+      'test result',
+      'lab report',
+      'mg/dl',
+      'mmol/l',
+      'units',
+      'thyroid',
+      'tsh',
+      'free t4',
+      'free t3',
+      'vitamin d',
+      'iron',
+      'ferritin',
     ];
 
-    if (bloodTestMarkers.some((marker) => fileContent.includes(marker))) {
-      return 'BLOOD_TEST';
+    // For OCR content, use more flexible matching with word boundaries
+    if (isImageOrPdf) {
+      if (bloodTestMarkers.some(marker => {
+        // Create a regex with word boundaries for more accurate matching
+        const regex = new RegExp(`\\b${marker.replace(/\s+/g, '\\s*')}\\b`, 'i');
+        return regex.test(fileContent);
+      })) {
+        return 'BLOOD_TEST';
+      }
+    } else {
+      // For structured data, use simpler string includes
+      if (bloodTestMarkers.some(marker => fileContent.includes(marker))) {
+        return 'BLOOD_TEST';
+      }
     }
 
-    // If no specific type detected, try to determine by file extension
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    if (['csv', 'xls', 'xlsx', 'pdf'].includes(extension || '')) {
-      return 'BLOOD_TEST'; // Most common format for blood tests
+    // If no specific type detected, use file type hints
+    if (['csv', 'xls', 'xlsx'].includes(extension)) {
+      return 'BLOOD_TEST'; // Most common format for structured data
+    }
+    
+    if (isImageOrPdf) {
+      // For images and PDFs with no clear indicators, prefer blood test
+      // as it's the most common health report type
+      return 'BLOOD_TEST';
     }
 
     return null;

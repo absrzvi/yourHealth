@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Test Parser Testing Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .results-section {
+            flex: 2;
+            min-width: 500px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .dropzone {
+            border: 2px dashed #3498db;
+            border-radius: 5px;
+            padding: 25px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .dropzone:hover {
+            background-color: #ebf5fb;
+        }
+        .file-list {
+            margin: 10px 0;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+            max-height: 600px;
+            overflow: auto;
+        }
+        .biomarker-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .biomarker-table th, .biomarker-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .biomarker-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        .biomarker-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .biomarker-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .status-normal {
+            color: green;
+        }
+        .status-high, .status-low, .status-abnormal {
+            color: red;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 10px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Blood Test Parser Testing Tool</h1>
+    <p>Upload blood test PDF files to test the parsing functionality.</p>
+    
+    <div class="container">
+        <div class="upload-section">
+            <h2>Upload Files</h2>
+            <div class="dropzone" id="dropzone">
+                <p>Drag and drop files here or click to select files</p>
+                <input type="file" id="fileInput" style="display: none;" multiple accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+            
+            <div class="file-list" id="fileList">
+                <h3>Selected Files</h3>
+                <p id="noFilesMessage">No files selected</p>
+                <div id="selectedFiles"></div>
+            </div>
+            
+            <button id="uploadBtn" disabled>Process Files</button>
+        </div>
+        
+        <div class="results-section">
+            <h2>Results</h2>
+            <div class="tabs">
+                <div class="tab active" data-tab="biomarkers">Biomarkers</div>
+                <div class="tab" data-tab="remarks">Remarks</div>
+                <div class="tab" data-tab="raw">Raw Data</div>
+                <div class="tab" data-tab="metadata">Metadata</div>
+                <div class="tab" data-tab="ocr">OCR Text</div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing... This may take a minute.</p>
+            </div>
+            
+            <div class="tab-content active" id="biomarkers-content">
+                <p>No results yet. Upload a file to see biomarkers.</p>
+            </div>
+            
+            <div class="tab-content" id="remarks-content">
+                <p>No results yet. Upload a file to see remarks.</p>
+            </div>
+            
+            <div class="tab-content" id="raw-content">
+                <p>No results yet. Upload a file to see raw data.</p>
+            </div>
+            
+            <div class="tab-content" id="metadata-content">
+                <p>No results yet. Upload a file to see metadata.</p>
+            </div>
+            
+            <div class="tab-content" id="ocr-content">
+                <p>No results yet. Upload a file to see OCR text.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // DOM elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const noFilesMessage = document.getElementById('noFilesMessage');
+        const selectedFiles = document.getElementById('selectedFiles');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const loading = document.getElementById('loading');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Files storage
+        let files = [];
+        
+        // Tab functionality
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and contents
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                // Add active class to current tab and content
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab') + '-content';
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // File handling
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.backgroundColor = '#ebf5fb';
+        });
+        
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.backgroundColor = '';
+        });
+        
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.backgroundColor = '';
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+        
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFiles(fileInput.files);
+            }
+        });
+        
+        function handleFiles(newFiles) {
+            files = Array.from(newFiles);
+            
+            // Update UI
+            if (files.length > 0) {
+                noFilesMessage.style.display = 'none';
+                uploadBtn.disabled = false;
+                
+                // Show selected files
+                selectedFiles.innerHTML = '';
+                files.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.classList.add('file-item');
+                    
+                    fileItem.innerHTML = `
+                        <span>${file.name} (${formatFileSize(file.size)})</span>
+                        <button class="remove-file" data-index="${index}">Remove</button>
+                    `;
+                    
+                    selectedFiles.appendChild(fileItem);
+                });
+                
+                // Add event listeners to remove buttons
+                document.querySelectorAll('.remove-file').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = parseInt(e.target.getAttribute('data-index'));
+                        files.splice(index, 1);
+                        
+                        // Re-render the file list
+                        handleFiles(files);
+                    });
+                });
+            } else {
+                noFilesMessage.style.display = 'block';
+                selectedFiles.innerHTML = '';
+                uploadBtn.disabled = true;
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            else return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+        
+        // Upload functionality
+        uploadBtn.addEventListener('click', async () => {
+            if (files.length === 0) return;
+            
+            // Show loading indicator
+            loading.style.display = 'block';
+            uploadBtn.disabled = true;
+            
+            // Process each file one by one
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', 'blood'); // Specify blood test type
+                
+                try {
+                    // Send to processing endpoint
+                    const response = await fetch('/api/upload/process', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        displayResults(result);
+                    } else {
+                        const error = await response.json();
+                        alert(`Error processing file: ${error.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert(`Upload failed: ${error.message}`);
+                }
+            }
+            
+            // Hide loading indicator
+            loading.style.display = 'none';
+            uploadBtn.disabled = false;
+        });
+        
+        // Display results
+        function displayResults(data) {
+            console.log('Parser result:', data);
+            
+            // Extract the parser result data
+            // The API returns data.data which contains the ParserResult
+            const parserResult = data.data;
+            
+            // Display biomarkers
+            if (parserResult && parserResult.data && parserResult.data.biomarkers) {
+                const biomarkersContent = document.getElementById('biomarkers-content');
+                
+                if (parserResult.data.biomarkers.length > 0) {
+                    let biomarkersHtml = `
+                        <table class="biomarker-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                    <th>Reference Range</th>
+                                    <th>Status</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    parserResult.data.biomarkers.forEach(biomarker => {
+                        const statusClass = biomarker.status === 'normal' ? 'status-normal' : `status-${biomarker.status ? biomarker.status.toLowerCase() : 'unknown'}`;
+                        
+                        biomarkersHtml += `
+                            <tr>
+                                <td>${biomarker.name}</td>
+                                <td>${biomarker.value}</td>
+                                <td>${biomarker.unit || 'N/A'}</td>
+                                <td>${biomarker.referenceRange || 'N/A'}</td>
+                                <td class="${statusClass}">${biomarker.status || 'Unknown'}</td>
+                                <td>${(biomarker.confidence * 100).toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    biomarkersHtml += `
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    biomarkersContent.innerHTML = biomarkersHtml;
+                } else {
+                    biomarkersContent.innerHTML = '<p>No biomarkers found in the uploaded file.</p>';
+                }
+            }
+            
+            // Display remarks
+            if (parserResult && parserResult.data && parserResult.data.remarks) {
+                const remarksContent = document.getElementById('remarks-content');
+                
+                if (parserResult.data.remarks.length > 0) {
+                    let remarksHtml = '<ul>';
+                    
+                    parserResult.data.remarks.forEach(remark => {
+                        remarksHtml += `
+                            <li>
+                                <strong>${remark.type}:</strong> ${remark.content}
+                                <br><small>Confidence: ${(remark.confidence * 100).toFixed(1)}%</small>
+                                ${remark.associatedBiomarkers && remark.associatedBiomarkers.length > 0 ? 
+                                    `<br><small>Associated Biomarkers: ${remark.associatedBiomarkers.join(', ')}</small>` : ''}
+                            </li>
+                        `;
+                    });
+                    
+                    remarksHtml += '</ul>';
+                    remarksContent.innerHTML = remarksHtml;
+                } else {
+                    remarksContent.innerHTML = '<p>No remarks found in the uploaded file.</p>';
+                }
+            }
+            
+            // Display raw data
+            const rawContent = document.getElementById('raw-content');
+            rawContent.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            
+            // Display metadata
+            if (parserResult && parserResult.data && parserResult.data.metadata) {
+                const metadataContent = document.getElementById('metadata-content');
+                
+                let metadataHtml = '<h3>Parsing Metadata</h3>';
+                
+                metadataHtml += `
+                    <p><strong>Parser:</strong> ${parserResult.data.metadata.parser}</p>
+                `;
+                
+                if (parserResult.data.metadata.validation) {
+                    metadataHtml += `
+                        <h3>Validation Results</h3>
+                        <ul>
+                            <li>Total Biomarkers: ${parserResult.data.metadata.validation.totalBiomarkers}</li>
+                            <li>Valid Biomarkers: ${parserResult.data.metadata.validation.validBiomarkers}</li>
+                            <li>Invalid Biomarkers: ${parserResult.data.metadata.validation.invalidBiomarkers}</li>
+                            <li>Average Confidence: ${(parserResult.data.metadata.validation.averageConfidence * 100).toFixed(1)}%</li>
+                        </ul>
+                    `;
+                    
+                    if (parserResult.data.metadata.validation.criticalFindings && 
+                        parserResult.data.metadata.validation.criticalFindings.length > 0) {
+                        metadataHtml += `
+                            <h3>Critical Findings</h3>
+                            <ul>
+                        `;
+                        
+                        parserResult.data.metadata.validation.criticalFindings.forEach(finding => {
+                            metadataHtml += `
+                                <li>
+                                    <strong>${finding.biomarker}</strong> - 
+                                    ${finding.severity} severity: ${finding.message}
+                                </li>
+                            `;
+                        });
+                        
+                        metadataHtml += '</ul>';
+                    }
+                }
+                
+                metadataContent.innerHTML = metadataHtml;
+            }
+            
+            // Display OCR text
+            if (data.ocrText) {
+                const ocrContent = document.getElementById('ocr-content');
+                ocrContent.innerHTML = `<h3>OCR Text</h3><pre>${data.ocrText}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

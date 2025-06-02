@@ -1,0 +1,21 @@
+PATIENT INFORMATION
+-----------------
+Name: John Doe
+DOB: 01/01/1980
+MRN: 123456789
+
+TEST RESULTS
+-----------
+1. Glucose: 95 mg/dL (70-99)
+2. Hemoglobin A1c: 5.8% (<5.7%)
+3. Total Cholesterol: 180 mg/dL (<200)
+4. HDL: 45 mg/dL (>40)
+5. LDL: 110 mg/dL (<100)
+6. Triglycerides: 150 mg/dL (<150)
+7. Vitamin D: 22 ng/mL (30-100)
+
+REMARKS
+-------
+- Patient shows Vitamin D insufficiency
+- LDL is slightly elevated
+- All other values within normal range

@@ -1,0 +1,72 @@
+2025-05-31T13:37:08.018Z - BloodTestParser initialized with 1557 characters
+2025-05-31T13:37:08.020Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
+2025-05-31T13:37:08.022Z - Starting blood test report parsing
+2025-05-31T13:37:08.024Z - Raw OCR Text (BloodTestParser Start - First 500 chars):
+BAHRIA TOWN INTERNATIONAL
+HOSPITAL test S
+KARACHI BRANCH
+
+Precinct 19, Phase 1, Bahria Town Karac 1111 284
+111 111284
+LABORATORY REPORT
+MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM
+REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030
+CONTACT : 03040120825
+BIOCHEMISTRY
+
+Investigation Values Reference Ranges * Last Available Results
+CREATININE (Serum)
+
+Sample: 15-Apr-2025
+
+Creatinine (Serum) 14 mg/dl Male0.9-1.3 mg/dl (10-20-24) 1...
+2025-05-31T13:37:08.026Z - Step 1: Normalizing OCR text
+2025-05-31T13:37:08.054Z - Text normalized from 1557 to 1406 chars
+2025-05-31T13:37:08.055Z - Normalized OCR Text (After OcrNormalizer.normalize - First 500 chars):
+BAHRIA TOWN INTERNATIONAL
+HOSPITAL test S
+KARACHI BRANCH
+Precinct 19, Phase 1, Bahria Town Karac 1111 284
+111 111284
+MR.NO: 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX M
+CONTACT: 03040120825
+BIOCHEMISTRY
+Investigation Values Reference Ranges * Last Available Results
+CREATININE (Serum)
+Sample: 15-Apr-2025
+CREATININE (Serum) 14 mg/dL Male 0.9-1.3 mg/dL (10-20-24) 1.2 mg/dL
+Female 06-11 mg/dL
+Methadology Test performed on Cobas ¢ 111 automated chemistry analyzer.
+Magnesi...
+2025-05-31T13:37:08.056Z - Step 2: Preprocessing content
+2025-05-31T13:37:08.060Z - Step 3: Parsing document sections
+2025-05-31T13:37:08.066Z - Step 4: Extracting metadata
+2025-05-31T13:37:08.068Z - Extracting metadata from content
+2025-05-31T13:37:08.071Z - Extracted patient info: {"gender":"M"}
+2025-05-31T13:37:08.073Z - Extracted lab info: {"name":"le Results"}
+2025-05-31T13:37:08.075Z - Step 5: Extracting biomarkers
+2025-05-31T13:37:08.077Z - Extracting biomarkers
+2025-05-31T13:37:08.173Z - Traditional extractor found 11 biomarkers
+2025-05-31T13:37:08.175Z - Normalizing biomarker objects
+2025-05-31T13:37:08.195Z - Normalized biomarker name: "CREATININE (Serum)" → "CREATININE (Serum"
+2025-05-31T13:37:08.203Z - Normalized biomarker name: "Magnesium (Serum) Sample" → "MAGNESIUM"
+2025-05-31T13:37:08.208Z - Normalized biomarker name: "Magnesium" → "MAGNESIUM"
+2025-05-31T13:37:08.223Z - Normalized biomarker name: "POTASSIUM 43 meq 385.2 meq/ (10-20-24)" → "POTASSIUM"
+2025-05-31T13:37:08.235Z - Normalized biomarker name: "UREA (Serum) Sample" → "UREA"
+2025-05-31T13:37:08.244Z - Normalized biomarker name: "Thyroid Stimulating Hormone (TSH)" → "TSH"
+2025-05-31T13:37:08.246Z - Normalized traditional biomarkers: 11 remaining
+2025-05-31T13:37:08.264Z - Generic extractor found 12 biomarkers
+2025-05-31T13:37:08.265Z - Normalizing biomarker objects
+2025-05-31T13:37:08.304Z - Normalized biomarker name: "CREATININE (Serum)" → "CREATININE (Serum"
+2025-05-31T13:37:08.317Z - Normalized biomarker name: "Thyroid Stimulating Hormone (TSH)" → "TSH"
+2025-05-31T13:37:08.322Z - Normalized generic biomarkers: 12 remaining
+2025-05-31T13:37:08.337Z - Validated generic biomarkers: 9 remaining after dictionary validation
+2025-05-31T13:37:08.338Z - Combined and deduped 20 to 9 biomarkers
+2025-05-31T13:37:08.339Z - Extracted 9 potential biomarkers
+2025-05-31T13:37:08.341Z - Step 6: Extracting clinical remarks
+2025-05-31T13:37:08.342Z - Starting remarks extraction (BloodTestParser)
+2025-05-31T13:37:08.348Z - No remarks data found or remarks array was empty/falsy in external result.
+2025-05-31T13:37:08.349Z - Extracted 0 remarks
+2025-05-31T13:37:08.350Z - Step 7: Validating results
+2025-05-31T13:37:08.355Z - Step 8: Preparing final result
+2025-05-31T13:37:08.357Z - Parsing completed successfully. Found 7 biomarkers and 0 remarks.

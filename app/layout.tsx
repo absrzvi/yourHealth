@@ -1,40 +1,38 @@
-import './globals.css';
-import { ReactNode } from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from './api/auth/[...nextauth]/route';
+import './globals.css'
+import type { Metadata } from 'next'
+import { Montserrat } from 'next/font/google'
+import { Navigation } from '@/components/layout/Navigation'
+import { AuthProvider } from '@/components/providers/AuthProvider'
+import { PromoBanner } from '@/components/ui/PromoBanner'
 
-import SessionProvider from '../components/providers/SessionProvider';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-montserrat',
+  display: 'swap',
+})
 
-// Debug log the environment variables
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
-console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '***' : 'Not set');
+export const metadata: Metadata = {
+  title: 'For Your Health - Personalized Health Insights Powered by AI',
+  description: 'Advanced DNA and microbiome testing combined with AI analysis to create your personalized health roadmap.',
+}
 
-export default async function RootLayout({ 
-  children 
-}: { 
-  children: ReactNode 
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
 }) {
-  const session = await getServerSession(authOptions);
-  
-  // Debug log the session
-  console.log('Root layout - Session:', session ? 'Authenticated' : 'Not authenticated');
-
   return (
-    <html lang="en">
-      <body className="bg-gray-50 min-h-screen">
-        <SessionProvider session={session}>
-          <div className="app-container">
-            <Sidebar />
-            <main className="main-content flex-1 flex flex-col">
-              <Header />
-              <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
-            </main>
-          </div>
-        </SessionProvider>
+    <html lang="en" className={montserrat.variable}>
+      <body className="font-sans bg-background text-foreground">
+        <AuthProvider>
+          <Navigation />
+          <main className="pt-16">
+            {children}
+            <PromoBanner />
+          </main>
+        </AuthProvider>
       </body>
     </html>
-  );
+  )
 }

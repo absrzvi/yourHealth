@@ -1,13 +1,23 @@
-import Link from "next/link";
+import { HeroSection } from '@/components/home/HeroSection';
+import { HowItWorks } from '@/components/home/HowItWorks';
+import { SciencePreview } from '@/components/home/SciencePreview';
+import { ProductTeaser } from '@/components/home/ProductTeaser';
+import { Testimonials } from '@/components/home/Testimonials';
+import { ProvidersTeaser } from '@/components/home/ProvidersTeaser';
+import { PersonalizedHealthcareSection } from '@/components/home/PersonalizedHealthcareSection';
+import { IntegrationsSection } from '@/components/home/IntegrationsSection';
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen">
-      <nav className="w-full flex justify-end p-4">
-        <Link href="/data-sources" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Data Sources</Link>
-      </nav>
-      <h1 className="text-3xl font-bold mb-4">For Your Health MVP</h1>
-      <p className="text-lg">Minimal personalized health platform for friends & family.</p>
-    </main>
+    <>
+      <HeroSection />
+      <PersonalizedHealthcareSection />
+      <HowItWorks />
+      <SciencePreview />
+      <IntegrationsSection />
+      <ProductTeaser />
+      <Testimonials />
+      <ProvidersTeaser />
+    </>
   );
 }

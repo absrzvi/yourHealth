@@ -22,8 +22,22 @@ export async function middleware(request: NextRequest) {
   const isPublicFile = /\.[^/]+$/.test(pathname)
   const isDev = process.env.NODE_ENV === 'development'
   // Public routes
-  const publicPaths = ['/auth/login', '/auth/register', '/auth/error', '/_error']
+  const publicPaths = [
+    '/', // Home page is public
+    '/auth/login', 
+    '/auth/register', 
+    '/auth/error', 
+    '/auth/debug-login', // Add our debug login page
+    '/_error',
+    '/ai-coach' // Added AI Coach to public paths
+  ]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
+  
+  // DEVELOPMENT ONLY: Allow access to all paths during development for testing
+  // if (isDev) {
+  //   console.log('Development mode: Allowing access to all paths for testing (TEMP DISABLED FOR DEMO AUTH TEST)');
+  //   return NextResponse.next();
+  // }
   
   debug('Middleware processing:', { 
     pathname, 
@@ -33,10 +47,12 @@ export async function middleware(request: NextRequest) {
     url: request.url 
   })
 
-  // Skip middleware for API routes, static files, _next paths and public files
-  if (pathname.startsWith('/api/') || pathname.startsWith('/_next') || isPublicFile) {
-    debug('Skipping middleware for API or static path:', pathname);
-    return NextResponse.next()
+  debug(`[Path Check for ${pathname}]: isApiAuthRoute=${isApiAuthRoute}, startsWithNext=${pathname.startsWith('/_next')}, isPublicFile=${isPublicFile}`);
+
+  // Skip middleware for NextAuth API routes, static files (except ocr-test.html), and _next paths
+  if (isApiAuthRoute || pathname.startsWith('/_next') || (isPublicFile && pathname !== '/ocr-test.html')) {
+    debug('Skipping middleware for NextAuth API, static, or _next path:', pathname);
+    return NextResponse.next();
   }
 
   // Declare token variable outside the try block so it's available throughout the middleware
@@ -47,7 +63,8 @@ export async function middleware(request: NextRequest) {
     // Get raw token string for debugging purposes
     const rawToken = await getToken({ 
       req: request,
-      secret: process.env.NEXTAUTH_SECRET || 'default-secret-change-in-production',
+      // HIPAA-SECURITY-ISSUE: In production, use only environment variable
+      secret: process.env.NEXTAUTH_SECRET || 'development-secret-key-replace-in-production',
       secureCookie: process.env.NODE_ENV === 'production',
       raw: true
     });
@@ -58,7 +75,8 @@ export async function middleware(request: NextRequest) {
     // Attempt to get parsed token
     token = await getToken({ 
       req: request,
-      secret: process.env.NEXTAUTH_SECRET || 'default-secret-change-in-production',
+      // HIPAA-SECURITY-ISSUE: In production, use only environment variable
+      secret: process.env.NEXTAUTH_SECRET || 'development-secret-key-replace-in-production',
       secureCookie: process.env.NODE_ENV === 'production'
     }) as AuthToken | null;
     
@@ -86,27 +104,25 @@ export async function middleware(request: NextRequest) {
     // This implements browser-session-only cookies for non-remembered sessions
     const browserSessionKey = 'next-auth.browser-session';
     const storedSessionId = request.cookies.get(browserSessionKey)?.value;
-    const currentSessionId = token.jti; // JWT ID uniquely identifies this session
-    
-    // TEMPORARILY DISABLED: Only validate session expiration, not browser session tracking
-    // This breaks the redirect loop while we fix the root cause
-    // For non-remembered sessions, we would normally check browser session tracking cookie
-    // but for now we'll rely only on token expiration for security
-    const shouldInvalidateSession = false; // Temporarily disable browser session validation
+    const userIdentifierFromToken = token.sub; // User's ID from token (standard JWT subject claim)
+
+    // Condition for invalidating session on protected paths if rememberMe is false
+    const shouldInvalidateSession = token.rememberMe === false && 
+                              !isPublicPath && 
+                              userIdentifierFromToken && 
+                              (!storedSessionId || storedSessionId !== userIdentifierFromToken);
     
     // Log what would have happened with the normal logic
     const wouldInvalidate = token.rememberMe === false && 
                            !isPublicPath && 
-                           currentSessionId && 
-                           (!storedSessionId || storedSessionId !== currentSessionId);
-    
-    debug('Would have invalidated session:', wouldInvalidate);
+                           userIdentifierFromToken && 
+                           (!storedSessionId || storedSessionId !== userIdentifierFromToken);
     
     debug('Session validation:', { 
       isExpired, 
       shouldInvalidateSession,
-      tokenSessionId: currentSessionId,
-      browserSessionId: storedSessionId,
+      userIdentifierInToken: userIdentifierFromToken, 
+      browserSessionId: storedSessionId, 
       rememberMe: token.rememberMe 
     });
     
@@ -136,15 +152,40 @@ export async function middleware(request: NextRequest) {
     // Skip session validation for public paths like login/register
     // But still redirect to dashboard if logged in (unless we're invalidating the session)
     if (token) {
-      // We're on a public path (like login) with a token, but we need to check if we're in the
-      // process of redirecting due to session invalidation
+      // === BEGIN NEW LOGIC ===
+      const browserSessionKey = 'next-auth.browser-session';
+      const storedSessionId = request.cookies.get(browserSessionKey)?.value;
+      const userIdentifierFromToken = token.sub; // User's ID from token (standard JWT subject claim)
+
+      const mustInvalidateNonRememberedSession = 
+        token.rememberMe === false && 
+        userIdentifierFromToken && 
+        !storedSessionId;
+
+      if (mustInvalidateNonRememberedSession) {
+        debug('Non-remembered session on public path without browser cookie. Invalidating and staying on page.');
+        const response = NextResponse.next(); // Stay on the current public page
+
+        // Determine session token cookie name based on environment
+        const sessionTokenCookieName = process.env.NODE_ENV === 'production' 
+          ? '__Secure-next-auth.session-token' 
+          : 'next-auth.session-token';
+
+        response.cookies.delete(sessionTokenCookieName);
+        response.cookies.delete(browserSessionKey);
+        
+        return response;
+      }
+      // === END NEW LOGIC ===
+      // We're on a public path with a token
+      // Only redirect to dashboard if coming from auth pages (login/register)
+      const isAuthPage = ['/auth/login', '/auth/register', '/auth/error', '/auth/debug-login'].includes(pathname);
       const isRedirectingForInvalidSession = pathname === '/auth/login' && 
         request.nextUrl.searchParams.has('callbackUrl');
       
-      // If we're not redirecting for session invalidation, and we have a token on a public path,
-      // redirect to dashboard
-      if (!isRedirectingForInvalidSession) {
-        debug('User is logged in on public path - redirecting to dashboard');
+      // Only redirect to dashboard if coming from an auth page and not in the middle of session invalidation
+      if (isAuthPage && !isRedirectingForInvalidSession) {
+        debug('User is logged in on auth page - redirecting to dashboard');
         // Don't redirect if already on the dashboard
         if (pathname === '/dashboard') {
           return NextResponse.next()
@@ -239,11 +280,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api/auth (Auth API routes)
+     * - api (All API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon\.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon\.ico).*)',
   ],
 }

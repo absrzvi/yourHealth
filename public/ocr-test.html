@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Test Utility</title>
+    <style>
+        html {
+            box-sizing: border-box;
+        }
+        *, *::before, *::after {
+            box-sizing: inherit;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f8f9fa; /* Light gray background */
+            color: #212529; /* Darker text for better contrast */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            background-color: #ffffff; /* White header */
+            color: #007bff;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-bottom: 1px solid #e9ecef;
+        }
+        header .logo-title h1 {
+            margin: 0;
+            font-size: 1.5em; /* Slightly smaller */
+            color: #007bff;
+        }
+        header .logo-title p {
+            margin: 0;
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+        .nav-buttons button, .nav-buttons a {
+            padding: 8px 15px;
+            background-color: transparent;
+            color: #007bff;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            text-decoration: none;
+            margin-left: 10px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .nav-buttons button:hover, .nav-buttons a:hover {
+            background-color: #007bff;
+            color: white;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+            width: 90%;
+            max-width: 1400px;
+            display: flex;
+            gap: 30px;
+            margin: 30px auto;
+            flex-grow: 1;
+        }
+        .results-table .normal-value {
+            color: green;
+            font-weight: bold;
+        }
+        .results-table .low-value {
+            color: orange;
+            font-weight: bold;
+        }
+        .results-table .high-value {
+            color: red;
+            font-weight: bold;
+        }
+
+        .upload-section, .results-section {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background-color: #ffffff;
+        }
+        .upload-section { flex: 1; min-width: 350px; }
+        .results-section { flex: 2; min-width: 450px; }
+
+        h2 {
+            color: #343a40;
+            font-size: 1.5em;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.95em;
+        }
+        select, input[type="text"] /* For potential future text inputs */
+        {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+            background-color: #fff;
+        }
+        select:focus, input[type="text"]:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .drop-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 200px;
+            padding: 20px;
+            border: 2px dashed #adb5bd;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .drop-zone.drag-over {
+            border-color: #007bff;
+            background-color: #e9f4ff;
+        }
+        .drop-zone-prompt p {
+            margin: 5px 0;
+            color: #495057;
+        }
+        .drop-zone-prompt .browse-link {
+            color: #007bff;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .drop-zone-prompt .browse-link:hover { text-decoration: underline; }
+        .drop-zone-text-sm { font-size: 0.85em; color: #6c757d; }
+        .upload-icon {
+            width: 40px; height: 40px; margin-bottom: 10px; color: #adb5bd;
+        }
+        .drop-zone.drag-over .upload-icon { color: #007bff; }
+
+        .file-preview {
+            padding: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .file-preview p { margin: 5px 0; font-size: 0.9em; }
+        .file-preview #fileName { font-weight: 500; }
+        
+        button.action-button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            width: 100%;
+        }
+        button.action-button:hover { background-color: #0056b3; }
+        button.action-button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        button.remove-button {
+            background-color: #dc3545;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85em;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button.remove-button:hover { background-color: #c82333; }
+
+        #uploadStatus {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .tabs { display: flex; margin-bottom: 0; border-bottom: 1px solid #dee2e6; }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-right: 1px;
+            font-weight: 500;
+            color: #495057;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            border-bottom-color: transparent; /* Tab content border takes over */
+            color: #007bff;
+            font-weight: 600;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff #dee2e6; /* Make bottom border white */
+        }
+        .tab-content { display: none; padding: 15px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 4px 4px; background-color: #fff; min-height: 200px; max-height: 450px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background-color: #e9ecef; padding: 10px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; font-size: 0.875em; color: #212529; }
+        
+        #reportHeader { margin-bottom: 15px; padding: 10px; background-color: #e9f4ff; border-left: 4px solid #007bff; border-radius: 4px; }
+        #reportHeader h3 { margin: 0 0 5px 0; color: #0056b3; }
+        #reportHeader p { margin: 0; font-size: 0.9em; color: #495057; }
+        .results-table { width: 100%; margin-top: 15px; border-collapse: collapse; border-radius: 4px; overflow: hidden; border: 1px solid #dee2e6;}
+        .results-table th, .results-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #dee2e6; font-size: 0.9em; }
+        .results-table th { background-color: #f8f9fa; font-weight: 600; color: #343a40; }
+        .results-table tbody tr:last-child td { border-bottom: none; }
+        .results-table tbody tr:hover { background-color: #f1f3f5; }
+        .remarks-section { margin-top: 15px; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
+        .remarks-section h4 { margin-top: 0; color: #856404; font-size: 1em; }
+        .remarks-section p { margin-bottom: 0; font-size: 0.9em; }
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-title">
+            <h1>OCR Test Utility</h1>
+            <p>Upload, process, and parse health reports.</p>
+        </div>
+        <div class="nav-buttons">
+            <a href="/dashboard" id="dashboardButton">Dashboard</a> 
+            <button onclick="handleLogout()" id="logoutButton">Sign Out</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="upload-section">
+            <h2>Upload Report</h2>
+            <form id="uploadForm" onsubmit="return false;">
+                <div>
+                    <label for="reportType">Report Type:</label>
+                    <select id="reportType" name="reportType">
+                        <option value="BLOOD_TEST">Blood Test Results</option>
+                        <option value="DNA">DNA Report</option>
+                        <option value="MICROBIOME">Microbiome Analysis</option>
+                    </select>
+                </div>
+
+                <div id="dropZone" class="drop-zone">
+                    <input type="file" id="fileInput" accept=".pdf,.xls,.xlsx,.csv,.txt,.json,.tsv,.jpg,.jpeg,.png,.heic,.heif" style="display: none;">
+                    <div class="drop-zone-prompt">
+                        <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <p>Drag 'n' drop file here, or <span class="browse-link" id="browseLink">browse</span></p>
+                        <p class="drop-zone-text-sm">Max: 10MB. PDF, Excel, CSV, TXT, JSON, TSV, JPG, PNG, HEIC, HEIF</p>
+                    </div>
+                    <div id="filePreview" class="file-preview" style="display: none;">
+                        <p id="fileName"></p>
+                        <p id="fileSize"></p>
+                        <button type="button" id="removeFileButton" class="remove-button">Remove File</button>
+                    </div>
+                </div>
+                
+                <button type="button" id="uploadButton" class="action-button" disabled>Upload File</button>
+            </form>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <div class="results-section">
+            <h2>Processing Results</h2>
+            <div class="tabs">
+                <div class="tab active" data-tab="parsedData">Parsed Data</div>
+                <div class="tab" data-tab="rawOcr">Raw OCR Text</div>
+                <div class="tab" data-tab="jsonResponse">Full JSON Response</div>
+            </div>
+            <div id="parsedData" class="tab-content active">
+                <div id="parsedDataContainer"><p>Parsed data will appear here...</p></div>
+            </div>
+            <div id="rawOcr" class="tab-content">
+                <pre id="rawOcrText">Raw OCR text will appear here...</pre>
+            </div>
+            <div id="jsonResponse" class="tab-content">
+                <pre id="jsonResponseData">Full JSON response will appear here...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const MAX_FILE_SIZE_MB = 10;
+        const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+        const ACCEPTED_MIME_TYPES_MAP = {
+            'application/pdf': ['.pdf'],
+            'application/vnd.ms-excel': ['.xls'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+            'text/csv': ['.csv'],
+            'text/plain': ['.txt'],
+            'application/json': ['.json'],
+            'text/tab-separated-values': ['.tsv'],
+            'image/jpeg': ['.jpg', '.jpeg'],
+            'image/png': ['.png'],
+            'image/heic': ['.heic'],
+            'image/heif': ['.heif'],
+        };
+        const ALLOWED_EXTENSIONS_DISPLAY = Object.values(ACCEPTED_MIME_TYPES_MAP).flat().join(', ');
+
+        // Data Dictionaries
+        /* IMPORTANT: The reference ranges below are common examples. Actual lab reference ranges 
+           can vary significantly based on the laboratory, testing methodology, patient demographics 
+           (age, sex), and other factors. These values should be considered placeholders and 
+           MUST BE REVIEWED AND UPDATED FOR CLINICAL ACCURACY based on the specific labs and 
+           contexts you are working with. */
+        const biomarkerReferenceRanges = {
+            "Sodium": "135-145 mmol/L",
+            "Potassium": "3.5-5.0 mmol/L",
+            "Chloride": "98-107 mmol/L",
+            "Carbon Dioxide": "23-30 mmol/L",
+            "BUN (Blood Urea Nitrogen)": "7-20 mg/dL",
+            "Urea": "2.5-7.1 mmol/L",
+            "Creatinine": "0.6-1.2 mg/dL",
+            "Glucose": "70-99 mg/dL (Fasting)",
+            "Calcium": "8.5-10.2 mg/dL",
+            "Protein, Total": "6.0-8.3 g/dL",
+            "Albumin": "3.5-5.0 g/dL",
+            "Globulin": "2.0-3.5 g/dL",
+            "A/G Ratio": "1.1-2.5",
+            "Bilirubin, Total": "0.1-1.2 mg/dL",
+            "Alkaline Phosphatase": "30-120 U/L",
+            "AST (SGOT)": "10-40 U/L",
+            "ALT (SGPT)": "7-56 U/L",
+            "GGT (Gamma-Glutamyl Transferase)": "5-40 U/L",
+            "LDH (Lactate Dehydrogenase)": "140-280 U/L",
+            "Uric Acid": "3.5-7.2 mg/dL (Male), 2.6-6.0 mg/dL (Female)",
+            "WBC (White Blood Cell Count)": "4.0-11.0 x10^9/L",
+            "RBC (Red Blood Cell Count)": "4.5-5.5 x10^12/L (Male), 4.0-5.0 x10^12/L (Female)",
+            "Hemoglobin": "13.5-17.5 g/dL (Male), 12.0-15.5 g/dL (Female)",
+            "Hematocrit": "41-50% (Male), 36-44% (Female)",
+            "MCV (Mean Corpuscular Volume)": "80-100 fL",
+            "MCH (Mean Corpuscular Hemoglobin)": "27-33 pg",
+            "MCHC (Mean Corpuscular Hemoglobin Concentration)": "32-36 g/dL",
+            "RDW (Red Cell Distribution Width)": "11.5-14.5%",
+            "Platelet Count": "150-450 x10^9/L",
+            "Neutrophils": "40-75%",
+            "Lymphocytes": "20-45%",
+            "Monocytes": "2-10%",
+            "Eosinophils": "0-6%",
+            "Basophils": "0-1%",
+            "Cholesterol, Total": "<200 mg/dL (Desirable)",
+            "Triglycerides": "<150 mg/dL (Desirable)",
+            "HDL Cholesterol": ">40 mg/dL (Male), >50 mg/dL (Female)",
+            "LDL Cholesterol": "<100 mg/dL (Optimal)",
+            "VLDL Cholesterol": "5-40 mg/dL",
+            "TSH (Thyroid Stimulating Hormone)": "0.4-4.0 mIU/L",
+            "Free T4 (FT4)": "0.8-1.8 ng/dL",
+            "Free T3 (FT3)": "2.3-4.2 pg/mL",
+            "Iron": "60-170 mcg/dL",
+            "Ferritin": "12-300 ng/mL (Male), 12-150 ng/mL (Female)",
+            "Vitamin D, 25-Hydroxy": "30-100 ng/mL (Sufficiency)",
+            "Vitamin B12": "200-900 pg/mL",
+            "Folate": ">4.0 ng/mL",
+            "HbA1c (Hemoglobin A1c)": "<5.7% (Normal), 5.7-6.4% (Prediabetes), >=6.5% (Diabetes)",
+            "eGFR (Estimated Glomerular Filtration Rate)": ">60 mL/min/1.73m^2",
+            "GFR Estimated": ">60 mL/min/1.73m^2",
+            "PSA (Prostate-Specific Antigen)": "<4.0 ng/mL",
+            "CRP (C-Reactive Protein), High Sensitivity": "<1.0 mg/L (Low CVD risk), 1-3 mg/L (Average), >3 mg/L (High)"
+        };
+
+        // DOM Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseLink = document.getElementById('browseLink');
+        const uploadButton = document.getElementById('uploadButton');
+        const reportTypeSelect = document.getElementById('reportType');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const filePreview = document.getElementById('filePreview');
+        const fileNameDisplay = document.getElementById('fileName');
+        const fileSizeDisplay = document.getElementById('fileSize');
+        const removeFileButton = document.getElementById('removeFileButton');
+        const dropZonePrompt = dropZone ? dropZone.querySelector('.drop-zone-prompt') : null;
+        const logoutButton = document.getElementById('logoutButton');
+
+        // Result Display DOM Elements
+        const jsonDataPre = document.getElementById('jsonResponseData');
+        const ocrTextContent = document.getElementById('rawOcrText');
+        const parsedDataContainer = document.getElementById('parsedDataContainer');
+        const reportHeaderDiv = document.getElementById('reportHeaderDiv'); 
+        const parsedResultsTableBody = document.getElementById('parsedResultsTableBody');
+        const noJsonDataMessage = document.getElementById('noJsonDataMessage');
+        const noParsedTableDataMessage = document.getElementById('noParsedTableDataMessage');
+        const parsedTableSectionContainer = document.getElementById('parsedTableSectionContainer');
+        const fileInfoContent = document.getElementById('fileInfoContent');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        let selectedFile = null;
+
+        // --- Utility Functions ---
+        function showStatus(message, isError = false) {
+            if (uploadStatus) {
+                uploadStatus.innerHTML = message;
+                uploadStatus.className = isError ? 'status-error' : 'status-success';
+            }
+        }
+
+        function clearStatus() {
+            if (uploadStatus) {
+                uploadStatus.textContent = '';
+                uploadStatus.className = '';
+            }
+        }
+        
+        function setLoading(isLoading) {
+            if (uploadButton) {
+                uploadButton.disabled = isLoading;
+                uploadButton.textContent = isLoading ? 'Uploading...' : 'Upload File';
+            }
+        }
+
+        function needsOcrProcessing(file) {
+            if (!file) return false;
+            const nameLower = file.name.toLowerCase();
+            if (file.type && file.type.startsWith('image/')) return true;
+            if ((file.type === 'application/pdf' || nameLower.endsWith('.pdf'))) return true;
+            return false;
+        }
+
+        function handleFile(file) {
+            clearStatus();
+            if (!file) return;
+
+            const fileType = file.type;
+            const fileExtension = ('.' + file.name.split('.').pop().toLowerCase()).trim();
+            let isValidType = false;
+
+            if (ACCEPTED_MIME_TYPES_MAP[fileType]) {
+                isValidType = ACCEPTED_MIME_TYPES_MAP[fileType].includes(fileExtension);
+            }
+            if (!isValidType) {
+                for (const mime in ACCEPTED_MIME_TYPES_MAP) {
+                    if (ACCEPTED_MIME_TYPES_MAP[mime].includes(fileExtension)) {
+                        isValidType = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!isValidType) {
+                showStatus(`Invalid file type: ${file.name}. Allowed: ${ALLOWED_EXTENSIONS_DISPLAY}`, true);
+                return;
+            }
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                showStatus(`File too large: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB). Max ${MAX_FILE_SIZE_MB}MB.`, true);
+                return;
+            }
+
+            selectedFile = file;
+            if (fileNameDisplay) fileNameDisplay.textContent = file.name;
+            if (fileSizeDisplay) fileSizeDisplay.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            if (filePreview) filePreview.style.display = 'block';
+            if (dropZonePrompt) dropZonePrompt.style.display = 'none';
+            if (uploadButton) uploadButton.disabled = false;
+        }
+
+        function clearResults() {
+            if (jsonDataPre) jsonDataPre.textContent = 'Full JSON response will appear here...';
+            if (ocrTextContent) ocrTextContent.textContent = 'Raw OCR text will appear here...';
+            if (parsedDataContainer) parsedDataContainer.innerHTML = '<p>Parsed data will appear here...</p>';
+            if (noJsonDataMessage) noJsonDataMessage.style.display = 'block';
+            if (noParsedTableDataMessage) noParsedTableDataMessage.style.display = 'block';
+            if (parsedTableSectionContainer) parsedTableSectionContainer.style.display = 'none';
+            if (fileInfoContent) fileInfoContent.textContent = 'File info will appear here...';
+            if (parsedResultsTableBody) parsedResultsTableBody.innerHTML = '';
+        }
+
+        function checkValue(value, referenceRange) {
+            // Basic placeholder - can be expanded
+            if (typeof value !== 'number' || !referenceRange || typeof referenceRange !== 'string') {
+                return { isOutOfRange: false, suggestion: 'N/A', className: '' };
+            }
+            const rangeParts = referenceRange.match(/([\d.]+)\s*-\s*([\d.]+)/);
+            if (rangeParts && rangeParts.length === 3) {
+                const lower = parseFloat(rangeParts[1]);
+                const upper = parseFloat(rangeParts[2]);
+                if (value < lower) return { isOutOfRange: true, suggestion: 'Low', className: 'low-value' };
+                if (value > upper) return { isOutOfRange: true, suggestion: 'High', className: 'high-value' };
+            }
+            return { isOutOfRange: false, suggestion: 'Normal', className: 'normal-value' };
+        }
+
+        function displayResults(data) {
+            console.log('displayResults received data:', JSON.stringify(data, null, 2)); // For debugging
+            const ocrTextTab = document.getElementById('rawOcr');
+            const parsedDataTab = document.getElementById('parsedData');
+            const ocrTextContent = document.getElementById('rawOcrText');
+            const parsedDataContainer = document.getElementById('parsedDataContainer');
+            const reportHeaderDiv = document.getElementById('reportHeaderDiv'); 
+            const parsedResultsTableBody = document.getElementById('parsedResultsTableBody');
+            const noJsonDataMessage = document.getElementById('noJsonDataMessage');
+            const noParsedTableDataMessage = document.getElementById('noParsedTableDataMessage');
+            const parsedTableSectionContainer = document.getElementById('parsedTableSectionContainer');
+            const fileInfoContent = document.getElementById('fileInfoContent');
+            const jsonDataPre = document.getElementById('jsonResponseData'); // Added for Full JSON Response tab
+
+            if (!parsedDataContainer) return;
+
+            if (data.error) {
+                const errorEl = document.createElement('p');
+                errorEl.style.color = 'red';
+                errorEl.textContent = `Error: ${data.error}`;
+                parsedDataContainer.appendChild(errorEl);
+                if (data.rawResponse) {
+                    const rawRespEl = document.createElement('pre');
+                    rawRespEl.textContent = `Raw server response: ${data.rawResponse}`;
+                    parsedDataContainer.appendChild(rawRespEl);
+                }
+                return;
+            }
+
+            const reportData = data.parsedData || data.analysis || data;
+            if (!reportData || Object.keys(reportData).length === 0 || (Object.keys(reportData).length === 1 && reportData.hasOwnProperty('reportId') && !reportData.biomarkers && !reportData.metadata)) {
+                const noDataEl = document.createElement('p');
+                noDataEl.textContent = 'No structured data in response.';
+                if(data.message) noDataEl.textContent += ` Server message: ${data.message}`;
+                parsedDataContainer.appendChild(noDataEl);
+                return;
+            }
+
+            if (data.success && data.tests && Array.isArray(data.tests) && data.tests.length > 0) {
+                let html = '<h3>Parsed Biomarkers</h3>';
+                
+                let parsedOcrJsonContent = null;
+                if (data.ocrText && typeof data.ocrText === 'string') {
+                    const ocrMatch = data.ocrText.match(/```json\n([\s\S]*?)\n```/);
+                    if (ocrMatch && ocrMatch[1]) {
+                        try {
+                            parsedOcrJsonContent = JSON.parse(ocrMatch[1]);
+                        } catch (e) {
+                            console.error("Failed to parse JSON from data.ocrText for parsed data tab:", e);
+                        }
+                    }
+                }
+
+                html += '<div class="report-meta" style="margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 4px;">';
+                if (parsedOcrJsonContent && parsedOcrJsonContent.metadata && parsedOcrJsonContent.metadata.labName) {
+                    html += `<p style="margin: 5px 0;"><strong>Lab:</strong> ${parsedOcrJsonContent.metadata.labName}</p>`;
+                } else {
+                    html += `<p style="margin: 5px 0;"><strong>Lab:</strong> N/A</p>`;
+                }
+                if (parsedOcrJsonContent && parsedOcrJsonContent.patientInfo) {
+                    html += `<p style="margin: 5px 0;"><strong>Patient Name:</strong> ${parsedOcrJsonContent.patientInfo.name || data.patientName || 'N/A'}</p>`;
+                    html += `<p style="margin: 5px 0;"><strong>Collection Date:</strong> ${parsedOcrJsonContent.patientInfo.collectionDate || 'N/A'}</p>`;
+                } else {
+                    html += `<p style="margin: 5px 0;"><strong>Patient Name:</strong> ${data.patientName || 'N/A'}</p>`;
+                    html += `<p style="margin: 5px 0;"><strong>Collection Date:</strong> N/A</p>`;
+                }
+                html += `<p style="margin: 5px 0;"><strong>Report ID:</strong> ${data.reportId || 'N/A'}</p>`;
+                html += `<p style="margin: 5px 0;"><strong>Overall Confidence:</strong> ${data.confidence !== undefined ? (parseFloat(data.confidence) * 100).toFixed(0) + '%' : 'N/A'}</p>`;
+                html += `<p style="margin: 5px 0;"><strong>Needs Review:</strong> ${data.needsReview !== undefined ? (data.needsReview ? 'Yes' : 'No') : 'N/A'}</p>`;
+                html += '</div>';
+
+                html += '<table class="results-table">';
+                html += '<thead><tr><th>Biomarker</th><th>Value</th><th>Unit</th><th>Reference Range</th><th>Suggestion</th></tr></thead>'; // Confidence column removed
+                html += '<tbody id="parsedResultsTableBody"></tbody>';
+                html += '</table>';
+
+                parsedDataContainer.innerHTML = html;
+
+                const parsedResultsTableBody = document.getElementById('parsedResultsTableBody');
+                data.tests.forEach(test => {
+                    const row = parsedResultsTableBody.insertRow();
+                    const biomarkerName = test.name || 'N/A';
+                    row.insertCell().textContent = biomarkerName;
+                    
+                    const valueCell = row.insertCell();
+                    valueCell.textContent = test.value !== undefined ? test.value : 'N/A';
+                    
+                    row.insertCell().textContent = test.unit || '';
+                    
+                    // Determine reference range using dictionary, then OCR data, then N/A
+                    let displayReferenceRange = biomarkerReferenceRanges[biomarkerName] || test.referenceRange || 'N/A';
+                    row.insertCell().textContent = displayReferenceRange;
+                    
+                    // Confidence cell and its population logic removed
+                    
+                    const { isOutOfRange, suggestion, className } = checkValue(parseFloat(test.value), displayReferenceRange); // Use the determined displayReferenceRange
+                    if (isOutOfRange) valueCell.classList.add('out-of-range');
+                    
+                    const suggestionCell = row.insertCell();
+                    suggestionCell.textContent = suggestion;
+                    if (className) suggestionCell.classList.add(className);
+                });
+            } else {
+                if (noParsedTableDataMessage) {
+                    noParsedTableDataMessage.style.display = 'block';
+                    noParsedTableDataMessage.textContent = 'No biomarker data found.';
+                }
+                if (parsedTableSectionContainer) parsedTableSectionContainer.style.display = 'none';
+            }
+
+            if (data.ocrText && typeof data.ocrText === 'string') {
+                let textToDisplay = data.ocrText;
+                const match = data.ocrText.match(/^```json\n([\s\S]*?)\n```$/);
+                if (match && match[1]) {
+                    textToDisplay = match[1]; // Extracted JSON string
+                    try {
+                        const parsedJson = JSON.parse(textToDisplay);
+                        textToDisplay = JSON.stringify(parsedJson, null, 2); // Prettify
+                    } catch (e) {
+                        // Not valid JSON or already plain text, keep as extracted
+                    }
+                }
+                ocrTextContent.innerHTML = `<pre>${textToDisplay.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
+            } else if (data.error && data.rawResponse) {
+                ocrTextContent.innerHTML = `<p class="text-danger">OCR text not available due to error. Raw server response:</p><pre>${String(data.rawResponse).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
+            } else {
+                ocrTextContent.innerHTML = '<p>No OCR text available or text is not in the expected string format.</p>';
+            }
+            if (jsonDataPre) jsonDataPre.textContent = JSON.stringify(data, null, 2);
+            if (noJsonDataMessage) {
+                 noJsonDataMessage.style.display = (jsonDataPre.textContent && jsonDataPre.textContent.trim() !== '{}' && jsonDataPre.textContent.trim() !== 'null' && jsonDataPre.textContent.trim() !== 'Full JSON response will appear here...') ? 'none' : 'block';
+            }
+        }
+
+        // --- Event Listeners & Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Drop Zone & File Input
+            if (dropZone) {
+                dropZone.addEventListener('click', (e) => {
+                    if (e.target.id === 'removeFileButton' || (browseLink && (e.target.id === 'browseLink' || browseLink.contains(e.target)))) return;
+                    if (fileInput) fileInput.click();
+                });
+                dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+                dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                    if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+                });
+            }
+            if (browseLink && fileInput) {
+                browseLink.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); fileInput.click(); });
+            }
+            if (fileInput) {
+                fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) handleFile(fileInput.files[0]); });
+            }
+            if (removeFileButton) {
+                removeFileButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectedFile = null;
+                    if (fileInput) fileInput.value = '';
+                    if (filePreview) filePreview.style.display = 'none';
+                    if (dropZonePrompt) dropZonePrompt.style.display = 'flex';
+                    if (uploadButton) uploadButton.disabled = true;
+                    clearStatus();
+                    clearResults();
+                });
+            }
+
+            // Upload Button
+            if (uploadButton && reportTypeSelect) {
+                uploadButton.addEventListener('click', async () => {
+                    if (!selectedFile) {
+                        showStatus('Please select a file first.', true);
+                        return;
+                    }
+                    setLoading(true);
+                    showStatus('Processing upload...', false);
+                    const formData = new FormData();
+                    formData.append('file', selectedFile);
+                    formData.append('type', reportTypeSelect.value);
+                    const needsOcr = needsOcrProcessing(selectedFile);
+                    const endpoint = needsOcr ? '/api/ocr-upload' : '/api/upload';
+
+                    try {
+                        const response = await fetch(endpoint, { method: 'POST', body: formData });
+                        const responseText = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(responseText);
+                        } catch (e) {
+                            console.error("Failed to parse JSON:", responseText);
+                            const err = new Error(`Server returned non-JSON (status ${response.status}). See console.`);
+                            err.rawResponse = responseText;
+                            throw err;
+                        }
+                        if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                        showStatus(data.reportId ? `Report ${data.reportId} processed.` : 'Upload successful!', false);
+                        displayResults(data);
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        showStatus(`Error: ${error.message}`, true);
+                        displayResults({ error: error.message, rawResponse: error.rawResponse || 'N/A' });
+                    } finally {
+                        setLoading(false);
+                    }
+                });
+            }
+
+            // Tabs
+            if (tabs.length > 0 && tabContents.length > 0) {
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        const targetTab = tab.getAttribute('data-tab');
+                        tabContents.forEach(tc => {
+                            tc.classList.remove('active');
+                            if (tc.id === targetTab) tc.classList.add('active');
+                        });
+                    });
+                });
+                // Set default active tab
+                tabs[0].classList.add('active');
+                document.getElementById(tabs[0].getAttribute('data-tab')).classList.add('active');
+            }
+            
+            // Logout Button
+            if (logoutButton) {
+                logoutButton.addEventListener('click', async function() {
+                    try {
+                        logoutButton.disabled = true;
+                        logoutButton.textContent = 'Logging out...';
+                        const trackSessionResponse = await fetch('/api/auth/track-session', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'clear' }),
+                            credentials: 'include'
+                        });
+                        if (!trackSessionResponse.ok) {
+                            console.warn('Failed to clear browser session cookie:', trackSessionResponse.statusText);
+                        }
+                    } catch (error) {
+                        console.error('Error in /api/auth/track-session during logout:', error);
+                    } finally {
+                        window.location.href = '/api/auth/signout';
+                    }
+                });
+            }
+
+            // Initial state
+            if (uploadButton) uploadButton.disabled = true;
+            clearResults(); // Initialize result areas
+            clearStatus();
+        });
+    </script>
+</body>
+</html>
