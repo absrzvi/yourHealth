@@ -1,0 +1,31 @@
+2025-05-31T11:48:10.718Z - BloodTestParser initialized with 1557 characters
+2025-05-31T11:48:10.721Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
+2025-05-31T11:48:10.725Z - Starting blood test report parsing
+2025-05-31T11:48:10.728Z - Step 1: Normalizing OCR text
+2025-05-31T11:48:10.746Z - Text normalized from 1557 to 1458 chars
+2025-05-31T11:48:10.750Z - Step 2: Preprocessing content
+2025-05-31T11:48:10.755Z - Step 3: Parsing document sections
+2025-05-31T11:48:10.764Z - Step 4: Extracting metadata
+2025-05-31T11:48:10.768Z - Extracting metadata from content
+2025-05-31T11:48:10.776Z - Extracted patient info: {"age":"65"}
+2025-05-31T11:48:10.782Z - Extracted lab info: {}
+2025-05-31T11:48:10.784Z - Step 5: Extracting biomarkers
+2025-05-31T11:48:10.788Z - Extracting biomarkers
+2025-05-31T11:48:10.809Z - Traditional extractor found 12 biomarkers
+2025-05-31T11:48:10.812Z - Normalizing biomarker objects
+2025-05-31T11:48:10.833Z - Normalized biomarker name: "Magnesium (5 erum) 5 amp 1 e" → "MAGNESIUM"
+2025-05-31T11:48:10.838Z - Normalized biomarker name: "Magnesium" → "MAGNESIUM"
+2025-05-31T11:48:10.842Z - Normalized biomarker name: "UREA (5 erum) 5 amp 1 e" → "UREA"
+2025-05-31T11:48:10.844Z - Normalized traditional biomarkers: 12 remaining
+2025-05-31T11:48:10.873Z - Generic extractor found 19 biomarkers
+2025-05-31T11:48:10.874Z - Normalizing biomarker objects
+2025-05-31T11:48:10.883Z - Normalized generic biomarkers: 19 remaining
+2025-05-31T11:48:10.886Z - Combined and deduped 31 to 25 biomarkers
+2025-05-31T11:48:10.888Z - Extracted 25 potential biomarkers
+2025-05-31T11:48:10.890Z - Step 6: Extracting clinical remarks
+2025-05-31T11:48:10.892Z - Starting remarks extraction (BloodTestParser)
+2025-05-31T11:48:10.898Z - No remarks data found or remarks array was empty/falsy in external result.
+2025-05-31T11:48:10.899Z - Extracted 0 remarks
+2025-05-31T11:48:10.902Z - Step 7: Validating results
+2025-05-31T11:48:10.912Z - Step 8: Preparing final result
+2025-05-31T11:48:10.914Z - Parsing completed successfully. Found 25 biomarkers and 0 remarks.

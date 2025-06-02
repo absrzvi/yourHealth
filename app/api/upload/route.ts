@@ -4,7 +4,9 @@ import path from "path";
 import fs from "fs/promises";
 import { FileProcessor, type ParserResult, type ReportType } from "@/lib/parsers";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth-options";
+// Import PDF parser for server-side
+import pdfParse from "pdf-parse";
 
 // Maximum file size in MB
 const MAX_FILE_SIZE_MB = 10;
@@ -81,17 +83,59 @@ export async function POST(req: NextRequest) {
     try {
       // Save the file
       const arrayBuffer = await file.arrayBuffer();
-      await fs.writeFile(filePath, Buffer.from(arrayBuffer));
+      const fileBuffer = Buffer.from(arrayBuffer);
+      await fs.writeFile(filePath, fileBuffer);
+
+      // Handle PDF extraction on server-side if needed
+      let fileContent = "";
+      let updatedFile = file;
+      
+      // Check if we need to extract text from PDF
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          console.log('Attempting server-side PDF extraction...');
+          const pdfData = await pdfParse(fileBuffer);
+          fileContent = pdfData.text;
+          console.log(`Extracted ${fileContent.length} characters from PDF`);
+          
+          // Create a modified file object with the extracted text
+          const textBlob = new Blob([fileContent], { type: 'text/plain' });
+          // @ts-ignore - We need to modify the file to include content for processing
+          updatedFile = new File([textBlob], file.name, { 
+            type: 'text/plain',
+            lastModified: file.lastModified
+          });
+          
+          // For debugging only
+          if (process.env.NODE_ENV === 'development') {
+            const previewLength = Math.min(500, fileContent.length);
+            console.log(`PDF content preview: ${fileContent.substring(0, previewLength)}...`);
+          }
+        } catch (pdfError) {
+          console.error('PDF extraction error:', pdfError);
+          // Continue with original file if PDF extraction fails
+        }
+      }
 
       // Process the file using our parser
-      const result = await FileProcessor.processFile(file);
+      console.log(`Extracted ${fileContent.length} characters of text from file`);
+      console.log(`Text content preview: ${fileContent.substring(0, 300).replace(/\n/g, ' ').trim()}...`);
+      
+      // Make sure to pass the content explicitly to the processor
+      const result = await FileProcessor.processFile(updatedFile, fileContent);
       
       if (!result.success) {
         // Clean up the uploaded file if parsing fails
         await fs.unlink(filePath).catch(console.error);
         return NextResponse.json(
           { success: false, error: result.error },
-          { status: 400 }
+          { 
+            status: 400, 
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-store'
+            }
+          }
         );
       }
 
@@ -109,15 +153,24 @@ export async function POST(req: NextRequest) {
       };
 
       // Store the report in the database
+      // Store metadata as part of parsedData since we don't have dedicated fields
+      const parsedDataWithMeta = {
+        ...reportData,
+        metadata: {
+          ...reportData.metadata,
+          // Store these as strings inside metadata since we don't have dedicated fields
+          labName: reportData.metadata.labName || null,
+          testDate: reportData.metadata.testDate || null,
+        }
+      };
+      
       const report = await prisma.report.create({
         data: {
           userId: session.user.id,
           type,
           fileName: file.name,
           filePath: `/uploads/${uniqueFilename}`,
-          parsedData: JSON.parse(JSON.stringify(reportData)), // Ensure proper serialization
-          labName: reportData.metadata.labName || null,
-          testDate: reportData.metadata.testDate ? new Date(reportData.metadata.testDate) : null,
+          parsedData: JSON.stringify(parsedDataWithMeta), // Ensure proper serialization
         },
       });
 
@@ -126,6 +179,11 @@ export async function POST(req: NextRequest) {
         file: `/uploads/${uniqueFilename}`,
         reportId: report.id,
         data: result.data,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
       });
 
     } catch (error) {
@@ -162,13 +220,37 @@ export async function GET(req: NextRequest) {
         type: true,
         fileName: true,
         filePath: true,
-        testDate: true,
-        labName: true,
+        parsedData: true,
         createdAt: true,
       },
     });
+    
+    // Extract metadata from parsedData for the UI
+    const processedReports = reports.map(report => {
+      let metadata = { labName: null, testDate: null };
+      if (report.parsedData) {
+        try {
+          const parsed = JSON.parse(report.parsedData);
+          metadata = parsed.metadata || metadata;
+        } catch (e) {
+          console.error('Error parsing report data:', e);
+        }
+      }
+      
+      return {
+        ...report,
+        labName: metadata.labName,
+        testDate: metadata.testDate,
+        parsedData: undefined // Don't send the full parsed data to the client
+      };
+    });
 
-    return NextResponse.json({ success: true, reports });
+    return NextResponse.json({ success: true, reports: processedReports }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      }
+    });
   } catch (error: any) {
     console.error("Error fetching reports:", error);
     return NextResponse.json(

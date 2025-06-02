@@ -1,0 +1,16 @@
+2025-05-30T17:48:15.206Z - BloodTestParser initialized with 0 characters
+2025-05-30T17:48:15.213Z - Processing file: undefined, size: undefined bytes
+2025-05-30T17:48:15.216Z - Content preview: ...
+2025-05-30T17:48:15.222Z - Starting blood test report parsing with multi-strategy approach
+2025-05-30T17:48:15.225Z - Strategy 1: Attempting CSV parsing
+2025-05-30T17:48:15.238Z - Strategy 2: Checking for Investigation-Values column format
+2025-05-30T17:48:15.241Z - Checking for column-based format
+2025-05-30T17:48:15.245Z - Investigation-Values column format not detected
+2025-05-30T17:48:15.248Z - Strategy 3: Using anchor biomarkers approach
+2025-05-30T17:48:15.255Z - Starting anchor-based biomarker detection
+2025-05-30T17:48:15.259Z - No biomarkers found using anchor-based approach
+2025-05-30T17:48:15.262Z - Strategy 4: Falling back to regex pattern matching
+2025-05-30T17:48:15.266Z - Starting regex-based biomarker extraction
+2025-05-30T17:48:15.269Z - Attempting to match 25 biomarker patterns
+2025-05-30T17:48:15.283Z - No recognizable blood test data found with regex patterns
+2025-05-30T17:48:15.287Z - All parsing strategies failed

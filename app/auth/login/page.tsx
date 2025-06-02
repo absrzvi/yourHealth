@@ -27,19 +27,52 @@ export default function LoginPage() {
   // Handle authentication status changes [SF, CA]
   useEffect(() => {
     if (status === 'authenticated' && session) {
-      console.log('User authenticated, setting up session tracking...');
+      console.log('User authenticated, calling track-session API...');
       
-      // Set a small delay to ensure cookies are properly set
-      const redirectTimer = setTimeout(() => {
-        // Force a complete page reload instead of client-side navigation
-        // This ensures the login screen is completely replaced
-        console.log('Redirecting to dashboard after authentication');
+      const currentSessionId = session.user?.id; 
+      const currentRememberMe = session.rememberMe;
+
+      if (currentSessionId) {
+        fetch('/api/auth/track-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId: currentSessionId, // Using user.id as the session identifier here
+            rememberMe: currentRememberMe, 
+          }),
+        })
+        .then(res => {
+          if (!res.ok) {
+            // Try to parse error body if not ok
+            return res.json().then(errData => {
+              throw new Error(errData.error || `HTTP error! status: ${res.status}`);
+            }).catch(() => {
+              // Fallback if error body isn't JSON
+              throw new Error(`HTTP error! status: ${res.status}`);
+            });
+          }
+          return res.json();
+        })
+        .then(data => {
+          console.log('Track session API response:', data);
+          // Proceed with redirect after track-session is called
+          console.log('Redirecting after track-session call to:', callbackUrl || '/dashboard');
+          window.location.href = callbackUrl || '/dashboard';
+        })
+        .catch(err => {
+          console.error('Error calling track-session API:', err);
+          // Still redirect, but log error
+          console.log('Redirecting despite track-session error to:', callbackUrl || '/dashboard');
+          window.location.href = callbackUrl || '/dashboard';
+        });
+      } else {
+        console.error('Session ID (user.id) or rememberMe status not found in session, cannot track session. Redirecting.');
         window.location.href = callbackUrl || '/dashboard';
-      }, 100);
-      
-      return () => clearTimeout(redirectTimer);
+      }
     }
-  }, [status, session, callbackUrl]);
+  }, [status, session, callbackUrl, router]);
 
   useEffect(() => {
     // Clear any existing auth-related query params

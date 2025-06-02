@@ -4,9 +4,25 @@ import { BaseParser } from './baseParser';
 export class DNAParser extends BaseParser<DNAReportData> {
   async parse(): Promise<ParserResult> {
     try {
-      const variants = this.extractVariants();
+      // Use OCR first approach - extract variants from OCR text content
+      const variants = this.extractVariantsWithRegex();
       
+      // If OCR didn't find variants, try structured parsing as fallback
       if (variants.length === 0) {
+        const structuredVariants = this.extractVariants();
+        if (structuredVariants.length > 0) {
+          return this.success({
+            type: 'DNA',
+            variants: structuredVariants,
+            metadata: {
+              parsedAt: new Date().toISOString(),
+              parser: 'DNAParser',
+              variantCount: structuredVariants.length,
+              source: this.file.name,
+              format: 'STRUCTURED'
+            }
+          });
+        }
         return this.error('No genetic variants found in the report');
       }
 
@@ -17,7 +33,8 @@ export class DNAParser extends BaseParser<DNAReportData> {
           parsedAt: new Date().toISOString(),
           parser: 'DNAParser',
           variantCount: variants.length,
-          source: this.file.name
+          source: this.file.name,
+          format: 'OCR'
         }
       });
     } catch (error) {
@@ -208,12 +225,18 @@ export class DNAParser extends BaseParser<DNAReportData> {
   }
 
   private extractVariantsWithRegex() {
-    const variants = [;
+    const variants = [];
     const rsidPattern = /(rs\d+)/gi;
     const genotypePattern = /[ACGT]{1,2}(?:[\/\|][ACGT]{1,2})?/g;
     
-    // Find all RSIDs and their context
-    const rsidMatches = [...this.content.matchAll(rsidPattern)];
+    // Find all RSIDs and their context - use a more compatible approach than matchAll
+    let match;
+    const rsidMatches = [];
+    
+    // Use exec in a loop instead of matchAll for better compatibility
+    while ((match = rsidPattern.exec(this.content)) !== null) {
+      rsidMatches.push(match);
+    }
     
     for (const match of rsidMatches) {
       const rsid = match[0];

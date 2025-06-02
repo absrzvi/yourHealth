@@ -2,10 +2,150 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Base typography styles */
+  html {
+    @apply text-base;
+  }
+  
+  body {
+    @apply font-normal leading-relaxed text-foreground antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-gray-900 mb-3;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.1];
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl font-bold leading-[1.2];
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl font-semibold leading-[1.25];
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl font-medium leading-[1.3];
+  }
+
+  h5 {
+    @apply text-lg md:text-xl font-semibold leading-[1.4];
+  }
+
+  h6 {
+    @apply text-base font-semibold leading-normal;
+  }
+
+  /* Paragraphs and text elements */
+  p {
+    @apply mb-4 leading-[1.7];
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-60 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary border-2 border-transparent hover:bg-gray-50 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent hover:bg-gray-100 text-gray-700 border-2 border-transparent;
+  }
+  
+  .btn-lg {
+    @apply text-base px-6 py-3 h-12;
+  }
+  
+  .btn-md {
+    @apply text-sm px-5 py-2.5 h-10;
+  }
+  
+  .btn-sm {
+    @apply text-xs px-4 py-2 h-8;
+  }
+  
+  /* Links */
+  a {
+    @apply text-primary font-medium transition-colors hover:text-primary-dark underline-offset-4 hover:underline;
+  }
+
+  /* Buttons */
+  button, .btn {
+    @apply font-medium tracking-wide;
+  }
+
+  /* Form elements */
+  input, textarea, select {
+    @apply font-normal;
+  }
+
+  /* Lists */
+  ul, ol {
+    @apply pl-5 mb-4 space-y-2;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    @apply border-l-4 border-gray-200 pl-4 italic text-gray-600;
+  }
+
+  /* Code */
+  code {
+    @apply font-mono text-sm bg-gray-100 px-1.5 py-0.5 rounded;
+  }
+
+  /* Small text */
+  small, .text-sm {
+    font-size: 0.875rem;  /* Equivalent to text-sm */
+    line-height: 1.625;   /* Custom leading */
+  }
+
+  /* Captions and labels */
+  .caption {
+    @apply text-xs font-normal text-gray-500 uppercase tracking-wider;
+  }
+
+  /* Text colors */
+  .text-muted {
+    @apply text-gray-500;
+  }
+
+  /* Text with light weight */
+  .text-light {
+    @apply font-light;
+  }
+}
+
 /* Custom global styles for dashboard layout */
 
 .app-container {
   display: flex;
+  min-height: 100vh;
+}
+
+.app-container.full-width {
+  display: block;
+  width: 100%;
+}
+
+.app-container.full-width .main-content {
+  width: 100%;
   min-height: 100vh;
 }
 

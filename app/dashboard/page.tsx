@@ -2,6 +2,12 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
+
+import { AIWelcome } from "../../components/dashboard/AIWelcome";
+import { HealthMetrics } from "../../components/dashboard/HealthMetrics";
+import { DataVisualization } from "../../components/dashboard/DataVisualization";
+import { PredictiveInsights } from "../../components/dashboard/PredictiveInsights";
+
 interface Report {
   id: string;
   fileName: string;
@@ -53,44 +59,42 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="content-section active">
-      <div className="dashboard-layout">
-        {/* Quick Metrics Widget */}
-        <div className="widget-card">
-          <div className="card-header">
-            <div className="card-icon" style={{ background: '#fef3c7', color: '#b45309' }}>⚡</div>
-            <div className="card-title">Quick Metrics</div>
+    <div className="container mx-auto p-4 md:p-8 bg-background text-foreground">
+      <AIWelcome userName={session?.user?.name} />
+      <HealthMetrics />
+      <DataVisualization />
+      <PredictiveInsights />
+
+      <section className="mt-12">
+        <h2 className="text-2xl font-semibold mb-6 text-neutral-700 font-montserrat">Your Reports</h2>
+        {feedback && (
+          <p className={`mb-4 p-3 rounded-md ${feedback.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {feedback}
+          </p>
+        )}
+        {reports.length === 0 && !loading && (
+          <p className="text-muted-foreground">You don't have any reports yet. Upload your blood test results to get started!</p>
+        )}
+        {reports.length > 0 && (
+          <div className="space-y-4">
+            {reports.map(report => (
+              <div key={report.id} className="bg-card p-4 rounded-lg shadow-md border border-border flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">{report.fileName}</h3>
+                  <p className="text-sm text-muted-foreground">Type: {report.type} - Uploaded: {new Date(report.createdAt).toLocaleDateString()}</p>
+                </div>
+                <button
+                  onClick={() => handleDelete(report.id)}
+                  disabled={deletingId === report.id}
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-md disabled:opacity-50 transition-colors ml-4"
+                >
+                  {deletingId === report.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            ))}
           </div>
-          <div className="metric-item"><span className="metric-label">Energy</span><span className="metric-value">68</span></div>
-          <div className="metric-item"><span className="metric-label">Inflammation</span><span className="metric-value">Low</span></div>
-          <div className="metric-item"><span className="metric-label">Sleep</span><span className="metric-value">7.2h</span></div>
-        </div>
-        {/* Chart Placeholder */}
-        <div className="widget-card">
-          <div className="card-header">
-            <div className="card-icon" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>📈</div>
-            <div className="card-title">Charts</div>
-          </div>
-          <div className="mini-chart">[Chart Placeholder]</div>
-        </div>
-        {/* Insights Placeholder */}
-        <div className="widget-card">
-          <div className="card-header">
-            <div className="card-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>💡</div>
-            <div className="card-title">Insights</div>
-          </div>
-          <div className="insight-list">
-            <div className="insight-item">
-              <div className="insight-icon" style={{ background: '#e0f2fe', color: '#0ea5e9' }}>🧬</div>
-              <div className="insight-text">Placeholder for personalized health insights.</div>
-            </div>
-            <div className="insight-item">
-              <div className="insight-icon" style={{ background: '#fef3c7', color: '#b45309' }}>🩸</div>
-              <div className="insight-text">Another insight placeholder.</div>
-            </div>
-          </div>
-        </div>
-      </div>
+        )}
+      </section>
     </div>
   );
 }
