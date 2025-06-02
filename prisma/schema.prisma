@@ -62,13 +62,16 @@ model ChatMessage {
   chatSessionId String
   chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
   
-  role          String      @default("USER") // Changed from MessageRole to String
+  role          String      @default("USER") // USER or ASSISTANT
+  type          String      @default("text")  // text, chart, dashboard, etc.
   content       String      // Actual message content, potentially PHI
+  status        String      @default("sent")  // sending, sent, error
   
   llmProvider   String?     // e.g., "openai", "anthropic"
   llmModel      String?     // e.g., "gpt-4o", "claude-3-opus"
   
   createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 // Health Intelligence Models

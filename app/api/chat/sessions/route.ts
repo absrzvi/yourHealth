@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 
 type ChatSessionResponse = {
   id: string;
-  title: string;
+  title: string | null;  // Make title nullable to match Prisma model
   updatedAt: Date;
   messageCount: number;
 };
@@ -91,14 +91,22 @@ export async function POST(req: NextRequest) {
         id: true,
         title: true,
         updatedAt: true,
+        _count: {
+          select: { messages: true },
+        },
       },
     });
 
+    // Format the response to match the expected frontend format
+    const response = {
+      id: newSession.id,
+      title: newSession.title,
+      updatedAt: newSession.updatedAt,
+      messageCount: newSession._count?.messages || 0,
+    };
+
     return NextResponse.json({
-      session: {
-        ...newSession,
-        messageCount: 0,
-      },
+      session: response,
     });
     
   } catch (error) {

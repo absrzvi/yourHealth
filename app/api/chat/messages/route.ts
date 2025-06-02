@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/db';
+import { streamChatCompletion } from '@/lib/ai/chat';
+
+// Types for chat messages
+type ChatMessageRole = 'system' | 'user' | 'assistant';
+type ChatMessageType = 'text' | 'chart' | 'dashboard' | 'error';
+type ChatMessageStatus = 'sending' | 'sent' | 'error';
+
+interface ChatMessage {
+  role: ChatMessageRole;
+  content: string;
+  name?: string;
+}
+
+// Extended type for our database message
+interface DatabaseChatMessage {
+  id: string;
+  chatSessionId: string;
+  role: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  content: string;
+  type: ChatMessageType;
+  status: ChatMessageStatus;
+  llmProvider: string | null;
+  llmModel: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const MAX_CONTEXT_MESSAGES = 20;
 
 // GET /api/chat/messages - Get messages for a chat session
 export async function GET(req: NextRequest) {
@@ -71,7 +99,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/chat/messages - Create a new message
+// POST /api/chat/messages - Create a new message and get AI response
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -104,6 +132,12 @@ export async function POST(req: NextRequest) {
         id: sessionId,
         user: { email: session.user.email },
       },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: MAX_CONTEXT_MESSAGES,
+        },
+      },
     });
 
     if (!chatSession) {
@@ -113,15 +147,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create the new message
+    // Create the new message using Prisma's create method
     const message = await prisma.chatMessage.create({
       data: {
         chatSessionId: sessionId,
-        role,
+        role: role as 'USER' | 'ASSISTANT' | 'SYSTEM',
         content,
-        type,
+        type: type as ChatMessageType,
+        status: 'sent',
         llmProvider,
         llmModel,
+      },
+      select: {
+        id: true,
+        chatSessionId: true,
+        role: true,
+        content: true,
+        type: true,
+        status: true,
+        llmProvider: true,
+        llmModel: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
@@ -131,12 +178,140 @@ export async function POST(req: NextRequest) {
       data: { updatedAt: new Date() },
     });
 
-    return NextResponse.json({ message });
+    // If this is not a user message, return the created message
+    if (role !== 'USER') {
+      return NextResponse.json({ message });
+    }
+
+    // For user messages, generate an AI response
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content: 'You are a helpful AI assistant.'
+      },
+      ...chatSession.messages
+        .filter((msg): msg is DatabaseChatMessage => 
+          (msg.role === 'USER' || msg.role === 'ASSISTANT') && 
+          typeof msg.content === 'string'
+        )
+        .map(msg => ({
+          role: msg.role.toLowerCase() as 'user' | 'assistant',
+          content: msg.content
+        })),
+      {
+        role: 'user',
+        content
+      }
+    ];
+
+    // Create a streaming response for the AI
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        let fullResponse = '';
+        let assistantMessageId: string | null = null;
+        
+        try {
+          // Create a placeholder for the assistant's message
+          const assistantMessage = await prisma.chatMessage.create({
+            data: {
+              chatSessionId: sessionId,
+              role: 'ASSISTANT',
+              content: '',
+              type: 'text',
+              status: 'sending',
+              llmProvider,
+              llmModel,
+            },
+            select: {
+              id: true,
+            },
+          });
+          
+          assistantMessageId = assistantMessage.id;
+          
+          if (!assistantMessageId) {
+            throw new Error('Failed to create assistant message');
+          }
+          
+          // Send the initial response with the message ID
+          controller.enqueue(
+            encoder.encode(`event: start\ndata: ${JSON.stringify({ messageId: assistantMessageId })}\n\n`)
+          );
+          
+          // Stream the AI response
+          for await (const chunk of streamChatCompletion(messages)) {
+            fullResponse += chunk;
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+            );
+          }
+
+          // Update the assistant's message with the full response
+          if (fullResponse.trim() && assistantMessageId) {
+            await prisma.chatMessage.update({
+              where: { id: assistantMessageId },
+              data: {
+                content: fullResponse,
+                status: 'sent',
+              },
+            });
+            
+            // Send completion event
+            controller.enqueue(
+              encoder.encode(`event: done\ndata: {}\n\n`)
+            );
+          }
+          
+          controller.close();
+        } catch (error) {
+          console.error('Error in chat streaming:', error);
+          
+          // If we have an assistant message, mark it as failed
+          if (assistantMessageId) {
+            await prisma.chatMessage.update({
+              where: { id: assistantMessageId },
+              data: {
+                content: 'Error generating response. Please try again.',
+                type: 'error',
+                status: 'error',
+              },
+            });
+            
+            // Send error event
+            controller.enqueue(
+              encoder.encode(`event: error\ndata: ${JSON.stringify({ error: 'Failed to generate response' })}\n\n`)
+            );
+          } else {
+            // If we don't have an assistant message ID, still send an error event
+            controller.enqueue(
+              encoder.encode(`event: error\ndata: ${JSON.stringify({ error: 'Failed to initialize chat' })}\n\n`)
+            );
+          }
+          
+          controller.close();
+        }
+      },
+      
+      cancel: () => {
+        // Clean up if the client disconnects
+        console.log('Client disconnected from chat stream');
+      }
+    });
+
+    // Return the streaming response
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
     
   } catch (error) {
-    console.error('Error creating chat message:', error);
+    console.error('Error in chat message creation:', error);
     return NextResponse.json(
-      { error: 'Failed to create chat message' },
+      { error: 'Failed to process chat message' },
       { status: 500 }
     );
   }
