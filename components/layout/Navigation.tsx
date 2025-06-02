@@ -73,7 +73,7 @@ export function Navigation() {
               </>
             ) : (
               <>
-                <Link href="/login">
+                <Link href="/auth/login">
                   <Button variant="ghost">Login</Button>
                 </Link>
                 <Link href="/register">
@@ -133,7 +133,7 @@ export function Navigation() {
               </>
             ) : (
               <>
-                <Link href="/login" className="block px-3 py-2 text-neutral-700 hover:text-primary">
+                <Link href="/auth/login" className="block px-3 py-2 text-neutral-700 hover:text-primary">
                   Login
                 </Link>
                 <Link href="/register" className="block px-3 py-2 text-secondary font-semibold">
