@@ -1,53 +1,82 @@
 # AI Coach Implementation Plan
 
 ## Overview
-This document outlines the implementation plan for the AI Coach feature, including current status, next steps, and future enhancements.
+This document outlines the implementation plan for the AI Coach feature, which is focused exclusively on providing a chat interface for interacting with the AI health coach. All dashboards, graphs, and biomarker statistics are handled in the separate Dashboard page.
+
+## Architecture
+
+### Page Structure
+- **AI Coach Page (`/ai-coach`)**
+  - Contains only the chat interface
+  - Focused on conversation with the AI health coach
+  - No dashboards or metrics displayed here
+  - Clean, minimal interface for optimal chat experience
+
+- **Dashboard Page (`/dashboard`)**
+  - Contains all health metrics, charts, and visualizations
+  - Displays biomarker statistics and trends
+  - Shows health insights and recommendations
+
+### Component Structure
+- `EnhancedChatInterface`: Main chat component with message history and input
+- `ChatWidget`: Floating chat button and container (for dashboard integration)
+- `ChatMessage`: Individual message component
+- `VisualizationMessage`: For displaying charts/graphs in chat (when referenced)
 
 ## Current Implementation
 
 ### Completed
-- Basic chat interface with message history
-- API endpoint for sending/receiving messages
+- Dedicated chat interface for AI Coach
+- API endpoints for chat functionality
 - Database schema for chat messages and sessions
-- Basic authentication and session management
-- Environment configuration for OpenAI integration
+- Authentication and session management
+- OpenAI integration with streaming responses
+- Separation of concerns: chat vs. dashboards
 
 ### In Progress
-- OpenAI API integration
-- Message streaming implementation
-- Error handling for API limits
+- Chat history and persistence
+- Message status indicators (sending, sent, read)
+- Loading states and error handling
 
 ## Next Steps
 
-### 1. Immediate Priorities (Sprint 1)
+### 1. Chat Experience (Sprint 1)
 
-#### OpenAI Integration
-- [ ] Set up OpenAI billing and obtain API credits
-- [ ] Configure rate limiting and usage monitoring
-- [ ] Implement proper error handling for API limits
-- [ ] Add API key rotation for security
-
-#### Chat Experience
-- [ ] Implement message streaming for real-time responses
-- [ ] Add typing indicators and loading states
+#### Core Chat Features
+- [x] Implement message streaming for real-time responses
+- [x] Add typing indicators and loading states
 - [ ] Implement proper error states and retry logic
 - [ ] Add message timestamps and read receipts
+- [ ] Support for message reactions and emojis
 
-### 2. Core Features (Sprint 2)
+#### Performance & Reliability
+- [ ] Implement message queuing for offline support
+- [ ] Add message retry mechanism
+- [ ] Optimize chat history loading
+- [ ] Implement proper error boundaries
+
+### 2. AI Integration (Sprint 2)
 
 #### AI Personality & Context
-- [ ] Define Aria's personality and response style
+- [x] Define Aria's personality and response style
 - [ ] Implement conversation history and context retention
-- [ ] Add support for different message types (text, markdown, data)
-- [ ] Implement conversation threading
+- [x] Support for different message types (text, markdown, data)
+- [ ] Conversation context management
+- [ ] Support for follow-up questions
+
+#### Visualization Integration
+- [ ] Generate charts/graphs in response to data queries
+- [ ] Link to relevant dashboard sections
+- [ ] Support for data exploration through chat
 
 #### User Experience
 - [ ] Add support for file uploads in chat
-- [ ] Implement message reactions and emojis
-- [ ] Add rich text formatting support
 - [ ] Improve mobile responsiveness
+- [ ] Keyboard shortcuts for common actions
+- [ ] Accessibility improvements
+- [ ] Dark/light theme support
 
-### 3. Advanced Features (Sprint 3)
+### 3. Advanced Features (Future)
 
 #### Health Data Integration
 - [ ] Connect to user health data for personalized responses

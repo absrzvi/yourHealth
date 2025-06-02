@@ -1,26 +1,39 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { generateSampleData } from '@/lib/chartUtils';
 
-type VisualizationType = 'chart' | 'dashboard' | 'message' | 'error';
+type VisualizationType = 'chart' | 'dashboard' | 'message' | 'error' | null;
 
 interface VisualizationResponse {
   type: VisualizationType;
   data: any;
   isLoading: boolean;
   error: string | null;
-  generateVisualization: (prompt: string) => Promise<void>;
+  generateVisualization: (prompt: string) => Promise<boolean>;
+  clearVisualization: () => void;
 }
 
 export function useVisualization(): VisualizationResponse {
-  const [type, setType] = useState<VisualizationType>('message');
+  const [type, setType] = useState<VisualizationType>(null);
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generateVisualization = async (prompt: string) => {
+  const clearVisualization = useCallback(() => {
+    setType(null);
+    setData(null);
+    setError(null);
+  }, []);
+
+  const generateVisualization = useCallback(async (prompt: string): Promise<boolean> => {
     if (!prompt.trim()) {
       setError('Prompt cannot be empty');
-      return;
+      return false;
+    }
+
+    // Check if this is a visualization request
+    const isVisualizationRequest = /^(show|display|graph|chart|visualize)/i.test(prompt);
+    if (!isVisualizationRequest) {
+      return false;
     }
 
     setIsLoading(true);
@@ -41,17 +54,18 @@ export function useVisualization(): VisualizationResponse {
 
       const result = await response.json();
       
-      // If no specific visualization was generated, return a default message
       if (!result.type) {
         setType('message');
         setData({
           content: 'I can help you visualize your health data. Try asking for a specific type of chart or dashboard.',
         });
-        return;
+        return true;
       }
 
       setType(result.type);
       setData(result.data);
+      return true;
+      
     } catch (err) {
       console.error('Error generating visualization:', err);
       setType('error');
@@ -66,10 +80,11 @@ export function useVisualization(): VisualizationResponse {
         xAxis: 'name',
         yAxis: 'value',
       });
+      return true;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   return {
     type,
@@ -77,5 +92,6 @@ export function useVisualization(): VisualizationResponse {
     isLoading,
     error,
     generateVisualization,
+    clearVisualization,
   };
 }

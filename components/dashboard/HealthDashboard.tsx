@@ -21,6 +21,14 @@ import { Badge } from '@/components/ui/badge';
 import { useHealthData } from '@/hooks/useHealthData';
 import { cn } from '@/lib/utils';
 import { StatCard } from './StatCard';
+import { HealthMetric } from '@/types/health';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ExportButton to avoid SSR issues with browser APIs
+const ExportButton = dynamic(
+  () => import('./ExportButton').then((mod) => mod.default),
+  { ssr: false }
+);
 
 type HealthDashboardProps = {
   className?: string;
@@ -140,30 +148,58 @@ export function HealthDashboard({
     );
   }
 
+  // Prepare data for export
+  const exportData = React.useMemo(() => {
+    return metrics.map((metric: HealthMetric) => ({
+      name: metric.name,
+      value: metric.value,
+      unit: metric.unit || '',
+      date: metric.date ? format(new Date(metric.date), 'yyyy-MM-dd') : 'N/A',
+      referenceRange: metric.referenceRange || '',
+      type: metric.type
+    }));
+  }, [metrics]);
+
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header with title and refresh button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
           <h2 className="text-2xl font-bold tracking-tight">Health Dashboard</h2>
           <p className="text-sm text-muted-foreground">
-            {lastUpdated 
-              ? `Last updated: ${format(new Date(lastUpdated), 'MMM d, yyyy h:mm a')}`
-              : 'Loading...'}
+            {loading ? 'Loading...' : `Last updated: ${lastUpdated ? format(lastUpdated, 'MMM d, yyyy h:mm a') : 'Never'}`}
           </p>
         </div>
-        {showRefresh && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={loading}
-            className="flex-shrink-0"
-          >
-            <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
-            Refresh Data
-          </Button>
-        )}
+        <div className="flex items-center space-x-2">
+          <ExportButton 
+            data={exportData}
+            filename="health_metrics_export"
+            disabled={loading || exportData.length === 0}
+            onExport={(format: 'csv' | 'pdf') => {
+              if (format === 'csv' && exportData.length > 0) {
+                try {
+                  // The actual export is handled by the ExportButton component
+                  console.log('Initiating CSV export...');
+                } catch (error) {
+                  console.error('Error exporting data:', error);
+                }
+              } else if (format === 'pdf') {
+                console.log('PDF export not yet implemented');
+              }
+            }}
+          />
+          {showRefresh && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Health Overview Cards */}

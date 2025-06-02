@@ -10,9 +10,11 @@
       "dom.iterable",
       "esnext"
     ],
+    "target": "es2015",
+    "downlevelIteration": true,
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "noEmit": true,
     "incremental": true,
     "esModuleInterop": true,

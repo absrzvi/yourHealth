@@ -29,7 +29,8 @@ export async function middleware(request: NextRequest) {
     '/auth/error', 
     '/auth/debug-login', // Add our debug login page
     '/_error',
-    '/ai-coach' // Added AI Coach to public paths
+    '/ai-coach', // Added AI Coach to public paths
+    '/demo-home' // Add the new demo home page here
   ]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
   
