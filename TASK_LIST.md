@@ -94,9 +94,15 @@
 - [x] Add message timestamps
 - [x] Implement proper error handling and retry logic
 - [x] Chat session management
+  - [x] Session creation and deletion
+  - [x] Session list and switching
+  - [x] Proper error handling for session operations
 - [x] Real-time message updates
 - [x] Loading states and feedback
 - [x] Mobile responsiveness improvements
+- [x] Fix chat session deletion parameter mismatch
+- [x] Replace raw SQL with Prisma query builder in messages route
+- [x] Improve error handling and type safety in chat components
 
 ### 3. AI Coach Features
 - [x] Define Aria's personality and response style
@@ -121,7 +127,11 @@
 - [ ] Implement conversation history and context retention
 - [ ] Add support for file uploads in chat
 
-### 4. Recent Improvements
+### 4. Recent Improvements (June 2, 2025)
+- [x] Fixed chat session deletion by correcting parameter name in API call
+- [x] Replaced raw SQL with Prisma's query builder in messages route
+- [x] Improved error handling and type safety in chat components
+- [x] Updated session creation to handle response format correctly
 - [x] Refactored AI Coach page to focus solely on chat interface
 - [x] Moved all dashboards and visualizations to Dashboard page
 - [x] Fixed chat session management
