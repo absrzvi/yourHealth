@@ -14,27 +14,43 @@ declare module "next-auth" {
     user: {
       id: string;
       email: string;
-      name?: string;
-      image?: string;
-      rememberMe?: boolean; // Add here for completeness
+      name?: string | null;
+      image?: string | null;
+      rememberMe?: boolean;  // Made optional to match User interface
     };
-    rememberMe?: boolean; // This is the main one for the session object itself
+    rememberMe?: boolean;  // Made optional to match User interface
+    expires: string;
+    debug?: {
+      tokenExpires: string;
+      rememberMe: boolean;
+      timestamp: string;
+    };
   }
 
-  interface User { // This augments the base User type from next-auth
-    id: string; // Explicitly include standard fields
+  /**
+   * Extend the built-in user type
+   */
+  interface User {
+    id: string;
     email?: string | null;
     name?: string | null;
     image?: string | null;
-    rememberMe?: boolean; 
+    rememberMe?: boolean;  // Made optional to match Session interface
   }
 
   /**
    * The shape of the JWT token
    */
   interface JWT {
-    id?: string;
-    rememberMe?: boolean;
+    id: string;
+    email?: string;
+    name?: string | null;
+    rememberMe: boolean;
+    exp?: number;
+    iat?: number;
+    jti?: string;
+    sub?: string;
+    [key: string]: any; // Allow additional properties
   }
 }
 
@@ -90,32 +106,276 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) { // Removed 'account' as it was causing confusion here
-      if (user) { // 'user' here is the object returned from 'authorize'
-        token.id = user.id;
-        // 'user' should now correctly have the 'rememberMe' type from the augmented interface
-        token.rememberMe = user.rememberMe; // No cast needed
-        console.log(`JWT callback (initial signIn): user.id=${user.id}, user.rememberMe=${user.rememberMe}. Set token.rememberMe to ${token.rememberMe}`);
+    async jwt({ token, user, trigger, session }) {
+      // Define a type-safe token interface
+      interface SafeToken {
+        id: string;
+        email: string;
+        name: string | null;
+        rememberMe: boolean;
+        exp: number;
+        sub?: string;
+        [key: string]: any; // Allow other properties
+      }
+
+      // Initial sign in
+      if (user) {
+        console.log('JWT callback - User signed in:', { 
+          userId: user.id, 
+          rememberMe: user.rememberMe,
+          hasToken: !!token
+        });
+        
+        // Create a new token object with proper typing and explicit type checking
+        const safeToken: SafeToken = {
+          ...token,
+          // Ensure id is always a string
+          id: (() => {
+            if (typeof user.id === 'string') return user.id;
+            if (typeof token.id === 'string') return token.id;
+            if (typeof token.sub === 'string') return token.sub;
+            return '';
+          })(),
+          // Ensure email is always a string
+          email: (() => {
+            if (typeof user.email === 'string') return user.email;
+            if (typeof token.email === 'string') return token.email;
+            return '';
+          })(),
+          // Name can be string or null
+          name: (() => {
+            if (typeof user.name === 'string') return user.name;
+            if (token.name === null || typeof token.name === 'string') return token.name;
+            return null;
+          })(),
+          // Remember me flag with explicit type checking
+          rememberMe: (() => {
+            if (typeof user.rememberMe === 'boolean') return user.rememberMe;
+            if (typeof token.rememberMe === 'boolean') return token.rememberMe;
+            return false;
+          })(),
+          // Expiration will be set below
+          exp: 0,
+          // Subject (sub) with fallback to id if available
+          sub: (() => {
+            if (typeof token.sub === 'string') return token.sub;
+            if (typeof user.id === 'string') return user.id;
+            if (typeof token.id === 'string') return token.id;
+            return '';
+          })()
+        };
+        
+        // Set token expiration based on rememberMe
+        const maxAge = safeToken.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 1 day
+        safeToken.exp = Math.floor(Date.now() / 1000) + maxAge;
+        
+        console.log('JWT callback - Token created:', {
+          userId: safeToken.id,
+          rememberMe: safeToken.rememberMe,
+          expiresIn: maxAge / (24 * 60 * 60) + ' days',
+          expiresAt: new Date(safeToken.exp * 1000).toISOString()
+        });
+        
+        return safeToken;
       }
       
-      // This handles updates if you ever implement changing rememberMe status mid-session
-      if (trigger === 'update' && session?.rememberMe !== undefined) {
-        token.rememberMe = session.rememberMe;
-        console.log(`JWT callback (update): Updated token.rememberMe to ${session.rememberMe}`);
+      // For subsequent requests, ensure required fields exist with proper typing
+      const safeToken: SafeToken = {
+        ...token,
+        // Ensure id is always a string
+        id: (() => {
+          if (typeof token.id === 'string') return token.id;
+          if (typeof token.sub === 'string') return token.sub;
+          return '';
+        })(),
+        // Ensure email is always a string
+        email: typeof token.email === 'string' ? token.email : '',
+        // Name can be string or null
+        name: typeof token.name === 'string' ? token.name : null,
+        // Remember me flag with default to false
+        rememberMe: typeof token.rememberMe === 'boolean' ? token.rememberMe : false,
+        // Expiration time with default to 0
+        exp: typeof token.exp === 'number' ? token.exp : 0,
+        // Subject (sub) with fallback to id if available
+        sub: (() => {
+          if (typeof token.sub === 'string') return token.sub;
+          if (typeof token.id === 'string') return token.id;
+          return '';
+        })()
+      };
+      
+      // Handle session updates
+      if (trigger === 'update' && session) {
+        console.log('JWT callback - Updating session:', { session });
+        
+        // Update token with session data
+        if (typeof session.rememberMe === 'boolean') {
+          safeToken.rememberMe = session.rememberMe;
+        }
+        
+        // Update other session properties if needed
+        if (session.email) safeToken.email = session.email;
+        if (session.name !== undefined) safeToken.name = session.name;
+        
+        // Update expiration if rememberMe changed
+        if (session.rememberMe !== undefined) {
+          const maxAge = session.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
+          safeToken.exp = Math.floor(Date.now() / 1000) + maxAge;
+        }
       }
       
-      return token;
+      // Ensure token has valid expiration
+      if (!safeToken.exp || safeToken.exp < Math.floor(Date.now() / 1000)) {
+        const maxAge = safeToken.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
+        safeToken.exp = Math.floor(Date.now() / 1000) + maxAge;
+      }
+      
+      // Ensure required fields
+      safeToken.sub = safeToken.sub || safeToken.id;
+      
+      console.log('JWT callback - Returning token:', {
+        userId: safeToken.id,
+        email: safeToken.email,
+        rememberMe: safeToken.rememberMe,
+        expires: new Date(safeToken.exp * 1000).toISOString(),
+        hasSub: !!safeToken.sub
+      });
+      
+      return safeToken;
     },
     async session({ session, token }) {
-      if (token.id) {
-        session.user.id = token.id as string;
+      // Log the start of session callback
+      console.log('Session callback - Starting with token:', {
+        hasToken: !!token,
+        tokenSub: token?.sub,
+        tokenRememberMe: token?.rememberMe,
+        tokenExp: token?.exp ? new Date((token.exp as number) * 1000).toISOString() : 'No expiration'
+      });
+
+      // Create a type-safe token object with defaults using explicit type casting
+      const safeToken = {
+        // Subject (sub) with fallback to id if available
+        sub: (() => {
+          if (typeof token.sub === 'string') return token.sub;
+          if (typeof token.id === 'string') return token.id;
+          console.warn('Session callback - No valid sub or id found in token');
+          return '';
+        })(),
+        // Ensure email is always a string
+        email: (() => {
+          if (typeof token.email === 'string') return token.email;
+          console.warn('Session callback - No valid email found in token');
+          return '';
+        })(),
+        // Name can be string or null
+        name: (() => {
+          if (typeof token.name === 'string') return token.name;
+          if (token.name === null) return null;
+          return null;
+        })(),
+        // Handle picture/avatar
+        picture: (() => {
+          if (typeof token.picture === 'string') return token.picture;
+          if (token.image && typeof token.image === 'string') return token.image;
+          return null;
+        })(),
+        // Remember me flag with explicit type checking
+        rememberMe: (() => {
+          if (typeof token.rememberMe === 'boolean') return token.rememberMe;
+          return false;
+        })(),
+        // Expiration time with validation
+        exp: (() => {
+          if (typeof token.exp === 'number' && token.exp > 0) return token.exp;
+          // Default to 1 day if no valid expiration
+          return Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+        })()
+      } as const;
+
+      // Log the safe token values
+      console.log('Session callback - Safe token values:', {
+        sub: safeToken.sub,
+        email: safeToken.email ? `${safeToken.email.substring(0, 3)}...` : 'No email',
+        hasName: !!safeToken.name,
+        hasPicture: !!safeToken.picture,
+        rememberMe: safeToken.rememberMe,
+        expiresAt: new Date(safeToken.exp * 1000).toISOString()
+      });
+
+      // Initialize or update session.user with type-safe values
+      const userData = {
+        id: safeToken.sub,
+        email: safeToken.email,
+        name: safeToken.name,
+        image: safeToken.picture,
+        rememberMe: safeToken.rememberMe
+      };
+
+      if (!session.user) {
+        session.user = userData;
+        console.log('Session callback - Created new session.user');
+      } else {
+        Object.assign(session.user, userData);
+        console.log('Session callback - Updated existing session.user');
       }
       
-      // Pass rememberMe state to the session
-      session.rememberMe = token.rememberMe as boolean;
-      // Log the rememberMe value being set on the session object
-      console.log(`Session callback: Setting session.rememberMe to ${session.rememberMe} from token.rememberMe`);
-      return session;
+      // Add rememberMe to session root for easier access
+      session.rememberMe = safeToken.rememberMe;
+      
+      // Calculate session expiration
+      const currentTime = Math.floor(Date.now() / 1000);
+      const maxAge = safeToken.rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
+      const expiresAt = safeToken.exp > currentTime ? safeToken.exp : currentTime + maxAge;
+      session.expires = new Date(expiresAt * 1000).toISOString();
+      
+      // Log the final session expiration
+      console.log('Session callback - Session expiration set:', {
+        rememberMe: safeToken.rememberMe,
+        expiresAt: session.expires,
+        isPersistent: safeToken.rememberMe ? '30 days' : '1 day (browser session)'
+      });
+      
+      // Add debug information in development
+      if (process.env.NODE_ENV === 'development') {
+        const debugInfo = {
+          tokenExpires: safeToken.exp > 0 ? new Date(safeToken.exp * 1000).toISOString() : 'No expiration',
+          rememberMe: safeToken.rememberMe,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Log additional debug info to console without adding to session
+        console.debug('Session debug info:', {
+          ...debugInfo,
+          sessionId: session.user?.id || 'no-session-id',
+          userEmail: session.user?.email ? `${session.user.email.substring(0, 3)}...` : 'no-email',
+          userRememberMe: session.user?.rememberMe,
+          sessionRememberMe: session.rememberMe
+        });
+        
+        session.debug = debugInfo;
+      }
+      
+      // Final session validation
+      if (!session.user || !session.user.id) {
+        console.error('Session callback - Invalid session: Missing user or user.id');
+        throw new Error('Invalid session: Missing user information');
+      }
+      
+      // Log the final session details (redacting sensitive information)
+      const loggableSession = {
+        userId: session.user.id,
+        email: session.user.email ? `${session.user.email.substring(0, 3)}...` : 'no-email',
+        rememberMe: session.rememberMe,
+        expires: session.expires,
+        hasDebug: !!session.debug,
+        userProperties: Object.keys(session.user).filter(k => k !== 'email' && k !== 'id')
+      };
+      
+      console.log('Session callback - Session ready:', loggableSession);
+      
+      // Ensure we're not returning any sensitive information
+      const { debug: _, ...cleanSession } = session;
+      return cleanSession;
     },
   },
   pages: {
