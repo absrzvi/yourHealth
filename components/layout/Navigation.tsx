@@ -37,11 +37,11 @@ export function Navigation() {
             <Link href="/" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Home
             </Link>
-            <Link href="/approach" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
-              Our Approach
+            <Link href="/#how-it-works" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
+              How it works
             </Link>
-            <Link href="/products" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
-              Products
+            <Link href="#integrations" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
+              Integrations
             </Link>
             <Link 
               href="/providers" 
@@ -49,8 +49,8 @@ export function Navigation() {
             >
               AI Coach
             </Link>
-            <Link href="/blog" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
-              Resources
+            <Link href="/approach" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
+              Our Approach
             </Link>
             
             {status === 'authenticated' ? (
@@ -104,17 +104,29 @@ export function Navigation() {
             <Link href="/" className="block px-3 py-2 text-neutral-700 hover:text-primary">
               Home
             </Link>
-            <Link href="/approach" className="block px-3 py-2 text-neutral-700 hover:text-primary">
-              Our Approach
+            <Link 
+              href="/#how-it-works" 
+              className="block px-3 py-2 text-neutral-700 hover:text-primary"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              How it works
             </Link>
-            <Link href="/products" className="block px-3 py-2 text-neutral-700 hover:text-primary">
-              Products
+            <Link 
+              href="#integrations" 
+              className="block py-2 px-4 text-base text-neutral-700 hover:bg-gray-50 rounded-md"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Integrations
             </Link>
             <Link href="/providers" className="block px-3 py-2 text-neutral-600 hover:text-primary text-sm">
               For Providers
             </Link>
-            <Link href="/blog" className="block px-3 py-2 text-neutral-700 hover:text-primary">
-              Resources
+            <Link 
+              href="/approach" 
+              className="block px-3 py-2 text-neutral-700 hover:text-primary"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Our Approach
             </Link>
             {status === 'authenticated' ? (
               <>

@@ -27,7 +27,7 @@ export function HowItWorks() {
   ];
 
   return (
-    <section className="py-16 md:py-24 lg:py-32 bg-gradient-to-b from-white to-gray-50">
+    <section id="how-it-works" className="py-16 md:py-24 lg:py-32 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-4xl mx-auto mb-16 lg:mb-20">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 font-montserrat">

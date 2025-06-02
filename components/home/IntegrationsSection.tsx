@@ -1,9 +1,12 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface IntegrationCard {
   title: string;
@@ -54,8 +57,50 @@ const itemVariants = {
 };
 
 export function IntegrationsSection() {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // In a real app, you would send this to your backend
+      // const response = await fetch('/api/waitlist', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ email })
+      // });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo purposes, just show success
+      setHasSubmitted(true);
+      setEmail('');
+      toast.success('You\'ve been added to the waitlist!', {
+        description: 'We\'ll keep you updated on our progress.'
+      });
+      
+      // Reset form after 5 seconds
+      setTimeout(() => {
+        setHasSubmitted(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast.error('Something went wrong', {
+        description: 'Please try again later.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
-    <section className="py-20 bg-gradient-to-br from-primary to-primary-dark relative overflow-hidden">
+    <section id="integrations" className="py-20 bg-gradient-to-br from-primary to-primary-dark relative overflow-hidden">
       {/* Animated DNA Background */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(5)].map((_, i) => (
@@ -173,18 +218,68 @@ export function IntegrationsSection() {
         </motion.div>
 
         <motion.div 
-          className="mt-16 text-center"
+          className="mt-16 max-w-md mx-auto"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ delay: 0.3 }}
         >
-          <Button className="btn btn-secondary btn-lg">
-            Join Waitlist for Early Access
-          </Button>
-          <p className="text-white/80 text-sm mt-4">
-            Be the first to know when new integrations are available
-          </p>
+          <AnimatePresence mode="wait">
+            {!hasSubmitted ? (
+              <motion.form 
+                onSubmit={handleSubmit}
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-4"
+              >
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/60 focus-visible:ring-white/50 focus-visible:ring-offset-0 h-12"
+                  />
+                  <Button 
+                    type="submit" 
+                    className="h-12 px-6 bg-white text-primary hover:bg-white/90 transition-colors"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Joining...
+                      </>
+                    ) : 'Join Waitlist'}
+                  </Button>
+                </div>
+                <p className="text-white/60 text-sm text-center">
+                  Be the first to know when new integrations are available
+                </p>
+              </motion.form>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center p-6 bg-white/5 rounded-xl backdrop-blur-sm"
+              >
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-medium text-white mb-2">You're on the list!</h3>
+                <p className="text-white/70">
+                  Thanks for your interest. We'll be in touch soon!
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </section>
