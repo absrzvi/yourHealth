@@ -29,7 +29,9 @@ export async function middleware(request: NextRequest) {
     '/auth/error', 
     '/auth/debug-login', // Add our debug login page
     '/_error',
-    '/ai-coach' // Added AI Coach to public paths
+    '/demo/ai-coach', // Demo AI Coach (moved from public)
+    '/products',
+    '/providers'
   ]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
   
@@ -152,18 +154,24 @@ export async function middleware(request: NextRequest) {
     // Skip session validation for public paths like login/register
     // But still redirect to dashboard if logged in (unless we're invalidating the session)
     if (token) {
-      // === BEGIN NEW LOGIC ===
+      // Only invalidate non-remembered sessions for login/register pages, not for all public paths
       const browserSessionKey = 'next-auth.browser-session';
       const storedSessionId = request.cookies.get(browserSessionKey)?.value;
       const userIdentifierFromToken = token.sub; // User's ID from token (standard JWT subject claim)
 
+      // Define auth pages once to be used throughout the middleware
+      const authPages = ['/auth/login', '/auth/register', '/auth/error', '/auth/debug-login'];
+      const isOnAuthPage = authPages.includes(pathname);
+      
+      // Only invalidate sessions on auth pages, not on all public paths like dashboard
       const mustInvalidateNonRememberedSession = 
+        isOnAuthPage && 
         token.rememberMe === false && 
         userIdentifierFromToken && 
         !storedSessionId;
 
       if (mustInvalidateNonRememberedSession) {
-        debug('Non-remembered session on public path without browser cookie. Invalidating and staying on page.');
+        debug('Non-remembered session on auth page without browser cookie. Invalidating session.');
         const response = NextResponse.next(); // Stay on the current public page
 
         // Determine session token cookie name based on environment
@@ -176,15 +184,14 @@ export async function middleware(request: NextRequest) {
         
         return response;
       }
-      // === END NEW LOGIC ===
+      
       // We're on a public path with a token
       // Only redirect to dashboard if coming from auth pages (login/register)
-      const isAuthPage = ['/auth/login', '/auth/register', '/auth/error', '/auth/debug-login'].includes(pathname);
       const isRedirectingForInvalidSession = pathname === '/auth/login' && 
         request.nextUrl.searchParams.has('callbackUrl');
       
       // Only redirect to dashboard if coming from an auth page and not in the middle of session invalidation
-      if (isAuthPage && !isRedirectingForInvalidSession) {
+      if (isOnAuthPage && !isRedirectingForInvalidSession) {
         debug('User is logged in on auth page - redirecting to dashboard');
         // Don't redirect if already on the dashboard
         if (pathname === '/dashboard') {
