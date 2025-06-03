@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 export function HeroSection() {
   // State for image loading
@@ -35,17 +35,17 @@ export function HeroSection() {
           {/* Left Column - Main Image (Family) */}
           <div className="lg:col-span-7 h-full relative rounded-2xl overflow-hidden shadow-2xl">
             {/* Image with error handling and fallback */}
-            <div className="absolute inset-0 w-full h-full">
-              <Image
-                src={images.family}
-                alt="Happy family enjoying outdoor activities"
-                fill
-                className="object-cover w-full h-full"
-                priority
-                sizes="(max-width: 1024px) 100vw, 60vw"
-                onError={handleImageError}
-              />
-            </div>
+            <OptimizedImage
+              src={images.family}
+              alt="Happy family enjoying outdoor activities"
+              fill
+              containerClassName="absolute inset-0 w-full h-full"
+              className="object-cover w-full h-full"
+              priority
+              sizes="(max-width: 1024px) 100vw, 60vw"
+              fallbackSrc="/images/fallback-placeholder.svg"
+              quality={90}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
             {/* Hero Content Overlay */}
             <div className="absolute inset-0 flex items-center z-10">
@@ -84,13 +84,15 @@ export function HeroSection() {
             {/* Top Image (Woman Climbing) */}
             <div className="relative h-1/2 rounded-2xl overflow-hidden shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10" />
-              <Image
+              <OptimizedImage
                 src={images.climbing}
                 alt="Woman climbing a cliff with ocean view"
                 fill
+                containerClassName="absolute inset-0 w-full h-full"
                 className="object-cover object-top transition-transform duration-700 hover:scale-105"
                 priority
                 sizes="(max-width: 1024px) 100vw, 34vw"
+                quality={85}
               />
               <div className="absolute bottom-0 left-0 p-6 z-20 w-full">
                 <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Push Your Limits</h2>
@@ -101,13 +103,15 @@ export function HeroSection() {
             {/* Bottom Image (Couple Running) */}
             <div className="relative h-1/2 rounded-2xl overflow-hidden shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10" />
-              <Image
+              <OptimizedImage
                 src={images.running}
                 alt="Couple running together outside"
                 fill
+                containerClassName="absolute inset-0 w-full h-full"
                 className="object-cover object-center transition-transform duration-700 hover:scale-105"
                 priority
                 sizes="(max-width: 1024px) 100vw, 34vw"
+                quality={85}
               />
               <div className="absolute bottom-0 left-0 p-6 z-20 w-full">
                 <h2 className="text-2xl font-bold font-montserrat text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Achieve Together</h2>

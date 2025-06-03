@@ -1,9 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface IntegrationCard {
   title: string;
@@ -53,7 +57,32 @@ const itemVariants = {
   },
 };
 
+// This would typically go in a separate API route file
+async function subscribeToWaitlist(email: string): Promise<{ success: boolean; message: string }> {
+  // In a real implementation, this would call your backend API
+  // For demo purposes, we'll simulate a successful signup after a delay
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        resolve({ success: false, message: 'Please enter a valid email address' });
+        return;
+      }
+      
+      // Simulated success response
+      resolve({ 
+        success: true, 
+        message: 'Thanks for joining! You\'ll be the first to know when new integrations are available.'
+      });
+    }, 1000);
+  });
+}
+
 export function IntegrationsSection() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
   return (
     <section className="py-20 bg-gradient-to-br from-primary to-primary-dark relative overflow-hidden">
       {/* Animated DNA Background */}
@@ -91,7 +120,7 @@ export function IntegrationsSection() {
         >
           <Badge 
             variant="secondary" 
-            className="mb-4 text-sm font-medium py-1 px-3 bg-white/10 hover:bg-white/20 border-0 text-white/90 backdrop-blur-sm"
+            className="mb-4 text-sm font-medium py-1 px-3 bg-white/10 hover:bg-white/20 border-0 text-white/90 backdrop-blur-sm animate-badge-pulse"
           >
             <span className="relative flex h-2 w-2 mr-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
@@ -125,7 +154,7 @@ export function IntegrationsSection() {
                     {card.status === 'coming-soon' && (
                       <Badge 
                         variant="outline" 
-                        className="bg-accent/10 text-accent border-accent/30 py-1 px-3 text-xs font-medium"
+                        className="bg-accent/10 text-accent border-accent/30 py-1 px-3 text-xs font-medium animate-badge-pulse"
                       >
                         Coming Soon
                       </Badge>
@@ -179,12 +208,74 @@ export function IntegrationsSection() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ delay: 0.3 }}
         >
-          <Button className="btn btn-secondary btn-lg">
-            Join Waitlist for Early Access
-          </Button>
-          <p className="text-white/80 text-sm mt-4">
-            Be the first to know when new integrations are available
-          </p>
+          <div className="max-w-md mx-auto bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20">
+            <h3 className="text-xl font-bold text-white mb-4">Join the Waitlist</h3>
+            <p className="text-white/80 mb-5">
+              Be the first to know when new integrations are available and get early access.
+            </p>
+            
+            <form className="space-y-4" onSubmit={async (e) => {
+              e.preventDefault();
+              if (!email.trim()) return;
+              
+              setIsSubmitting(true);
+              setSubmitResult(null);
+              
+              try {
+                const result = await subscribeToWaitlist(email);
+                setSubmitResult(result);
+                if (result.success) {
+                  setEmail('');
+                }
+              } catch (error) {
+                setSubmitResult({ 
+                  success: false, 
+                  message: 'Something went wrong. Please try again later.'
+                });
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}>
+              <div className="flex w-full items-center space-x-2">
+                <Input
+                  type="email"
+                  placeholder="Your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/50 focus:border-accent focus:ring-accent"
+                  aria-label="Email address for waitlist"
+                  disabled={isSubmitting}
+                />
+                <Button 
+                  type="submit" 
+                  className="bg-accent hover:bg-accent/80 text-white font-medium whitespace-nowrap"
+                  disabled={isSubmitting || !email.trim()}
+                >
+                  {isSubmitting ? 'Joining...' : 'Join Waitlist'}
+                </Button>
+              </div>
+              
+              {submitResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert className={`border-0 ${submitResult.success ? 'bg-emerald-500/20 text-emerald-300' : 'bg-destructive/20 text-destructive-foreground'}`}>
+                    <div className="flex items-center gap-2">
+                      {submitResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                      <AlertDescription>{submitResult.message}</AlertDescription>
+                    </div>
+                  </Alert>
+                </motion.div>
+              )}
+            </form>
+            
+            <p className="text-white/60 text-xs mt-4">
+              We respect your privacy and will never share your information with third parties.
+            </p>
+          </div>
         </motion.div>
       </div>
     </section>

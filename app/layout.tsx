@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { Montserrat } from 'next/font/google'
 import { Navigation } from '@/components/layout/Navigation'
 import { AuthProvider } from '@/components/providers/AuthProvider'
-import { PromoBanner } from '@/components/ui/PromoBanner'
+import { DevTools } from '@/components/dev/DevTools'
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -29,8 +29,8 @@ export default function RootLayout({
           <Navigation />
           <main className="pt-16">
             {children}
-            <PromoBanner />
           </main>
+          <DevTools />
         </AuthProvider>
       </body>
     </html>

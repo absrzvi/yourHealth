@@ -1,4 +1,5 @@
 import { Star, UserCircle } from 'lucide-react';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 const testimonials = [
   {
@@ -56,11 +57,18 @@ export function Testimonials() {
               </blockquote>
               <div className="flex items-center mt-auto">
                 {testimonial.avatar ? (
-                  <img 
-                    src={testimonial.avatar} 
-                    alt={testimonial.name} 
-                    className="w-12 h-12 rounded-full mr-4 object-cover"
-                  />
+                  <div className="relative w-12 h-12 rounded-full mr-4 overflow-hidden">
+                    <OptimizedImage
+                      src={testimonial.avatar}
+                      alt={`${testimonial.name} avatar`}
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                      quality={80}
+                      lowQualityPlaceholder={true}
+                      fallbackSrc="/images/avatar-placeholder.svg"
+                    />
+                  </div>
                 ) : (
                   <UserCircle size={48} className="text-neutral-400 mr-4" />
                 )}
