@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { initializeWebSocketServer } from './app/api/visualizations/websocket/route'
 
 interface AuthToken {
   exp?: number;
@@ -21,6 +22,7 @@ export async function middleware(request: NextRequest) {
   const isApiAuthRoute = pathname.startsWith('/api/auth/')
   const isPublicFile = /\.[^/]+$/.test(pathname)
   const isDev = process.env.NODE_ENV === 'development'
+  const isWebSocketRequest = request.headers.get('upgrade') === 'websocket'
   // Public routes
   const publicPaths = [
     '/', // Home page is public
@@ -50,6 +52,14 @@ export async function middleware(request: NextRequest) {
   })
 
   debug(`[Path Check for ${pathname}]: isApiAuthRoute=${isApiAuthRoute}, startsWithNext=${pathname.startsWith('/_next')}, isPublicFile=${isPublicFile}`);
+
+  // Handle WebSocket connection upgrades for visualization data
+  if (isWebSocketRequest && pathname.startsWith('/api/visualizations/websocket')) {
+    debug('WebSocket connection request for visualization data:', pathname);
+    // For WebSocket requests, we need to pass through to the WebSocket handler
+    // The actual upgrade happens in the WebSocket server handler
+    return NextResponse.next();
+  }
 
   // Skip middleware for NextAuth API routes, static files (except ocr-test.html), and _next paths
   if (isApiAuthRoute || pathname.startsWith('/_next') || (isPublicFile && pathname !== '/ocr-test.html')) {
@@ -287,11 +297,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (All API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * 
+     * Note: We don't exclude 'api' anymore to allow WebSocket connections to be handled
      */
-    '/((?!api|_next/static|_next/image|favicon\.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

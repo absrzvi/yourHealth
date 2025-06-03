@@ -58,6 +58,9 @@ export function Navigation() {
                 <Link href="/ocr-test.html" className="text-neutral-700 hover:text-primary transition">
                   Data Sources
                 </Link>
+                <Link href="/blood-reports" className="text-neutral-700 hover:text-primary transition">
+                  Blood Reports
+                </Link>
                 <Link href="/dashboard">
                   <Button variant="ghost" className="text-primary">
                     Dashboard
@@ -120,6 +123,12 @@ export function Navigation() {
               <>
                 <Link href="/ocr-test.html" className="block px-3 py-2 text-neutral-700 hover:text-primary">
                   Data Sources
+                </Link>
+                <Link href="/blood-reports" className="block px-3 py-2 text-neutral-700 hover:text-primary">
+                  Blood Reports
+                </Link>
+                <Link href="/blood-reports/upload" className="block px-3 py-2 text-neutral-700 hover:text-primary">
+                  Upload Blood Report
                 </Link>
                 <Link href="/dashboard" className="block px-3 py-2 text-primary font-semibold">
                   Dashboard

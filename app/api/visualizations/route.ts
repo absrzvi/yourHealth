@@ -2,103 +2,32 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import OpenAI from 'openai';
-import { generateSampleData } from '@/lib/chartUtils';
-import { prisma } from '@/lib/db';  // For future database operations
+import { prisma } from '@/lib/db';
+import {
+  availableFunctions,
+  functionImplementations,
+} from '@/lib/ai/functions';
+import {
+  generateChart,
+  generateDashboard,
+  generateHealthInsights,
+} from '@/lib/ai/visualizationService';
+import {
+  recognizeVisualizationIntent,
+  intentToFunctionArgs,
+  generateVisualizationPromptTemplate,
+} from '@/lib/ai/nlp-visualization';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Define the function schemas for OpenAI function calling
-const functions = [
-  {
-    name: 'create_health_chart',
-    description: 'Create a health data visualization chart',
-    parameters: {
-      type: 'object',
-      properties: {
-        chartType: {
-          type: 'string',
-          enum: ['line', 'bar', 'area', 'pie', 'radar'],
-          description: 'Type of chart to create',
-        },
-        title: {
-          type: 'string',
-          description: 'Title of the chart',
-        },
-        xAxis: {
-          type: 'string',
-          description: 'Field to use for the x-axis',
-        },
-        yAxis: {
-          type: 'string',
-          description: 'Field to use for the y-axis',
-        },
-        timeRange: {
-          type: 'string',
-          enum: ['day', 'week', 'month', 'year'],
-          description: 'Time range for the data',
-        },
-        metrics: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          description: 'List of metrics to include in the chart',
-        },
-      },
-      required: ['chartType', 'title'],
-    },
-  },
-  {
-    name: 'create_health_dashboard',
-    description: 'Create a health dashboard with multiple visualizations',
-    parameters: {
-      type: 'object',
-      properties: {
-        title: {
-          type: 'string',
-          description: 'Title of the dashboard',
-        },
-        timeRange: {
-          type: 'string',
-          enum: ['day', 'week', 'month', 'year'],
-          description: 'Time range for the data',
-        },
-        charts: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              chartType: {
-                type: 'string',
-                enum: ['line', 'bar', 'area', 'pie', 'radar'],
-              },
-              title: { type: 'string' },
-              xAxis: { type: 'string' },
-              yAxis: { type: 'string' },
-              metrics: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-            },
-            required: ['chartType', 'title'],
-          },
-        },
-      },
-      required: ['title', 'charts'],
-    },
-  },
-];
-
-// Helper function to generate sample data based on the request
-const generateChartData = (params: any) => {
-  const { chartType, timeRange = 'week' } = params;
-  
-  // In a real app, this would fetch actual data from your database
-  // For now, we'll use the sample data generator
-  return generateSampleData(chartType, timeRange === 'day' ? 1 : timeRange === 'week' ? 7 : timeRange === 'month' ? 30 : 365);
+// Map function names from OpenAI to their implementations
+const functionMap = {
+  'generate_chart': generateChart,
+  'generate_dashboard': generateDashboard,
+  'generate_health_insights': generateHealthInsights,
 };
 
 export async function POST(req: Request) {
@@ -141,20 +70,55 @@ export async function POST(req: Request) {
       );
     }
 
+    // First, try to recognize the visualization intent directly from the message
+    const visualizationIntent = recognizeVisualizationIntent(message);
+    
+    // If we have high confidence in our intent recognition, bypass OpenAI for efficiency
+    if (visualizationIntent.intentType !== 'unknown' && visualizationIntent.confidence >= 0.7) {
+      try {
+        // Convert the recognized intent to function arguments
+        const functionArgs = intentToFunctionArgs(visualizationIntent);
+        
+        if (functionArgs) {
+          // Execute the appropriate function based on the recognized intent
+          switch (visualizationIntent.intentType) {
+            case 'chart':
+              const chartResult = await generateChart(functionArgs, user.id);
+              return NextResponse.json(chartResult);
+            case 'dashboard':
+              const dashboardResult = await generateDashboard(functionArgs, user.id);
+              return NextResponse.json(dashboardResult);
+            case 'insights':
+              const insightsResult = await generateHealthInsights(functionArgs, user.id);
+              return NextResponse.json(insightsResult);
+          }
+        }
+      } catch (error) {
+        console.error('Error in direct intent processing:', error);
+        // Fall back to OpenAI if direct processing fails
+      }
+    }
+    
+    // If direct intent recognition fails or has low confidence, use OpenAI
+    // Generate a prompt template based on any recognized intent
+    const promptTemplate = generateVisualizationPromptTemplate(message);
+    
     // Call OpenAI to determine the appropriate visualization
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4', // Use gpt-4 for better function calling capabilities
       messages: [
         {
           role: 'system',
-          content: `You are a health data visualization assistant. Your job is to help users visualize their health data by creating appropriate charts and dashboards based on their natural language requests.`,
+          content: `You are Aria, a health data visualization assistant. You help users visualize their health data by creating appropriate charts and dashboards based on their natural language requests. You analyze trends in health metrics and provide insights. You can generate visualizations for various health metrics including cholesterol levels, blood pressure, glucose, weight, sleep, exercise, and nutrition data.
+          
+          ${promptTemplate}`,
         },
         {
           role: 'user',
           content: message,
         },
       ],
-      functions,
+      functions: availableFunctions,
       function_call: 'auto',
     });
 
@@ -164,32 +128,12 @@ export async function POST(req: Request) {
     if (responseMessage.function_call) {
       const functionName = responseMessage.function_call.name;
       const functionArgs = JSON.parse(responseMessage.function_call.arguments);
-
-      if (functionName === 'create_health_chart') {
-        // Generate chart data
-        const chartData = generateChartData(functionArgs);
+      
+      // Execute the appropriate function based on the model's choice
+      if (functionMap[functionName as keyof typeof functionMap]) {
+        const result = await functionMap[functionName as keyof typeof functionMap](functionArgs, user.id);
         
-        return NextResponse.json({
-          type: 'chart',
-          data: {
-            ...functionArgs,
-            data: chartData,
-          },
-        });
-      } else if (functionName === 'create_health_dashboard') {
-        // Generate dashboard data
-        const charts = functionArgs.charts.map((chart: any) => ({
-          ...chart,
-          data: generateChartData(chart),
-        }));
-
-        return NextResponse.json({
-          type: 'dashboard',
-          data: {
-            ...functionArgs,
-            charts,
-          },
-        });
+        return NextResponse.json(result);
       }
     }
 
@@ -202,8 +146,23 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('Error processing visualization request:', error);
+    
+    // Provide more detailed error information for debugging in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Error processing your request: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      : 'Error processing your request';
+    
     return NextResponse.json(
-      { error: 'Error processing your request' },
+      { 
+        error: errorMessage,
+        type: 'error',
+        fallback: {
+          type: 'message',
+          data: {
+            content: "I'm having trouble generating that visualization right now. Could you try rephrasing your request?"
+          }
+        }
+      },
       { status: 500 }
     );
   }

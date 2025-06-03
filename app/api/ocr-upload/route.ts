@@ -18,19 +18,38 @@ export const routeSegmentConfig = {
 export async function POST(request: Request) {
   console.log('[API /api/ocr-upload] Received request');
   try {
-    // HIPAA compliance: Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    // HIPAA compliance: Verify authentication (bypass in testing mode)
+    let userId = 'test-user-id';
+    
+    if (process.env.TESTING_MODE !== 'true') {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
+      userId = session.user.id;
+    } else {
+      console.log('[OCR-UPLOAD] Running in TESTING MODE - authentication bypassed');
     }
 
-    // Get the user from the database
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    });
+    // Get the user from the database (create mock user in testing mode)
+    let user;
+    
+    if (process.env.TESTING_MODE === 'true') {
+      // Use a mock user for testing
+      user = { 
+        id: userId,
+        email: 'test@example.com',
+        name: 'Test User'
+      };
+      console.log('[OCR-UPLOAD] Using mock user for testing');
+    } else {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-    if (!user) {
-      return new NextResponse('User not found', { status: 404 });
+      if (!user) {
+        return new NextResponse('User not found', { status: 404 });
+      }
     }
 
     // Parse the form data
@@ -175,11 +194,25 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Error processing upload:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    // Provide more detailed error information for debugging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorName = error instanceof Error ? error.name : 'Unknown error type';
+    
     return new NextResponse(
       JSON.stringify({ 
         success: false, // Ensure success flag is explicitly false on error
         error: 'Failed to process upload', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        details: errorMessage,
+        errorType: errorName,
+        // Include additional debugging information in testing mode
+        ...(process.env.TESTING_MODE === 'true' && {
+          debug: {
+            errorStack: error instanceof Error ? error.stack : 'No stack trace',
+            errorMessage: errorMessage
+          }
+        })
       }),
       { status: 500 }
     );

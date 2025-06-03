@@ -77,7 +77,7 @@ export function PromoBanner() {
         animate="visible"
         exit="exit"
         variants={bannerVariants}
-        className="fixed right-6 bottom-6 z-50"
+        className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-50 max-w-[calc(100vw-2rem)]"
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
       >

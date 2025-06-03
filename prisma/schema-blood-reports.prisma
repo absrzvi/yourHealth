@@ -1,0 +1,103 @@
+// Enhanced Blood Report Data Models
+
+model BloodTestReport {
+  id                String              @id @default(cuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Report Metadata
+  reportDate        DateTime            // When the test was conducted
+  receivedDate      DateTime            @default(now()) // When the report was uploaded/received
+  labName           String?             // Name of the laboratory
+  doctorName        String?             // Ordering physician
+  reportIdentifier  String?             // Original report ID from lab
+  reportVersion     Int                 @default(1)     // Version of this report (for tracking changes)
+  
+  // Patient Information
+  patientName       String?             // Patient's full name (could be PHI)
+  patientDOB        DateTime?           // Patient's date of birth (could be PHI)
+  patientGender     String?             // Patient's gender
+  patientId         String?             // Patient's ID in the lab system (could be PHI)
+  
+  // Report Status
+  status            String              @default("ACTIVE") // ACTIVE, AMENDED, DELETED
+  isVerified        Boolean             @default(false)    // Whether the data has been verified by a healthcare professional
+  
+  // Relations
+  biomarkers        BloodBiomarker[]    // All biomarkers in this report
+  sections          BloodReportSection[] // Sections in the report
+  notes             String?             // Clinical notes or additional information
+  originalReportId  String?             // If this is an amended version, reference to original
+  originalReport    BloodTestReport?    @relation("ReportVersions", fields: [originalReportId], references: [id], onDelete: SetNull)
+  amendedVersions   BloodTestReport[]   @relation("ReportVersions")
+  
+  // OCR and Processing Data
+  rawOcrText        String?             // Raw OCR text for reference/debugging
+  ocrConfidence     Float?              // Overall OCR confidence score
+  parsingMethod     String?             // Method used to parse (e.g., "traditional", "generic", "manual")
+  
+  // Tracking
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Indexes for efficient querying
+  @@index([userId])
+  @@index([reportDate])
+  @@index([status])
+}
+
+model BloodBiomarker {
+  id                String            @id @default(cuid())
+  reportId          String
+  report            BloodTestReport   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  // Biomarker Information
+  name              String            // Standardized name (e.g., "LDL Cholesterol")
+  originalName      String?           // Original name as appeared in report (e.g., "CHOLESTEROL, LDL")
+  value             String            // Measured value as string to handle different formats (e.g., "<3", ">10", "Negative")
+  numericValue      Float?            // Numeric value if available for calculations and trends
+  unit              String?           // Unit of measurement (e.g., "mg/dL")
+  
+  // Reference Ranges
+  referenceRangeLow  Float?           // Lower bound of reference range
+  referenceRangeHigh Float?           // Upper bound of reference range
+  referenceRangeText String?          // Original reference range text (e.g., "<3.0 mg/dL" or "Negative")
+  
+  // Analysis and Categorization
+  category          String?           // Category (e.g., "Lipids", "Liver Function", "CBC")
+  isAbnormal        Boolean?          // Whether the value is outside reference range
+  abnormalityType   String?           // "HIGH", "LOW", "NORMAL", "UNKNOWN"
+  clinicalSignificance String?        // Medical interpretation (e.g., "Critical", "Borderline")
+  
+  // Versioning and Quality Control
+  confidence        Float?            // Confidence in the extracted data (0-1)
+  isVerified        Boolean           @default(false) // Whether this specific biomarker was verified
+  notes             String?           // Additional notes about this biomarker
+  
+  // Tracking
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Indexes
+  @@index([reportId])
+  @@index([name])
+  @@index([category])
+  @@index([isAbnormal])
+}
+
+model BloodReportSection {
+  id                String            @id @default(cuid())
+  reportId          String
+  report            BloodTestReport   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  // Section Information
+  name              String            // Section name (e.g., "Lipid Panel", "Complete Blood Count")
+  order             Int               // Order in the report
+  sectionText       String?           // Raw text of the section
+  
+  // Tracking
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@index([reportId])
+}

@@ -79,6 +79,15 @@ async function subscribeToWaitlist(email: string): Promise<{ success: boolean; m
   });
 }
 
+// Predefined circle positions for stability
+const backgroundCircles = [
+  { size: 120, top: '10%', left: '5%', delay: 0, className: 'animate-float' },
+  { size: 80, top: '25%', left: '80%', delay: 1, className: 'animate-float-subtle' },
+  { size: 140, top: '65%', left: '15%', delay: 2, className: 'animate-float' },
+  { size: 100, top: '70%', left: '75%', delay: 1.5, className: 'animate-float-subtle' },
+  { size: 60, top: '40%', left: '50%', delay: 0.5, className: 'animate-float' },
+];
+
 export function IntegrationsSection() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,24 +96,17 @@ export function IntegrationsSection() {
     <section className="py-20 bg-gradient-to-br from-primary to-primary-dark relative overflow-hidden">
       {/* Animated DNA Background */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-white/5"
+        {backgroundCircles.map((circle, i) => (
+          <div
+            key={`circle-${i}`}
+            className={`absolute rounded-full bg-white/5 ${circle.className}`}
             style={{
-              width: Math.random() * 100 + 50 + 'px',
-              height: Math.random() * 100 + 50 + 'px',
-              top: Math.random() * 100 + '%',
-              left: Math.random() * 100 + '%',
-            }}
-            animate={{
-              y: [0, -30, 0],
-              rotate: [0, 360],
-            }}
-            transition={{
-              duration: 15 + Math.random() * 15,
-              repeat: Infinity,
-              ease: 'easeInOut',
+              width: `${circle.size}px`,
+              height: `${circle.size}px`,
+              top: circle.top,
+              left: circle.left,
+              animationDelay: `${circle.delay}s`,
+              willChange: 'transform', // Performance optimization for animations
             }}
           />
         ))}
@@ -117,6 +119,7 @@ export function IntegrationsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
+          style={{ willChange: 'opacity, transform' }} // Performance optimization
         >
           <Badge 
             variant="secondary" 

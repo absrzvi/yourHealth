@@ -1,0 +1,282 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { models } from '@/lib/prisma-helpers';
+import { z } from "zod";
+
+// Schema for updating blood report data [IV, REH]
+const updateBloodTestReportSchema = z.object({
+  reportDate: z.string().transform(str => new Date(str)).optional(),
+  labName: z.string().optional(),
+  doctorName: z.string().optional(),
+  reportIdentifier: z.string().optional(),
+  patientName: z.string().optional(),
+  patientDOB: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  patientGender: z.string().optional(),
+  patientId: z.string().optional(),
+  status: z.enum(["ACTIVE", "AMENDED", "DELETED"]).optional(),
+  isVerified: z.boolean().optional(),
+  notes: z.string().optional(),
+  parsingMethod: z.string().optional(),
+});
+
+/**
+ * GET /api/blood-reports/[id]
+ * Returns a specific blood report by ID
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Get authenticated session [SFT]
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { id } = params;
+
+    // Get the blood report with all relations
+    const report = await models.bloodTestReport.findUnique({
+      where: {
+        id,
+        userId: session.user.id, // Security check: user can only access their own reports [SFT]
+      },
+      include: {
+        biomarkers: {
+          orderBy: {
+            category: "asc",
+          },
+        },
+        sections: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+        // Include versioning information
+        amendedVersions: {
+          select: {
+            id: true,
+            reportVersion: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!report) {
+      return new NextResponse(JSON.stringify({ error: "Report not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return NextResponse.json({ data: report });
+  } catch (error) {
+    console.error("Error fetching blood report:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to fetch blood report" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+
+/**
+ * PATCH /api/blood-reports/[id]
+ * Updates a specific blood report
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Get authenticated session
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { id } = params;
+
+    // Verify report exists and belongs to the user
+    const existingReport = await models.bloodTestReport.findUnique({
+      where: {
+        id,
+        userId: session.user.id,
+      },
+    });
+
+    if (!existingReport) {
+      return new NextResponse(JSON.stringify({ error: "Report not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validatedData = updateBloodTestReportSchema.parse(body);
+
+    // Check if this is a significant update that should create a new version
+    const shouldCreateNewVersion = 
+      validatedData.reportDate !== undefined || 
+      validatedData.status === "AMENDED";
+    
+    let updatedReport;
+    
+    if (shouldCreateNewVersion) {
+      // Create a new version of the report [RM]
+      const newReport = await models.bloodTestReport.create({
+        data: {
+          ...existingReport,
+          id: undefined, // Don't copy the ID
+          originalReportId: existingReport.id,
+          reportVersion: (existingReport.reportVersion || 1) + 1,
+          ...validatedData,
+          userId: session.user.id,
+          // Create biomarkers from the existing report
+          biomarkers: {
+            create: await models.bloodBiomarker.findMany({
+              where: { reportId: existingReport.id },
+              select: {
+                name: true,
+                originalName: true,
+                value: true,
+                numericValue: true,
+                unit: true,
+                referenceRangeLow: true,
+                referenceRangeHigh: true,
+                referenceRangeText: true,
+                category: true,
+                isAbnormal: true,
+                abnormalityType: true,
+                clinicalSignificance: true,
+                confidence: true,
+                isVerified: true,
+                notes: true,
+              },
+            }),
+          },
+          // Create sections from the existing report
+          sections: {
+            create: await models.bloodReportSection.findMany({
+              where: { reportId: existingReport.id },
+              select: {
+                name: true,
+                order: true,
+                sectionText: true,
+              },
+            }),
+          },
+        },
+        include: {
+          biomarkers: true,
+          sections: true,
+        },
+      });
+      updatedReport = newReport;
+    } else {
+      // Simple update without versioning
+      updatedReport = await models.bloodTestReport.update({
+        where: { id },
+        data: validatedData,
+        include: {
+          biomarkers: true,
+          sections: true,
+        },
+      });
+    }
+
+    return NextResponse.json({ 
+      data: updatedReport,
+      versioned: shouldCreateNewVersion,
+    });
+  } catch (error) {
+    console.error("Error updating blood report:", error);
+    if (error instanceof z.ZodError) {
+      return new NextResponse(
+        JSON.stringify({ error: "Validation error", details: error.errors }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to update blood report" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+
+/**
+ * DELETE /api/blood-reports/[id]
+ * Marks a blood report as deleted (soft delete)
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Get authenticated session
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { id } = params;
+
+    // Verify report exists and belongs to the user
+    const existingReport = await models.bloodTestReport.findUnique({
+      where: {
+        id,
+        userId: session.user.id,
+      },
+    });
+
+    if (!existingReport) {
+      return new NextResponse(JSON.stringify({ error: "Report not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Soft delete by updating status
+    const deletedReport = await models.bloodTestReport.update({
+      where: { id },
+      data: { 
+        status: "DELETED",
+      },
+    });
+
+    return NextResponse.json({ 
+      data: { id: deletedReport.id, status: deletedReport.status },
+      message: "Report marked as deleted"
+    });
+  } catch (error) {
+    console.error("Error deleting blood report:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Failed to delete blood report" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}

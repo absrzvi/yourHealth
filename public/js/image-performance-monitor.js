@@ -6,8 +6,17 @@
  */
 
 (function() {
-  // Only run in development mode
-  if (process.env.NODE_ENV !== 'development') return;
+  // Only run in development mode - check if hostname is localhost or a development URL
+  const isDevelopment = window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1' || 
+                      window.location.hostname.includes('.local') ||
+                      window.location.hostname.endsWith('.test') ||
+                      window.location.hostname.includes('dev-') ||
+                      window.location.hostname.includes('-dev') ||
+                      window.location.hostname.includes('staging');
+  
+  // Skip execution if not in development environment
+  if (!isDevelopment) return;
 
   let loadedImages = 0;
   let totalImageSize = 0;
