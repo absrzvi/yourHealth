@@ -2,23 +2,54 @@
 
 A modern, AI-powered health platform that helps you understand and improve your wellbeing through personalized insights and recommendations.
 
-## ✨ Latest Updates (June 2024)
+## ✨ Latest Updates (June 2025)
 
-- 🎨 **Redesigned UI** with smooth animations and modern components
-- 🎯 New interactive PromoBanner for special offers and announcements
-- 📱 Enhanced mobile responsiveness across all pages
-- 🚀 Performance optimizations and bug fixes
+### AI Coach & Chat
+- 💬 **Enhanced Chat Experience** with real-time message streaming
+- 🗂️ Session-based chat history management
+- 🛠️ Improved error handling and type safety
+- 🔄 Optimized chat session creation and deletion
+- 🏗️ Replaced raw SQL with Prisma query builder for better maintainability
+
+### UI/UX Improvements
+- 🎨 Redesigned chat interface with improved message bubbles
+- 📱 Enhanced mobile responsiveness for chat interface
+- 🚀 Performance optimizations for chat functionality
+- 🐛 Fixed various UI bugs and inconsistencies
+
+### Technical Improvements
+- 🔒 Enhanced security with proper session validation
+- 📊 Improved database schema for chat messages and sessions
+- 🧪 Added comprehensive error handling and logging
+- 🛡️ Implemented proper input validation and sanitization
 
 ## 🚀 Tech Stack
 
+### Core
 - **Framework**: Next.js 14 (App Router, TypeScript)
 - **Styling**: Tailwind CSS v3.4 with shadcn/ui components
-- **State Management**: Zustand
+- **State Management**: React Context + Zustand
 - **Database**: Prisma + SQLite
 - **Authentication**: NextAuth.js
+
+### Chat & AI
+- **AI Integration**: OpenAI API with streaming responses
+- **Real-time Updates**: Server-Sent Events (SSE)
+- **Data Validation**: Zod schema validation
+- **Error Handling**: Custom error boundaries and logging
+
+### UI Components
+- **Component Library**: shadcn/ui
 - **Data Visualization**: Recharts
 - **File Uploads**: React Dropzone
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+
+### Development Tools
 - **Testing**: Jest + React Testing Library
+- **Linting**: ESLint + Prettier
+- **Type Checking**: TypeScript
+- **API Documentation**: OpenAPI (Swagger)
 
 ## 📁 Project Structure
 
