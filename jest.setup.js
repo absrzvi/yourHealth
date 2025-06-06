@@ -1,3 +1,8 @@
+// Add TextEncoder and TextDecoder polyfills first
+const util = require('util');
+global.TextEncoder = util.TextEncoder;
+global.TextDecoder = util.TextDecoder;
+
 // Import testing library matchers
 import '@testing-library/jest-dom';
 
@@ -75,7 +80,7 @@ Object.defineProperty(window, 'matchMedia', {
 beforeEach(() => {
   // Clear all mocks before each test
   jest.clearAllMocks();
-  
+
   // Reset mock implementations
   mockPush.mockReset();
   mockReplace.mockReset();
@@ -90,3 +95,14 @@ afterAll(() => {
   // Cleanup after all tests
   jest.restoreAllMocks();
 });
+
+// @ts-ignore
+import { ReadableStream } from 'web-streams-polyfill';
+// @ts-ignore
+if (!globalThis.ReadableStream) globalThis.ReadableStream = ReadableStream;
+// @ts-ignore
+import { Request, Response } from 'undici';
+// @ts-ignore
+if (!globalThis.Request) globalThis.Request = Request;
+// @ts-ignore
+if (!globalThis.Response) globalThis.Response = Response;

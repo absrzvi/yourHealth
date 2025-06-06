@@ -8,85 +8,85 @@ datasource db {
 }
 
 model User {
-  id                String            @id @default(cuid())
-  email             String            @unique
+  id                String             @id @default(cuid())
+  email             String             @unique
   password          String
   name              String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  bloodTests        BloodTest[]        @relation("UserBloodTests")
+  chatSessions      ChatSession[]
+  claims            Claim[]            @relation("UserClaims")
+  dnaSequences      DNASequence[]
+  healthMetrics     HealthMetric[]
+  insurancePlans    InsurancePlan[]    @relation("UserInsurancePlans")
+  microbiomeSamples MicrobiomeSample[]
   reports           Report[]
   insights          WeeklyInsight[]
-  chatSessions      ChatSession[]
-  healthMetrics     HealthMetric[]
-  dnaSequences      DNASequence[]
-  microbiomeSamples MicrobiomeSample[]
 }
 
 model Report {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  fileName  String
-  filePath  String
+  id         String      @id @default(cuid())
+  userId     String
+  type       String
+  fileName   String
+  filePath   String
   parsedData String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  bloodTests BloodTest[] @relation("ReportBloodTests")
+  claims     Claim[]     @relation("ReportClaims")
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WeeklyInsight {
-  id                    String   @id @default(cuid())
-  userId                String
-  weekNumber            Int
-  year                  Int
-  cardiovascularScore   Float?
-  metabolicScore        Float?
-  inflammationScore     Float?
-  recommendations       String?
-  generatedAt           DateTime @default(now())
-  user                  User     @relation(fields: [userId], references: [id])
+  id                  String   @id @default(cuid())
+  userId              String
+  weekNumber          Int
+  year                Int
+  cardiovascularScore Float?
+  metabolicScore      Float?
+  inflammationScore   Float?
+  recommendations     String?
+  generatedAt         DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id])
 }
 
-// New Models for Chat Functionality
 model ChatSession {
-  id        String      @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?     // Optional title for the chat session
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  title     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {
   id            String      @id @default(cuid())
   chatSessionId String
-  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
-  
-  role          String      @default("USER") // USER or ASSISTANT
-  type          String      @default("text")  // text, chart, dashboard, etc.
-  content       String      // Actual message content, potentially PHI
-  status        String      @default("sent")  // sending, sent, error
-  
-  llmProvider   String?     // e.g., "openai", "anthropic"
-  llmModel      String?     // e.g., "gpt-4o", "claude-3-opus"
-  
+  role          String      @default("USER")
+  type          String      @default("text")
+  content       String
+  status        String      @default("sent")
+  llmProvider   String?
+  llmModel      String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 }
 
-// Health Intelligence Models
 model HealthMetric {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String   // e.g., 'blood_test', 'vital_sign', 'lab_result'
-  name          String   // e.g., 'LDL Cholesterol', 'Blood Pressure'
-  value         String   // Store as string to handle different metric types
-  unit          String?  // e.g., 'mg/dL', 'bpm'
-  referenceRange String?  // e.g., '0-100 mg/dL'
-  date          DateTime // When the measurement was taken
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  type           String
+  name           String
+  value          String
+  unit           String?
+  referenceRange String?
+  date           DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -94,15 +94,14 @@ model HealthMetric {
 }
 
 model DNASequence {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rsid        String   // Reference SNP cluster ID
-  chromosome  String   // Chromosome number
-  position    Int      // Base pair position
-  genotype    String   // Genotype (e.g., 'AA', 'AG', 'TT')
-  createdAt   DateTime @default(now())
-
+  id         String   @id @default(cuid())
+  userId     String
+  rsid       String
+  chromosome String
+  position   Int
+  genotype   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([rsid])
@@ -111,25 +110,189 @@ model DNASequence {
 model MicrobiomeSample {
   id             String               @id @default(cuid())
   userId         String
-  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   sampleDate     DateTime
-  sampleType     String               // e.g., 'stool', 'oral_swab'
-  diversityScore Float?              // Alpha diversity metric
-  organisms      MicrobiomeOrganism[]
+  sampleType     String
+  diversityScore Float?
   createdAt      DateTime             @default(now())
-
+  organisms      MicrobiomeOrganism[]
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model MicrobiomeOrganism {
-  id                String          @id @default(cuid())
+  id                String           @id @default(cuid())
   sampleId          String
+  name              String
+  taxaLevel         String
+  abundance         Float
+  relativeAbundance Float?
+  createdAt         DateTime         @default(now())
   sample            MicrobiomeSample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
-  name              String          // Organism name (e.g., 'Bacteroides fragilis')
-  taxaLevel         String          // Taxonomic level (e.g., 'species', 'genus')
-  abundance         Float           // Raw abundance count
-  relativeAbundance Float?          // Relative abundance (0-1)
-  createdAt         DateTime        @default(now())
 }
 
+enum ClaimStatus {
+  DRAFT
+  READY
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  DENIED
+  PARTIALLY_PAID
+  PAID
+  APPEALED
+}
+
+model InsurancePlan {
+  id            String   @id @default(cuid())
+  userId        String
+  payerName     String
+  payerId       String
+  memberId      String
+  groupNumber   String?
+  planType      String
+  isPrimary     Boolean  @default(true)
+  isActive      Boolean  @default(true)
+  effectiveDate DateTime
+  termDate      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  claims        Claim[] @relation("InsurancePlanClaims")
+  eligibilities EligibilityCheck[]
+  user          User     @relation("UserInsurancePlans", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([memberId])
+  @@index([payerId])
+}
+
+model Claim {
+  id                    String            @id @default(cuid())
+  userId                String
+  reportId              String?
+  insurancePlanId       String
+  claimNumber           String            @unique
+  status                ClaimStatus       @default(DRAFT)
+  totalCharge           Float
+  allowedAmount         Float?
+  paidAmount            Float?
+  patientResponsibility Float?
+  denialReason          String?
+  submissionDate        DateTime?
+  processedDate         DateTime?
+  ediFileLocation       String?
+  clearinghouseId       String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  insurancePlan         InsurancePlan     @relation("InsurancePlanClaims", fields: [insurancePlanId], references: [id])
+  report                Report?           @relation("ReportClaims", fields: [reportId], references: [id])
+  user                  User              @relation("UserClaims", fields: [userId], references: [id], onDelete: Cascade)
+  claimEvents           ClaimEvent[]
+  claimLines            ClaimLine[]
+  eligibilityCheck      EligibilityCheck?
+
+  @@index([userId])
+  @@index([claimNumber])
+  @@index([status])
+  @@index([submissionDate])
+}
+
+model ClaimLine {
+  id          String   @id @default(cuid())
+  claimId     String
+  lineNumber  Int
+  cptCode     String
+  description String
+  icd10Codes  Json
+  charge      Float
+  units       Int      @default(1)
+  modifier    String?
+  serviceDate DateTime
+  claim       Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([claimId])
+  @@index([cptCode])
+}
+
+model ClaimEvent {
+  id        String   @id @default(cuid())
+  claimId   String
+  eventType String
+  eventData Json?
+  notes     String?
+  createdAt DateTime @default(now())
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([claimId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model EligibilityCheck {
+  id                String        @id @default(cuid())
+  insurancePlanId   String
+  claimId           String?       @unique
+  status            String        // active, inactive, pending
+  deductible        Float?
+  deductibleMet     Float?
+  outOfPocketMax    Float?
+  outOfPocketMet    Float?
+  copay             Float?
+  coinsurance       Float?
+  checkedAt         DateTime      @default(now())
+  responseData      Json?
+  insurancePlan     InsurancePlan @relation(fields: [insurancePlanId], references: [id])
+  claim             Claim?        @relation(fields: [claimId], references: [id])
+}
+
+model DenialPattern {
+  id              String   @id @default(cuid())
+  payerId         String
+  denialCode      String
+  denialReason    String
+  frequency       Int      @default(1)
+  lastOccurred    DateTime
+  preventionRule  Json?
+}
+
+model BloodTest {
+  id         String      @id @default(cuid())
+  userId     String
+  reportId   String?
+  testDate   DateTime
+  labName    String?
+  labId      String?
+  status     String
+  rawData    Json?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  biomarkers Biomarker[]
+  report     Report?     @relation("ReportBloodTests", fields: [reportId], references: [id])
+  user       User        @relation("UserBloodTests", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([testDate])
+  @@index([status])
+}
+
+model Biomarker {
+  id             String    @id @default(cuid())
+  bloodTestId    String
+  name           String
+  displayName    String
+  value          Float
+  unit           String
+  rawValue       String?
+  referenceRange String?
+  status         String?
+  category       String
+  isFlagged      Boolean   @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  bloodTest      BloodTest @relation(fields: [bloodTestId], references: [id], onDelete: Cascade)
+
+  @@index([bloodTestId])
+  @@index([name])
+  @@index([category])
+  @@index([status])
+}
