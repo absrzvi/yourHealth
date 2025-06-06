@@ -20,134 +20,237 @@ async function main() {
   await prisma.report.deleteMany({});
   await prisma.user.deleteMany({});
 
-  // Create a test user
-  console.log('Creating test user...');
-  const password = await bcrypt.hash('password123', 10);
-  const user = await prisma.user.create({
-    data: {
-      id: 'user_123',
-      email: 'test@example.com',
-      name: 'Test User',
-      password,
-    },
-  });
-
-  // Create insurance plans
-  console.log('Creating insurance plans...');
-  const insurancePlans = [
-    {
-      id: 'ins_1',
-      userId: user.id,
-      payerName: 'Blue Cross Blue Shield',
-      payerId: 'BCBS123',
-      memberId: 'BCBS12345678',
-      groupNumber: 'GRP123456',
-      planType: 'PPO',
-      isPrimary: true,
-      isActive: true,
-      effectiveDate: new Date('2023-01-01'),
-    },
-    {
-      id: 'ins_2',
-      userId: user.id,
-      payerName: 'Aetna',
-      payerId: 'AETNA456',
-      memberId: 'AETNA87654321',
-      groupNumber: 'GRP987654',
-      planType: 'HMO',
-      isPrimary: false,
-      isActive: true,
-      effectiveDate: new Date('2023-01-01'),
-    },
-  ];
-
-  for (const plan of insurancePlans) {
-    await prisma.insurancePlan.create({ data: plan });
+  // Find existing user or create a test user if none exists
+  console.log('Finding or creating user...');
+  let user = await prisma.user.findFirst({});
+  
+  if (!user) {
+    console.log('No user found, creating a test user...');
+    const password = await bcrypt.hash('password123', 10);
+    user = await prisma.user.create({
+      data: {
+        id: 'user_123',
+        email: 'test@example.com',
+        name: 'Test User',
+        password,
+      },
+    });
+  } else {
+    console.log(`Using existing user: ${user.email} (ID: ${user.id})`);
   }
 
-  // Create a sample report
-  console.log('Creating sample report...');
-  const report = await prisma.report.create({
-    data: {
-      id: 'report_1',
-      userId: user.id,
-      type: 'LAB_RESULTS',
-      fileName: '2023-06-15-annual-physical.pdf',
-      filePath: '/reports/2023-06-15-annual-physical.pdf',
-      parsedData: JSON.stringify({
-        title: 'Annual Physical - 2023',
-        date: '2023-06-15',
-        notes: 'Annual checkup with blood work'
-      })
-    },
+  // Create insurance plans if none exist for this user
+  console.log('Checking for existing insurance plans...');
+  const existingPlans = await prisma.insurancePlan.findMany({
+    where: { userId: user.id }
   });
+  
+  if (existingPlans.length === 0) {
+    console.log('Creating insurance plans...');
+    const insurancePlans = [
+      {
+        id: 'ins_1',
+        userId: user.id,
+        payerName: 'Blue Cross Blue Shield',
+        payerId: 'BCBS123',
+        memberId: 'BCBS12345678',
+        groupNumber: 'GRP123456',
+        planType: 'PPO',
+        isPrimary: true,
+        isActive: true,
+        effectiveDate: new Date('2023-01-01'),
+      },
+      {
+        id: 'ins_2',
+        userId: user.id,
+        payerName: 'Aetna',
+        payerId: 'AETNA456',
+        memberId: 'AETNA87654321',
+        groupNumber: 'GRP987654',
+        planType: 'HMO',
+        isPrimary: false,
+        isActive: true,
+        effectiveDate: new Date('2023-01-01'),
+      },
+    ];
 
-  // Create sample claims
-  console.log('Creating sample claims...');
-  const claims = [
-    {
-      id: 'claim_1',
-      userId: user.id,
-      insurancePlanId: 'ins_1',
-      reportId: report.id,
-      claimNumber: 'CLM' + Math.floor(100000 + Math.random() * 900000),
-      status: 'SUBMITTED',
-      totalCharge: 250.0,
-      allowedAmount: 200.0,
-      paidAmount: 200.0,
-      patientResponsibility: 50.0,
-      submissionDate: new Date('2023-06-11'),
-      processedDate: new Date('2023-06-20'),
-      ediFileLocation: '/edi/claims/claim_1.edi',
-      clearinghouseId: 'CLR' + Math.floor(100000 + Math.random() * 900000),
-    },
-    {
-      id: 'claim_2',
-      userId: user.id,
-      insurancePlanId: 'ins_2',
-      reportId: report.id,
-      claimNumber: 'CLM' + Math.floor(100000 + Math.random() * 900000),
-      status: 'DRAFT',
-      totalCharge: 180.0,
-      patientResponsibility: 30.0,
-      submissionDate: new Date('2023-06-15'),
-    },
-  ];
-
-  for (const claim of claims) {
-    await prisma.claim.create({ data: claim });
+    for (const plan of insurancePlans) {
+      await prisma.insurancePlan.create({ data: plan });
+    }
+  } else {
+    console.log(`Found ${existingPlans.length} existing insurance plans for user`);
   }
 
-  // Create claim lines for the first claim
-  console.log('Creating claim lines...');
-  const claimLines = [
-    {
-      id: 'line_1',
-      claimId: 'claim_1',
-      lineNumber: 1,
-      cptCode: '99213',
-      description: 'Office visit, established patient',
-      icd10Codes: ['Z00.00'],
-      charge: 150.0,
-      units: 1,
-      modifier: '25',
-      serviceDate: new Date('2023-06-10'),
-    },
-    {
-      id: 'line_2',
-      claimId: 'claim_1',
-      lineNumber: 2,
-      cptCode: '85025',
-      description: 'Complete blood count',
-      icd10Codes: ['Z79.899'],
-      charge: 100.0,
-      units: 1,
-      serviceDate: new Date('2023-06-10'),
-    },
-  ];
+  // Check for existing reports or create a sample report
+  console.log('Checking for existing reports...');
+  let report = await prisma.report.findFirst({
+    where: { userId: user.id }
+  });
+  
+  if (!report) {
+    console.log('Creating sample report...');
+    report = await prisma.report.create({
+      data: {
+        id: 'report_1',
+        userId: user.id,
+        type: 'LAB_RESULTS',
+        fileName: '2023-06-15-annual-physical.pdf',
+        filePath: '/reports/2023-06-15-annual-physical.pdf',
+        parsedData: JSON.stringify({
+          title: 'Annual Physical - 2023',
+          date: '2023-06-15',
+          notes: 'Annual checkup with blood work'
+        })
+      },
+    });
+  } else {
+    console.log(`Found existing report: ${report.id}`);
+  }
 
-  for (const line of claimLines) {
-    await prisma.claimLine.create({ data: line });
+  // Check for existing plans if they weren't created above
+  const plans = await prisma.insurancePlan.findMany({
+    where: { userId: user.id }
+  });
+  
+  // Create or update plans if needed
+  let planIds = [];
+  if (plans.length > 0) {
+    planIds = plans.map(p => p.id);
+    console.log(`Using existing insurance plans: ${planIds.join(', ')}`);
+  } else {
+    console.log('No insurance plans found, cannot create claims');
+    return;
+  }
+  
+  // Check for existing claims
+  console.log('Checking for existing claims...');
+  const existingClaims = await prisma.claim.findMany({
+    where: { userId: user.id }
+  });
+  
+  if (existingClaims.length === 0) {
+    // Create sample claims
+    console.log('Creating sample claims...');
+    const claims = [
+      {
+        id: 'claim_1',
+        userId: user.id,
+        insurancePlanId: planIds[0],
+        reportId: report.id,
+        claimNumber: 'CLM' + Math.floor(100000 + Math.random() * 900000),
+        status: 'SUBMITTED',
+        totalCharge: 250.0,
+        allowedAmount: 200.0,
+        paidAmount: 200.0,
+        patientResponsibility: 50.0,
+        submissionDate: new Date('2023-06-11'),
+        processedDate: new Date('2023-06-20'),
+        ediFileLocation: '/edi/claims/claim_1.edi',
+        clearinghouseId: 'CLR' + Math.floor(100000 + Math.random() * 900000),
+      },
+      {
+        id: 'claim_2',
+        userId: user.id,
+        insurancePlanId: planIds.length > 1 ? planIds[1] : planIds[0],
+        reportId: report.id,
+        claimNumber: 'CLM' + Math.floor(100000 + Math.random() * 900000),
+        status: 'DRAFT',
+        totalCharge: 180.0,
+        patientResponsibility: 30.0,
+        submissionDate: new Date('2023-06-15'),
+      },
+      {
+        id: 'claim_3',
+        userId: user.id,
+        insurancePlanId: planIds[0],
+        reportId: report.id,
+        claimNumber: 'CLM' + Math.floor(100000 + Math.random() * 900000),
+        status: 'APPROVED',
+        totalCharge: 320.0,
+        allowedAmount: 280.0,
+        paidAmount: 250.0,
+        patientResponsibility: 70.0,
+        submissionDate: new Date('2023-05-20'),
+        processedDate: new Date('2023-05-28'),
+        ediFileLocation: '/edi/claims/claim_3.edi',
+        clearinghouseId: 'CLR' + Math.floor(100000 + Math.random() * 900000),
+      },
+      {
+        id: 'claim_4',
+        userId: user.id,
+        insurancePlanId: planIds[0],
+        reportId: report.id,
+        claimNumber: 'CLM' + Math.floor(100000 + Math.random() * 900000),
+        status: 'DENIED',
+        totalCharge: 150.0,
+        allowedAmount: 0.0,
+        paidAmount: 0.0,
+        patientResponsibility: 150.0,
+        submissionDate: new Date('2023-05-10'),
+        processedDate: new Date('2023-05-15'),
+        ediFileLocation: '/edi/claims/claim_4.edi',
+        clearinghouseId: 'CLR' + Math.floor(100000 + Math.random() * 900000),
+      },
+    ];
+
+    for (const claim of claims) {
+      await prisma.claim.create({ data: claim });
+    }
+    console.log(`Created ${claims.length} claims`);
+  } else {
+    console.log(`Found ${existingClaims.length} existing claims`);
+  }
+
+  // Check for claims to attach lines to
+  const claims = await prisma.claim.findMany({
+    where: { userId: user.id }
+  });
+  
+  if (claims.length > 0) {
+    // Check for existing claim lines
+    console.log('Checking for existing claim lines...');
+    const existingLines = await prisma.claimLine.findMany({
+      where: { claimId: { in: claims.map(c => c.id) } }
+    });
+    
+    if (existingLines.length === 0) {
+      // Create claim lines for the first claim
+      console.log('Creating claim lines...');
+      const claimLines = [
+        {
+          id: 'line_1',
+          claimId: claims[0].id,
+          lineNumber: 1,
+          cptCode: '99213',
+          description: 'Office visit, established patient',
+          icd10Codes: ['Z00.00'],
+          charge: 150.0,
+          units: 1,
+          modifier: '25',
+          serviceDate: new Date('2023-06-10'),
+        },
+        {
+          id: 'line_2',
+          claimId: claims[0].id,
+          lineNumber: 2,
+          cptCode: '85025',
+          description: 'Complete blood count',
+          icd10Codes: ['Z79.899'],
+          charge: 100.0,
+          units: 1,
+          serviceDate: new Date('2023-06-10'),
+        },
+      ];
+
+      for (const line of claimLines) {
+        await prisma.claimLine.create({ data: line });
+      }
+      console.log(`Created ${claimLines.length} claim lines`);
+    } else {
+      console.log(`Found ${existingLines.length} existing claim lines`);
+    }
+  } else {
+    console.log('No claims found, skipping claim lines creation');
   }
 
   // Create claim events

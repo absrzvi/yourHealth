@@ -1,6 +1,12 @@
 # Task List - For Your Health MVP
 
 ## Current Status
+- **Backend Type Safety & Metadata**:
+  - [x] Enforced strict DocumentMetadata typing (url/domain fields)
+  - [x] Refactored all backend usages for type safety
+  - [x] Fixed all main backend type errors and lints
+  - [x] Updated API return types for handler compatibility
+
 - **AI Coach Chat Interface**: 
   - Enhanced UI with light theme and improved message styling
   - Dedicated chat-only interface
@@ -78,26 +84,100 @@
   - [ ] Test performance with Lighthouse
   - [ ] Ensure accessibility compliance
 
-## Next Sprint: AI Coach Enhancement
+## Next Sprint: CPU-Compatible AI Coach Implementation
 
-### 1. OpenAI Integration & Billing
-- [ ] Set up OpenAI billing and obtain API credits
-- [ ] Configure environment variables for production
-- [ ] Implement proper error handling for API limits and billing issues
+### 1. Project Setup & Dependencies
+- [ ] Create project structure for AI Coach module
+  - [ ] Backend services directory structure
+  - [ ] Frontend components directory structure
+- [ ] Install backend dependencies
+  - [ ] CPU-compatible ML libraries (transformers, torch CPU, sentence-transformers)
+  - [ ] Qdrant client and RAG dependencies
+  - [ ] FastAPI and API utilities
+- [ ] Install frontend dependencies
+  - [ ] CopilotKit integration packages
+  - [ ] React UI components for medical interface
+  - [ ] Visualization libraries for health data
 
-### 2. Chat Functionality
-- [x] Basic chat UI implementation
-- [x] API endpoint for chat messages
-- [x] Implement message streaming for better UX
-- [x] Add typing indicators
-- [x] Implement message history and persistence
-- [x] Add message timestamps
-- [x] Implement proper error handling and retry logic
-- [x] Chat session management
-  - [x] Session creation and deletion
-  - [x] Session list and switching
-  - [x] Proper error handling for session operations
-- [x] Real-time message updates
+### 2. CPU-Compatible Medical LLM Implementation
+- [ ] Implement CPUMedicalLLM class
+  - [ ] Setup model loading with CPU optimization
+  - [ ] Implement ONNX Runtime integration
+  - [ ] Add medical prompt formatting
+  - [ ] Implement response generation with safety features
+- [ ] Create fallback mechanisms
+  - [ ] Implement OpenAIFallbackLLM for complex queries
+  - [ ] Create HybridLLMService for graceful degradation
+- [ ] Add medical domain knowledge
+  - [ ] Implement prompt templates with medical disclaimers
+  - [ ] Add domain-specific response formatting
+
+### 3. Qdrant-Based RAG System
+- [ ] Setup Qdrant vector database integration
+  - [ ] Implement collection creation and management
+  - [ ] Define schema for medical knowledge storage
+- [ ] Create MedicalRAGService
+  - [ ] Implement vector search capabilities
+  - [ ] Add medical domain classification
+  - [ ] Create citation formatting system
+- [ ] Implement document ingestion pipeline
+  - [ ] Create MedicalKnowledgeIngester class
+  - [ ] Add intelligent chunking with medical context preservation
+  - [ ] Implement content extraction from various file formats
+
+### 4. Medical Coach Agent Development
+- [ ] Implement IntegratedMedicalCoachAgent
+  - [ ] Add health query processing workflow
+  - [ ] Implement emergency detection system
+  - [ ] Create query classification by medical domain
+  - [ ] Add follow-up recommendation system
+- [ ] Implement safety features
+  - [ ] Create emergency detection and triage
+  - [ ] Add medical disclaimers and warnings
+  - [ ] Implement urgency assessment
+- [ ] Add AGUI event streaming
+  - [ ] Implement streaming response generation
+  - [ ] Add agentic state updates
+  - [ ] Create action execution framework
+
+### 5. Frontend Integration
+- [ ] Create MedicalCoachInterface component
+  - [ ] Implement CopilotKit integration
+  - [ ] Create emergency alert handling
+  - [ ] Add medical context management
+  - [ ] Implement follow-up recommendation display
+- [ ] Develop health data visualization components
+  - [ ] Create biomarker trend charts
+  - [ ] Implement lab result comparison views
+  - [ ] Add genetic and microbiome data visualizations
+- [ ] Build AI Coach page
+  - [ ] Create coach avatar and animation
+  - [ ] Implement chat interface with medical features
+  - [ ] Add health data upload capabilities
+  - [ ] Create sample query suggestions
+
+### 6. Docker & Deployment
+- [ ] Create CPU-optimized Docker configuration
+  - [ ] Build backend Dockerfile with CPU optimizations
+  - [ ] Implement frontend Docker setup
+  - [ ] Create Docker Compose for full stack
+- [ ] Setup Qdrant database persistence
+  - [ ] Configure volume mounts for data persistence
+  - [ ] Implement backup and restore mechanisms
+- [ ] Implement health check and monitoring
+  - [ ] Add service healthchecks
+  - [ ] Implement basic monitoring and logging
+
+### 7. Testing & Security
+- [ ] Implement comprehensive testing
+  - [ ] Unit tests for core ML components
+  - [ ] Integration tests for API endpoints
+  - [ ] End-to-end testing for user flows
+- [ ] Add HIPAA-compliant security measures
+  - [ ] Implement proper authentication and authorization
+  - [ ] Add data encryption at rest and in transit
+  - [ ] Create audit logging for all medical interactions
+  - [ ] Implement secure environment variable handling
 - [x] Loading states and feedback
 - [x] Mobile responsiveness improvements
 - [x] Fix chat session deletion parameter mismatch

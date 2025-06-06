@@ -1,22 +1,6 @@
+import { InsurancePlan } from "@prisma/client";
 import { BaseEligibilityParser } from "./base.parser";
 import { EligibilityResult } from "../types";
-
-// Local interface for InsurancePlan to avoid Prisma dependency
-export interface InsurancePlan {
-  id: string;
-  userId: string;
-  payerId: string;
-  payerName: string;
-  memberId: string;
-  groupNumber: string;
-  planType: string;
-  isPrimary: boolean;
-  isActive: boolean;
-  effectiveDate: Date;
-  termDate: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
 
 /**
  * Default parser for eligibility responses

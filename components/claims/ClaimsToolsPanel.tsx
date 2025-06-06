@@ -1,314 +1,694 @@
 "use client";
+
 import * as React from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  PlusCircle,
+  ClipboardList,
+  RefreshCcw,
+  Search,
+  Download,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { useState } from "react";
 
-// Utility types
+// Interfaces for the component
 interface EligibilityRequest {
+  patientFirstName: string;
+  patientLastName: string;
+  patientDOB: string;
   patientId?: string;
-  insurancePlanId: string;
-  serviceCode?: string;
+  insurancePlanId?: string;
   serviceDate?: string;
   forceRefresh?: boolean;
 }
 
-interface EligibilityErrorDetail {
-  code: string;
-  message: string;
-  details?: string;
-}
-
-interface CoverageDetail {
-  planName?: string;
-  networkStatus?: string;
-  coinsurance?: number;
-  deductible?: number;
-  deductibleMet?: number;
-  outOfPocketMax?: number;
-  outOfPocketMet?: number;
-}
-
-interface PlanInfo {
-  payerName?: string;
-  planType?: string;
-  effectiveDate?: string;
-  termDate?: string;
-}
-
 interface EligibilityResult {
-  isEligible: boolean;
-  coverage?: CoverageDetail;
-  planInfo?: PlanInfo;
+  status: string;
+  timestamp: string;
   serviceDate?: string;
-  timestamp?: string;
-  error?: EligibilityErrorDetail;
+  patientInfo: {
+    firstName: string;
+    lastName: string;
+    dob: string;
+    memberId?: string;
+  };
+  planInfo: {
+    planName: string;
+    planId: string;
+    payerId?: string;
+    effectiveDate?: string;
+    termDate?: string;
+  };
+  coverageInfo?: {
+    active: boolean;
+    coverageType?: string;
+    network?: string;
+    copay?: number;
+    coinsurance?: number;
+    deductible?: {
+      individual: number;
+      family: number;
+      remaining: number;
+    };
+    outOfPocket?: {
+      individual: number;
+      family: number;
+      remaining: number;
+    };
+  };
+  error?: {
+    code: string;
+    message: string;
+    details?: string;
+  };
 }
 
 interface Claim {
   id: string;
-  patientName: string;
+  claimNumber: string;
   status: string;
+  totalCharge: number;
+  patientName: string;
+  serviceDate: string;
+  insurancePlan?: {
+    payerName: string;
+    planType: string;
+  };
+  ediFileLocation?: string;
+}
+
+interface ClaimStats {
+  total: number;
+  draft: number;
+  submitted: number;
+  processing: number;
+  approved: number;
+  denied: number;
+  paid: number;
 }
 
 export function ClaimsToolsPanel() {
-  // Eligibility tab state
+  // Eligibility check state
   const [eligReq, setEligReq] = useState<EligibilityRequest>({
+    patientFirstName: "",
+    patientLastName: "",
+    patientDOB: "",
     patientId: "",
     insurancePlanId: "",
-    serviceCode: "",
     serviceDate: "",
-    forceRefresh: false
+    forceRefresh: false,
   });
   const [eligResult, setEligResult] = useState<EligibilityResult | null>(null);
   const [eligLoading, setEligLoading] = useState(false);
-  const [eligError, setEligError] = useState("");
-  const [eligDialogOpen, setEligDialogOpen] = useState(false);
+  const [eligError, setEligError] = useState<string | null>(null);
+  const [showEligDialog, setShowEligDialog] = useState(false);
 
-  // EDI tab state
+  // Claims state
   const [claims, setClaims] = useState<Claim[]>([]);
-  const [ediLoading, setEdiLoading] = useState<string | null>(null);
-  const [ediError, setEdiError] = useState<string | null>(null);
-  const [ediDownloadFile, setEdiDownloadFile] = useState<{ [claimId: string]: string }>({});
+  const [claimStats, setClaimStats] = useState<ClaimStats>({
+    total: 0,
+    draft: 0,
+    submitted: 0,
+    processing: 0,
+    approved: 0,
+    denied: 0,
+    paid: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
-  // Fetch eligible claims on mount for EDI tab
-  React.useEffect(() => {
-    fetch("/api/claims?status=READY_FOR_EDI")
-      .then((r) => r.json())
-      .then((data) => setClaims(data.claims || []))
-      .catch(() => setClaims([]));
+  // EDI generation state
+  const [ediClaims, setEdiClaims] = useState<Claim[]>([]);
+  const [ediLoading, setEdiLoading] = useState(false);
+  const [ediError, setEdiError] = useState<string | null>(null);
+  const [generatingEdi, setGeneratingEdi] = useState<string | null>(null);
+  const [downloadingEdi, setDownloadingEdi] = useState<string | null>(null);
+
+  // Effect hooks
+  useEffect(() => {
+    fetchClaimStats();
   }, []);
 
-  // Handlers
-  const handleEligibilityCheck = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEligLoading(true);
-    setEligResult(null);
-    setEligError("");
-    setEligDialogOpen(true);
-    
-    // Create payload - only include properties with values
-    const payload: EligibilityRequest = { insurancePlanId: eligReq.insurancePlanId };
-    if (eligReq.patientId) payload.patientId = eligReq.patientId;
-    if (eligReq.serviceCode) payload.serviceCode = eligReq.serviceCode;
-    if (eligReq.serviceDate) payload.serviceDate = eligReq.serviceDate;
-    if (eligReq.forceRefresh) payload.forceRefresh = eligReq.forceRefresh;
-    
+  const fetchClaimStats = async () => {
+    setStatsLoading(true);
+    setStatsError(null);
     try {
-      const res = await fetch("/api/claims/eligibility", {
+      const response = await fetch("/api/claims/stats");
+      if (!response.ok) throw new Error("Failed to fetch claim statistics");
+      const data = await response.json();
+      setClaimStats(data);
+    } catch (error) {
+      console.error("Error fetching claim stats:", error);
+      setStatsError("Failed to load claim statistics");
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchClaimsForEdi = async () => {
+    setEdiLoading(true);
+    setEdiError(null);
+    try {
+      const response = await fetch("/api/claims?status=READY,SUBMITTED");
+      if (!response.ok) throw new Error("Failed to fetch claims");
+      const data = await response.json();
+      setEdiClaims(data);
+    } catch (error) {
+      console.error("Error fetching claims:", error);
+      setEdiError("Failed to load claims for EDI generation");
+    } finally {
+      setEdiLoading(false);
+    }
+  };
+
+  // Eligibility handlers
+  const checkEligibility = async () => {
+    setEligLoading(true);
+    setEligError(null);
+    setEligResult(null);
+
+    try {
+      const response = await fetch("/api/claims/eligibility", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(eligReq),
       });
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error((data.error && data.error.message) || "Eligibility check failed");
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Eligibility check failed");
       }
-      
-      setEligResult(data);
-    } catch (err: any) {
-      setEligError(err.message || "Unknown error");
+
+      const result = await response.json();
+      setEligResult(result);
+      setShowEligDialog(true);
+    } catch (error) {
+      console.error("Eligibility check error:", error);
+      setEligError(error instanceof Error ? error.message : "Failed to check eligibility");
     } finally {
       setEligLoading(false);
     }
   };
 
-  const handleEdiGenerate = async (claimId: string) => {
-    setEdiLoading(claimId);
-    setEdiError(null);
+  const resetEligibilityForm = () => {
+    setEligReq({
+      patientFirstName: "",
+      patientLastName: "",
+      patientDOB: "",
+      patientId: "",
+      insurancePlanId: "",
+      serviceDate: "",
+      forceRefresh: false,
+    });
+    setEligResult(null);
+    setEligError(null);
+  };
+
+  // EDI handlers
+  const generateEdi = async (claimId: string) => {
+    setGeneratingEdi(claimId);
     try {
-      const res = await fetch("/api/claims/generate-edi", {
+      const response = await fetch("/api/claims/generate-edi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ claimId }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate EDI");
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "EDI generation failed");
       }
-      if (!data.fileName) {
-        throw new Error("No EDI file name returned");
-      }
-      setEdiDownloadFile((prev) => ({ ...prev, [claimId]: data.fileName }));
-    } catch (err: any) {
-      setEdiError(err.message || "Unknown error");
+
+      const result = await response.json();
+      
+      // Refresh claims list
+      await fetchClaimsForEdi();
+      
+      // Show success message
+      alert(`EDI file generated successfully: ${result.fileName}`);
+    } catch (error) {
+      console.error("EDI generation error:", error);
+      alert(error instanceof Error ? error.message : "Failed to generate EDI");
     } finally {
-      setEdiLoading(null);
+      setGeneratingEdi(null);
     }
   };
 
-  const handleEdiDownload = async (claimId: string) => {
-    const fileName = ediDownloadFile[claimId];
-    if (!fileName) return;
+  const downloadEdi = async (claimId: string, fileName: string) => {
+    setDownloadingEdi(claimId);
     try {
-      // Audit log
+      // Log the download event
       await fetch("/api/claims/log-edi-download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ claimId, fileName }),
       });
-    } catch (err) {
-      // Optionally show a toast or error, but don't block download
+
+      // Download the file
+      const response = await fetch(`/api/claims/download-edi/${claimId}`);
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("EDI download error:", error);
+      alert("Failed to download EDI file");
+    } finally {
+      setDownloadingEdi(null);
     }
-    window.location.href = `/api/claims/download-edi/${encodeURIComponent(fileName)}`;
   };
 
-  return (
-    <div className="mt-10">
-      <Tabs defaultValue="eligibility" className="w-full max-w-2xl mx-auto">
-        <TabsList className="mb-6">
-          <TabsTrigger value="eligibility">Eligibility Checker</TabsTrigger>
-          <TabsTrigger value="edi">EDI Generator</TabsTrigger>
-        </TabsList>
-        <TabsContent value="eligibility">
-          <form onSubmit={handleEligibilityCheck} className="space-y-4 bg-muted rounded-xl p-6">
-            <div>
-              <label htmlFor="patientId" className="block text-sm font-medium mb-1">Patient ID</label>
-              <Input id="patientId" value={eligReq.patientId || ""} onChange={e => setEligReq(r => ({ ...r, patientId: e.target.value }))} />
+  // Render functions for tabs
+  const renderManagementTab = () => (
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Claims Overview</h3>
+          <Button
+            onClick={fetchClaimStats}
+            disabled={statsLoading}
+            size="sm"
+            variant="outline"
+          >
+            {statsLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="h-4 w-4" />
+            )}
+            <span className="ml-2">Refresh</span>
+          </Button>
+        </div>
+
+        {statsError ? (
+          <div className="text-red-600 text-sm">{statsError}</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-gray-50 rounded p-4">
+              <div className="text-2xl font-bold">{claimStats.total}</div>
+              <div className="text-sm text-gray-600">Total Claims</div>
             </div>
-            <div>
-              <label htmlFor="insurancePlanId" className="block text-sm font-medium mb-1">Insurance Plan ID</label>
-              <Input id="insurancePlanId" value={eligReq.insurancePlanId} onChange={e => setEligReq(r => ({ ...r, insurancePlanId: e.target.value }))} required />
+            <div className="bg-blue-50 rounded p-4">
+              <div className="text-2xl font-bold text-blue-600">{claimStats.submitted}</div>
+              <div className="text-sm text-gray-600">Submitted</div>
             </div>
-            <div>
-              <label htmlFor="serviceCode" className="block text-sm font-medium mb-1">Service Code (optional)</label>
-              <Input id="serviceCode" value={eligReq.serviceCode || ""} onChange={e => setEligReq(r => ({ ...r, serviceCode: e.target.value }))} />
+            <div className="bg-green-50 rounded p-4">
+              <div className="text-2xl font-bold text-green-600">{claimStats.approved}</div>
+              <div className="text-sm text-gray-600">Approved</div>
             </div>
-            <div>
-              <label htmlFor="serviceDate" className="block text-sm font-medium mb-1">Service Date (optional)</label>
-              <Input id="serviceDate" type="date" value={eligReq.serviceDate || ""} onChange={e => setEligReq(r => ({ ...r, serviceDate: e.target.value }))} />
+            <div className="bg-red-50 rounded p-4">
+              <div className="text-2xl font-bold text-red-600">{claimStats.denied}</div>
+              <div className="text-sm text-gray-600">Denied</div>
             </div>
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={eligReq.forceRefresh || false}
-                  onChange={e => setEligReq(r => ({ ...r, forceRefresh: e.target.checked }))} 
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <span className="text-sm">Force refresh (bypass cache)</span>
-              </label>
-            </div>
-            <Button type="submit" disabled={eligLoading || !eligReq.insurancePlanId}>
-              {eligLoading ? "Checking..." : "Check Eligibility"}
+          </div>
+        )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/claims/new">
+            <Button>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              New Claim
             </Button>
-            
-            {eligError && <div className="mt-2 text-red-600">{eligError}</div>}
-          </form>
+          </Link>
+          <Link href="/claims">
+            <Button variant="outline">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              View All Claims
+            </Button>
+          </Link>
+          <Link href="/insurance">
+            <Button variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              Manage Insurance
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderEligibilityTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Check Insurance Eligibility</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Patient First Name</label>
+            <Input
+              value={eligReq.patientFirstName}
+              onChange={(e) => setEligReq({ ...eligReq, patientFirstName: e.target.value })}
+              placeholder="John"
+            />
+          </div>
           
-          {/* Eligibility Check Results Dialog */}
-          <Dialog open={eligDialogOpen} onOpenChange={setEligDialogOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Eligibility Check Results</DialogTitle>
-              </DialogHeader>
-              
-              {eligLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <Spinner className="h-8 w-8" />
-                  <p className="ml-2">Checking eligibility...</p>
+          <div>
+            <label className="block text-sm font-medium mb-2">Patient Last Name</label>
+            <Input
+              value={eligReq.patientLastName}
+              onChange={(e) => setEligReq({ ...eligReq, patientLastName: e.target.value })}
+              placeholder="Doe"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Date of Birth</label>
+            <Input
+              type="date"
+              value={eligReq.patientDOB}
+              onChange={(e) => setEligReq({ ...eligReq, patientDOB: e.target.value })}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Member ID (Optional)</label>
+            <Input
+              value={eligReq.patientId}
+              onChange={(e) => setEligReq({ ...eligReq, patientId: e.target.value })}
+              placeholder="ABC123456"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Insurance Plan ID (Optional)</label>
+            <Input
+              value={eligReq.insurancePlanId}
+              onChange={(e) => setEligReq({ ...eligReq, insurancePlanId: e.target.value })}
+              placeholder="Plan ID"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Service Date (Optional)</label>
+            <Input
+              type="date"
+              value={eligReq.serviceDate}
+              onChange={(e) => setEligReq({ ...eligReq, serviceDate: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {eligError && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+            {eligError}
+          </div>
+        )}
+
+        <div className="mt-6 flex gap-4">
+          <Button
+            onClick={checkEligibility}
+            disabled={eligLoading || !eligReq.patientFirstName || !eligReq.patientLastName || !eligReq.patientDOB}
+          >
+            {eligLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Check Eligibility
+              </>
+            )}
+          </Button>
+          
+          <Button variant="outline" onClick={resetEligibilityForm}>
+            Reset Form
+          </Button>
+        </div>
+      </div>
+
+      {/* Eligibility Result Dialog */}
+      <Dialog open={showEligDialog} onOpenChange={setShowEligDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Eligibility Check Results</DialogTitle>
+          </DialogHeader>
+          
+          {eligResult && (
+            <div className="space-y-4">
+              {/* Patient Information */}
+              <div className="bg-gray-50 rounded p-4">
+                <h4 className="font-semibold mb-2">Patient Information</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>Name: {eligResult.patientInfo.firstName} {eligResult.patientInfo.lastName}</div>
+                  <div>DOB: {eligResult.patientInfo.dob}</div>
+                  {eligResult.patientInfo.memberId && (
+                    <div>Member ID: {eligResult.patientInfo.memberId}</div>
+                  )}
                 </div>
-              ) : eligResult ? (
-                <div className="space-y-4">
-                  {/* Status */}
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Status:</span>
-                    <Badge variant={eligResult.isEligible ? "default" : "destructive"}
-                      className={eligResult.isEligible ? "bg-green-500 hover:bg-green-500/80 text-white" : ""}
-                    >
-                      {eligResult.isEligible ? "ELIGIBLE" : "NOT ELIGIBLE"}
-                    </Badge>
+              </div>
+
+              {/* Plan Information */}
+              <div className="bg-gray-50 rounded p-4">
+                <h4 className="font-semibold mb-2">Plan Information</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>Plan: {eligResult.planInfo.planName}</div>
+                  <div>Plan ID: {eligResult.planInfo.planId}</div>
+                  {eligResult.planInfo.payerId && (
+                    <div>Payer ID: {eligResult.planInfo.payerId}</div>
+                  )}
+                  {eligResult.planInfo.effectiveDate && (
+                    <div>Effective: {new Date(eligResult.planInfo.effectiveDate).toLocaleDateString()}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Coverage Information */}
+              {eligResult.coverageInfo && (
+                <div className="bg-gray-50 rounded p-4">
+                  <h4 className="font-semibold mb-2">Coverage Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className={`font-semibold ${eligResult.coverageInfo.active ? 'text-green-600' : 'text-red-600'}`}>
+                      Status: {eligResult.coverageInfo.active ? 'Active' : 'Inactive'}
+                    </div>
+                    {eligResult.coverageInfo.coverageType && (
+                      <div>Coverage Type: {eligResult.coverageInfo.coverageType}</div>
+                    )}
+                    {eligResult.coverageInfo.network && (
+                      <div>Network: {eligResult.coverageInfo.network}</div>
+                    )}
+                    {eligResult.coverageInfo.copay !== undefined && (
+                      <div>Copay: ${eligResult.coverageInfo.copay}</div>
+                    )}
+                    {eligResult.coverageInfo.coinsurance !== undefined && (
+                      <div>Coinsurance: {eligResult.coverageInfo.coinsurance}%</div>
+                    )}
+                    
+                    {eligResult.coverageInfo.deductible && (
+                      <div className="mt-2">
+                        <div className="font-semibold">Deductible:</div>
+                        <div className="ml-4">
+                          Individual: ${eligResult.coverageInfo.deductible.individual} 
+                          (Remaining: ${eligResult.coverageInfo.deductible.remaining})
+                        </div>
+                        <div className="ml-4">
+                          Family: ${eligResult.coverageInfo.deductible.family}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {eligResult.coverageInfo.outOfPocket && (
+                      <div className="mt-2">
+                        <div className="font-semibold">Out of Pocket Maximum:</div>
+                        <div className="ml-4">
+                          Individual: ${eligResult.coverageInfo.outOfPocket.individual} 
+                          (Remaining: ${eligResult.coverageInfo.outOfPocket.remaining})
+                        </div>
+                        <div className="ml-4">
+                          Family: ${eligResult.coverageInfo.outOfPocket.family}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Error Information */}
+              {eligResult.error && (
+                <div className="bg-red-50 border border-red-200 rounded p-4">
+                  <h4 className="font-semibold text-red-700 mb-2">Error</h4>
+                  <div className="text-sm text-red-600">
+                    <div>Code: {eligResult.error.code}</div>
+                    <div>Message: {eligResult.error.message}</div>
+                    {eligResult.error.details && (
+                      <div className="mt-2">Details: {eligResult.error.details}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              <div className="text-sm text-gray-500">
+                Checked at: {new Date(eligResult.timestamp).toLocaleString()}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setShowEligDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+
+  const renderEdiTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">EDI File Generation</h3>
+          <Button
+            onClick={fetchClaimsForEdi}
+            disabled={ediLoading}
+            size="sm"
+            variant="outline"
+          >
+            {ediLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="h-4 w-4" />
+            )}
+            <span className="ml-2">Refresh</span>
+          </Button>
+        </div>
+
+        {ediError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+            {ediError}
+          </div>
+        )}
+
+        {ediLoading ? (
+          <div className="flex justify-center py-8">
+            <Spinner />
+          </div>
+        ) : ediClaims.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No claims ready for EDI generation. Claims must be in READY or SUBMITTED status.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {ediClaims.map((claim) => (
+              <div key={claim.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-semibold">{claim.claimNumber}</div>
+                    <div className="text-sm text-gray-600">
+                      Patient: {claim.patientName}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Service Date: {new Date(claim.serviceDate).toLocaleDateString()}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Amount: ${claim.totalCharge.toFixed(2)}
+                    </div>
+                    {claim.insurancePlan && (
+                      <div className="text-sm text-gray-600">
+                        Insurance: {claim.insurancePlan.payerName} ({claim.insurancePlan.planType})
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Coverage */}
-                  {eligResult.coverage && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Coverage Details</h4>
-                      <div className="space-y-2">
-                        {eligResult.coverage.planName && <p><strong>Plan:</strong> {eligResult.coverage.planName}</p>}
-                        {eligResult.coverage.networkStatus && <p><strong>Network:</strong> {eligResult.coverage.networkStatus}</p>}
-                        {typeof eligResult.coverage.coinsurance === 'number' && <p><strong>Coinsurance:</strong> {eligResult.coverage.coinsurance}%</p>}
-                        {typeof eligResult.coverage.deductible === 'number' && <p><strong>Deductible:</strong> ${eligResult.coverage.deductible.toFixed(2)}</p>}
-                        {typeof eligResult.coverage.deductibleMet === 'number' && <p><strong>Deductible Met:</strong> ${eligResult.coverage.deductibleMet.toFixed(2)}</p>}
-                        {typeof eligResult.coverage.outOfPocketMax === 'number' && <p><strong>Out-of-Pocket Max:</strong> ${eligResult.coverage.outOfPocketMax.toFixed(2)}</p>}
-                        {typeof eligResult.coverage.outOfPocketMet === 'number' && <p><strong>Out-of-Pocket Met:</strong> ${eligResult.coverage.outOfPocketMet.toFixed(2)}</p>}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Plan Info */}
-                  {eligResult.planInfo && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Plan Information</h4>
-                      <div className="space-y-1">
-                        {eligResult.planInfo.payerName && <p><strong>Payer:</strong> {eligResult.planInfo.payerName}</p>}
-                        {eligResult.planInfo.planType && <p><strong>Plan Type:</strong> {eligResult.planInfo.planType}</p>}
-                        {eligResult.planInfo.effectiveDate && <p><strong>Effective:</strong> {new Date(eligResult.planInfo.effectiveDate).toLocaleDateString()}</p>}
-                        {eligResult.planInfo.termDate && <p><strong>Term Date:</strong> {new Date(eligResult.planInfo.termDate).toLocaleDateString()}</p>}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Service Date */}
-                  {eligResult.serviceDate && (
-                    <p><strong>Service Date:</strong> {new Date(eligResult.serviceDate).toLocaleDateString()}</p>
-                  )}
-                  
-                  {/* Errors */}
-                  {eligResult.error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                      <h4 className="font-semibold">Error: {eligResult.error.code}</h4>
-                      <p>{eligResult.error.message}</p>
-                      {eligResult.error.details && <p className="text-sm">{eligResult.error.details}</p>}
-                    </div>
-                  )}
-                  
-                  {/* Last Checked */}
-                  {eligResult.timestamp && (
-                    <p className="text-xs text-gray-500 mt-4">Last checked: {new Date(eligResult.timestamp).toLocaleString()}</p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-center py-4">No eligibility data available</p>
-              )}
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-        <TabsContent value="edi">
-          <div className="space-y-6 bg-muted rounded-xl p-6">
-            <h3 className="text-lg font-semibold">Claims Ready for EDI</h3>
-            {claims.length === 0 && <div>No claims available for EDI generation.</div>}
-            <ul className="divide-y">
-              {claims.map(claim => (
-                <li key={claim.id} className="py-3 flex items-center justify-between">
-                  <span>
-                    <span className="font-medium">{claim.patientName}</span> (ID: {claim.id})<br />
-                    <span className="text-xs text-gray-500">Status: {claim.status}</span>
-                  </span>
-                  <span>
-                    {ediDownloadFile[claim.id] ? (
-                      <Button onClick={() => handleEdiDownload(claim.id)} className="btn btn-primary">
-                        Download EDI
+                  <div className="flex gap-2">
+                    {!claim.ediFileLocation ? (
+                      <Button
+                        size="sm"
+                        onClick={() => generateEdi(claim.id)}
+                        disabled={generatingEdi === claim.id}
+                      >
+                        {generatingEdi === claim.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Generate EDI
+                          </>
+                        )}
                       </Button>
                     ) : (
-                      <Button disabled={ediLoading === claim.id} onClick={() => handleEdiGenerate(claim.id)}>
-                        {ediLoading === claim.id ? "Generating..." : "Generate EDI"}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadEdi(claim.id, claim.ediFileLocation!)}
+                        disabled={downloadingEdi === claim.id}
+                      >
+                        {downloadingEdi === claim.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download EDI
+                          </>
+                        )}
                       </Button>
                     )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {ediError && <div className="text-red-600">{ediError}</div>}
+                  </div>
+                </div>
+                
+                {claim.ediFileLocation && (
+                  <div className="mt-2 text-sm text-green-600">
+                    EDI file generated: {claim.ediFileLocation}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
+  );
+
+  // Main component return
+  return (
+    <Tabs defaultValue="management" className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="management">Claims Management</TabsTrigger>
+        <TabsTrigger value="eligibility">Eligibility Verification</TabsTrigger>
+        <TabsTrigger value="edi">EDI Generation</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="management">
+        {renderManagementTab()}
+      </TabsContent>
+      
+      <TabsContent value="eligibility">
+        {renderEligibilityTab()}
+      </TabsContent>
+      
+      <TabsContent value="edi">
+        {renderEdiTab()}
+      </TabsContent>
+    </Tabs>
   );
 }

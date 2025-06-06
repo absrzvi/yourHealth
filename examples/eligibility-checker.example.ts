@@ -44,7 +44,9 @@ async function main() {
     const checker = new EligibilityChecker({
       prisma,
       cacheType: 'memory',
-      defaultCacheTtl: 3600, // 1 hour
+      cacheOptions: {
+        ttl: 3600, // 1 hour
+      }
     });
     
     // Register default parser and validator
@@ -77,6 +79,10 @@ async function main() {
       serviceType: 'LAB',
       serviceCode: '80053',
       providerNpi: '1234567890',
+      context: {
+        location: 'OUTPATIENT',
+        diagnosisCodes: ['E11.9']
+      }
     };
     
     const serviceResult = await checker.checkEligibility('MEMBER123', serviceOptions);

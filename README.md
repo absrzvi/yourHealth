@@ -4,6 +4,12 @@ A modern, AI-powered health platform that helps you understand and improve your 
 
 ## ✨ Latest Updates (June 2025)
 
+### Backend Type Safety & Metadata
+- ✅ Enforced strict typing for DocumentMetadata (url/domain fields)
+- ✅ Refactored backend to ensure all metadata is type-safe and HIPAA-ready
+- ✅ Fixed all backend type errors and improved API handler compatibility
+
+
 ### AI Coach & Chat
 - 💬 **Enhanced Chat Experience** with real-time message streaming
 - 🗂️ Session-based chat history management
@@ -16,6 +22,16 @@ A modern, AI-powered health platform that helps you understand and improve your 
 - 📱 Enhanced mobile responsiveness for chat interface
 - 🚀 Performance optimizations for chat functionality
 - 🐛 Fixed various UI bugs and inconsistencies
+
+### Insurance Claims Management
+- 📋 **Complete Claims Workflow** with status tracking and transitions
+- 🏥 Insurance plan management with CRUD operations
+- ✅ Real-time eligibility verification
+- 📄 EDI 837 file generation for claim submission
+- 📊 Claims statistics and analytics dashboard
+- 🔍 Comprehensive claims search and filtering
+- 📝 Detailed claim line item management
+- 🔐 HIPAA-compliant audit logging
 
 ### Technical Improvements
 - 🔒 Enhanced security with proper session validation
