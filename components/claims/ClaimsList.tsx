@@ -88,6 +88,26 @@ export function ClaimsList() {
     fetchInsurancePlans();
   }, []);
 
+  // Status transition map for the legend
+  const statusTransitionMap = {
+    'DRAFT': ['SUBMITTED'],
+    'SUBMITTED': ['PROCESSING', 'DENIED'],
+    'PROCESSING': ['APPROVED', 'DENIED'],
+    'APPROVED': ['PAID'],
+    'DENIED': [],
+    'PAID': []
+  };
+  
+  // Color mapping for different statuses for visual clarity
+  const statusColorMap = {
+    'DRAFT': 'bg-gray-200',
+    'SUBMITTED': 'bg-blue-200',
+    'PROCESSING': 'bg-yellow-200',
+    'DENIED': 'bg-red-200',
+    'APPROVED': 'bg-green-200',
+    'PAID': 'bg-green-300'
+  };
+
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -138,16 +158,34 @@ export function ClaimsList() {
   const saveEdit = async (claimId: string) => {
     setEditLoading(true);
     try {
+      // Only send the fields that can be updated
+      const updateData = {
+        claimNumber: editForm.claimNumber,
+        // Handle totalCharge safely - convert to number or default to current value
+        totalCharge: editForm.totalCharge !== undefined ? 
+          parseFloat(String(editForm.totalCharge)) : 0,
+        status: editForm.status,
+        insurancePlanId: editForm.insurancePlan?.id || null
+      };
+      
+      console.log('Sending update data:', updateData);
+      
       const res = await fetch(`/api/claims/${claimId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(updateData),
       });
-      if (!res.ok) throw new Error('Failed to update claim');
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || errorData.errors?.join(', ') || 'Failed to update claim');
+      }
+      
       setEditClaimId(null);
       setEditForm({});
       await fetchClaims();
     } catch (err: any) {
+      console.error('Error updating claim:', err);
       alert(err.message || 'Unknown error');
     } finally {
       setEditLoading(false);
@@ -341,19 +379,44 @@ export function ClaimsList() {
             </select>
           )}
         </div>
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-          disabled={formLoading}
-        >
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded" disabled={formLoading}>
           {formLoading ? 'Creating...' : 'Create Claim'}
         </button>
-        {formError && <div className="text-red-600">{formError}</div>}
-        {formSuccess && <div className="text-green-600">{formSuccess}</div>}
       </form>
 
+      {/* Status Transition Legend */}
+      <div className="mt-6 border border-red-500 p-4 rounded-md">
+        <h3 className="text-lg font-semibold mb-2">Claim Status Workflow</h3>
+        <p className="text-sm mb-3">Claims must follow this workflow. You can only change to an allowed next status.</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.entries(statusTransitionMap).map(([status, transitions]) => (
+            <div key={status} className={`p-3 rounded-md ${statusColorMap[status as keyof typeof statusColorMap]}`}>
+              <div className="font-medium">{status}</div>
+              <div className="text-sm mt-1">
+                {transitions.length > 0 ? (
+                  <>
+                    <span className="font-medium">Can transition to:</span>
+                    <ul className="list-disc list-inside">
+                      {transitions.map(nextStatus => (
+                        <li key={nextStatus}>{nextStatus}</li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <span className="italic">Terminal status - no further transitions</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {formError && <div className="text-red-600 mt-2">{formError}</div>}
+      {formSuccess && <div className="text-green-600 mt-2">{formSuccess}</div>}
+
       {claims.length === 0 ? (
-        <div>No claims found.</div>
+        <div className="mt-6">No claims found.</div>
       ) : (
         <>
           <table className="min-w-full border border-gray-200">
@@ -369,7 +432,7 @@ export function ClaimsList() {
             <tbody>
               {claims.map((claim) => (
                 <React.Fragment key={claim.id}>
-                  <tr>
+                  <tr className={`${statusColorMap[claim.status as keyof typeof statusColorMap] || 'bg-white'} hover:bg-opacity-80 transition-colors`}>
                     {editClaimId === claim.id ? (
                       <>
                         <td className="border px-4 py-2"><input type="text" name="claimNumber" value={editForm.claimNumber as string} onChange={handleEditChange} className="border px-2 py-1 rounded w-full" /></td>
