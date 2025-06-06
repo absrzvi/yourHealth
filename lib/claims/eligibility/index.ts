@@ -19,3 +19,6 @@ export * from './checker';
 export { default as EligibilityChecker } from './checker';
 export { default as DefaultEligibilityParser } from './parsers/default.parser';
 export { default as DefaultEligibilityValidator } from './validators/default.validator';
+
+// Re-export CacheFactory for convenience
+export { CacheFactory } from './cache';

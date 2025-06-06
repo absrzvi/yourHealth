@@ -1,5 +1,5 @@
+import { InsurancePlan } from "@prisma/client";
 import { EligibilityResult } from "../types";
-import { InsurancePlan } from "./default.parser";
 
 /**
  * Base parser interface for eligibility responses
@@ -8,10 +8,10 @@ export interface IEligibilityParser {
   /**
    * Parse the raw response from the payer
    * @param response Raw response from the payer
-   * @param insurancePlan The insurance plan being checked
+   * @param plan The insurance plan being checked
    * @returns Parsed eligibility result
    */
-  parse(response: unknown, insurancePlan: InsurancePlan): Promise<EligibilityResult>;
+  parse(response: unknown, plan: InsurancePlan): Promise<EligibilityResult>;
   
   /**
    * Check if this parser can handle the given response format
@@ -28,9 +28,9 @@ export abstract class BaseEligibilityParser implements IEligibilityParser {
   /**
    * Parse the raw response from the payer
    * @param response Raw response from the payer
-   * @param insurancePlan The insurance plan being checked
+   * @param plan The insurance plan being checked
    */
-  abstract parse(response: unknown, insurancePlan: InsurancePlan): Promise<EligibilityResult>;
+  abstract parse(response: unknown, plan: InsurancePlan): Promise<EligibilityResult>;
   
   /**
    * Check if this parser can handle the given response format

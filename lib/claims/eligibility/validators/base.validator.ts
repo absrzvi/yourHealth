@@ -1,5 +1,5 @@
 import { InsurancePlan } from "@prisma/client";
-import { ValidationRule } from "../../types";
+import { ValidationRule } from "../types";
 
 /**
  * Base validator interface for eligibility validation

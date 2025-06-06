@@ -126,23 +126,3 @@ export function extractDiagnosisCodes(claim: Claim & { claimLines: ClaimLine[] }
   // Convert Set to Array for return
   return Array.from(allCodes);
 }
-
-/**
- * Generates a control number for EDI transactions
- * Using a timestamp-based approach for uniqueness
- */
-export function generateControlNumber(): string {
-  const now = new Date();
-  // Format: YYYYMMDDHHMMSS + 3 random digits
-  const timestamp = 
-    now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, '0') +
-    String(now.getDate()).padStart(2, '0') +
-    String(now.getHours()).padStart(2, '0') +
-    String(now.getMinutes()).padStart(2, '0') +
-    String(now.getSeconds()).padStart(2, '0');
-    
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  
-  return timestamp + random;
-}

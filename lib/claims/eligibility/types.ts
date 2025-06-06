@@ -72,6 +72,18 @@ export interface CheckEligibilityOptions {
   /** Service date to check eligibility for (defaults to current date) */
   serviceDate?: Date;
   
+  /** Service type code (e.g., 'LAB', 'OFFICE_VISIT') */
+  serviceType?: string;
+  
+  /** Service procedure code */
+  serviceCode?: string;
+  
+  /** Provider NPI number */
+  providerNpi?: string;
+  
+  /** Cache TTL in seconds */
+  cacheTtl?: number;
+  
   /** Additional context for the eligibility check */
   context?: Record<string, unknown>;
 }

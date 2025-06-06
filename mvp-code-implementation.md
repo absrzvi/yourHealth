@@ -58,6 +58,13 @@ IMPORTANT: Use the code provided below exactly as written. Only generate new cod
 - File serving and logging are designed for HIPAA compliance (no direct PHI exposure, full event audit trail).
 
 Phase 1: Foundation & Core Infrastructure
+
+### Checkpoint: Backend Type Safety & Metadata Enforcement (2025-06-06)
+- Strict DocumentMetadata typing (url/domain fields)
+- All backend usages refactored for type safety
+- API return types made robust
+- All main backend type errors resolved
+
 Checkpoint 1.1: Database Schema Update
 File: prisma/schema.prisma
 prismagenerator client {

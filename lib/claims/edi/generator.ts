@@ -1,7 +1,7 @@
 import { ClaimLine, Claim, InsurancePlan, User } from '../../../src/lib/claims/types/claims.types';
 import { EDIClaim, EDIClaimLine, EDIConfig, EDIFile } from './types';
-import { formatEDIDate, formatEDITime, padLeft, padRight, parsePersonName, validateNPI, formatEDIAmount, formatEDIName } from './utils';
-import { mapClaimToEDIClaim, extractProviderInfo, extractSubscriberInfo, extractDiagnosisCodes, generateControlNumber } from './mapper';
+import { formatEDIDate, formatEDITime, padLeft, padRight, parsePersonName, validateNPI, formatEDIAmount, formatEDIName, generateControlNumber } from './utils';
+import { mapClaimToEDIClaim, extractProviderInfo, extractSubscriberInfo, extractDiagnosisCodes } from './mapper';
 
 /**
  * Default configuration for EDI 837 generation
