@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { validateClaimInput, canTransition, ClaimStatus } from '@/lib/claims/validation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  // Get authenticated session properly
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Get user ID from session
+  const userId = session.user.id;
   try {
-    const claim = await prisma.claim.findUnique({
-      where: { id: params.id },
+    // Find claim belonging to this user only - security check
+    const claim = await prisma.claim.findFirst({
+      where: { 
+        id: params.id,
+        user: {
+          id: userId 
+        }
+      },
       include: {
         claimLines: true,
         claimEvents: true,
@@ -13,8 +29,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         eligibilityCheck: true,
       },
     });
+    
     if (!claim) {
-      return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Claim not found or you do not have permission to view it' }, { status: 404 });
     }
     // HIPAA-compliant event logging for claim view
     await prisma.claimEvent.create({
@@ -32,26 +49,83 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Get authenticated session
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Get user ID from session
+    const userId = session.user.id;
+    
+    // Parse the data from the request
     const data = await req.json();
-    const errors = validateClaimInput(data);
+    console.log('Update data received:', data);
+    
+    // Mark this as an update operation for validation
+    const dataWithUpdateFlag = {
+      ...data,
+      isUpdate: true // Flag to indicate this is an update operation
+    };
+    
+    // Validate the input data for update operation
+    const errors = validateClaimInput(dataWithUpdateFlag);
     if (errors.length > 0) {
       return NextResponse.json({ errors }, { status: 400 });
     }
-    const currentClaim = await prisma.claim.findUnique({ where: { id: params.id } });
+    
+    // Find the current claim and verify ownership
+    const currentClaim = await prisma.claim.findFirst({ 
+      where: { 
+        id: params.id,
+        user: {
+          id: userId
+        }
+      } 
+    });
+    
     if (!currentClaim) {
-      return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Claim not found or you do not have permission to modify it' }, { status: 404 });
     }
-    if (!canTransition(currentClaim.status as ClaimStatus, data.status as ClaimStatus)) {
+    
+    // Verify the status transition is valid - allow keeping the same status during updates
+    if (currentClaim.status !== data.status && !canTransition(currentClaim.status as ClaimStatus, data.status as ClaimStatus)) {
+      console.log(`Invalid status transition attempted: ${currentClaim.status} -> ${data.status}`);
       return NextResponse.json({ error: 'Invalid status transition.' }, { status: 400 });
     }
+    
+    // Prepare update data
+    const updateData: any = {
+      claimNumber: data.claimNumber,
+      totalCharge: parseFloat(data.totalCharge.toString()),
+      status: data.status
+    };
+    
+    // Add insurance plan connection if provided
+    if (data.insurancePlanId) {
+      // Verify the insurance plan belongs to this user
+      const insurancePlan = await prisma.insurancePlan.findFirst({
+        where: {
+          id: data.insurancePlanId,
+          userId: userId
+        }
+      });
+      
+      if (!insurancePlan) {
+        return NextResponse.json({ 
+          error: 'Insurance plan not found or does not belong to this user' 
+        }, { status: 404 });
+      }
+      
+      updateData.insurancePlan = {
+        connect: { id: data.insurancePlanId }
+      };
+    }
+    
+    // Update the claim
     const updated = await prisma.claim.update({
       where: { id: params.id },
-      data: {
-        claimNumber: data.claimNumber,
-        totalCharge: data.totalCharge,
-        status: data.status,
-        // Add other fields as needed
-      },
+      data: updateData,
       include: {
         claimLines: true,
         claimEvents: true,
@@ -101,18 +175,44 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const claim = await prisma.claim.findUnique({ where: { id: params.id } });
+    // Get authenticated session
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Get user ID from session
+    const userId = session.user.id;
+    
+    // Find claim and verify ownership
+    const claim = await prisma.claim.findFirst({
+      where: {
+        id: params.id,
+        user: {
+          id: userId
+        }
+      }
+    });
+    
+    if (!claim) {
+      return NextResponse.json({ error: 'Claim not found or you do not have permission to delete it' }, { status: 404 });
+    }
+    
+    // Delete the claim
     await prisma.claim.delete({ where: { id: params.id } });
+    
     // HIPAA-compliant event logging for deletion
     await prisma.claimEvent.create({
       data: {
         eventType: 'claim_deleted',
-        eventData: { claimNumber: claim?.claimNumber },
+        eventData: { claimNumber: claim.claimNumber },
         claimId: params.id,
       },
     });
+    
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Error deleting claim:', error);
     return NextResponse.json({ error: 'Failed to delete claim', details: error }, { status: 500 });
   }
 } 
