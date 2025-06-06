@@ -1,0 +1,224 @@
+import { Prisma, PrismaClient } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
+
+// Mock the ClaimsService
+jest.mock('../claims.service');
+const MockClaimsService = jest.mocked(require('../claims.service').default, true);
+
+// Define test types - aligned with schema
+interface ClaimLineInput {
+  cptCode: string;
+  description: string;
+  units: number;
+  charge: number;
+  icd10Codes: string[];
+  serviceDate: Date;
+  modifier?: string;
+}
+
+interface CreateClaimInput {
+  userId: string;
+  insurancePlanId: string;
+  reportId: string;
+  serviceDate: Date;
+  notes?: string;
+  claimLines: ClaimLineInput[];
+}
+
+interface UpdateClaimInput {
+  status?: string;
+  notes?: string;
+  claimLines?: Array<ClaimLineInput & { id?: string }>;
+}
+
+// Use exact enum values from Prisma schema
+type ClaimStatus = 'DRAFT' | 'READY' | 'SUBMITTED' | 'ACCEPTED' | 'REJECTED' | 'DENIED' | 'PARTIALLY_PAID' | 'PAID' | 'APPEALED';
+
+// Create a mock Prisma client with proper typing
+const createMockPrismaClient = () => {
+  return {
+    user: {
+      findUnique: jest.fn(),
+    },
+    insurancePlan: {
+      findUnique: jest.fn(),
+    },
+    report: {
+      findUnique: jest.fn(),
+    },
+    claim: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    },
+    claimLine: {
+      createMany: jest.fn(),
+      findMany: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    claimEvent: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+    $transaction: jest.fn((fn) => fn(mockPrismaClient)),
+  } as unknown as PrismaClient;
+};
+
+// Create a mock Prisma client instance
+const mockPrismaClient = createMockPrismaClient();
+
+// Mock data
+const mockUser = {
+  id: 'user-123',
+  email: 'test@example.com',
+  name: 'Test User',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockInsurancePlan = {
+  id: 'plan-123',
+  name: 'Test Insurance Plan',
+  insuranceProvider: 'Test Provider',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockReport = {
+  id: 'report-123',
+  userId: 'user-123',
+  title: 'Test Report',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockClaim = {
+  id: 'claim-123',
+  userId: 'user-123',
+  insurancePlanId: 'plan-123',
+  reportId: 'report-123',
+  status: 'DRAFT' as ClaimStatus,
+  serviceDate: new Date(),
+  notes: 'Test claim',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+const mockClaimLines = [
+  {
+    id: 'line-1',
+    claimId: 'claim-123',
+    cptCode: '99213',
+    description: 'Office Visit',
+    units: 1,
+    charge: 100.50,
+    icd10Codes: ['J45.901'], // Example ICD-10 code for asthma
+    serviceDate: new Date(),
+    modifier: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+describe('ClaimsService', () => {
+  let claimsService: typeof MockClaimsService;
+
+  beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+    
+    // Setup default mock implementations
+    mockPrismaClient.user.findUnique.mockResolvedValue(mockUser);
+    mockPrismaClient.insurancePlan.findUnique.mockResolvedValue(mockInsurancePlan);
+    mockPrismaClient.report.findUnique.mockResolvedValue(mockReport);
+    mockPrismaClient.claim.create.mockResolvedValue(mockClaim);
+    mockPrismaClient.claimLine.createMany.mockResolvedValue({ count: 1 });
+    mockPrismaClient.claimEvent.create.mockResolvedValue({
+      id: 'event-1',
+      claimId: 'claim-123',
+      eventType: 'STATUS_CHANGED',
+      fromStatus: null,
+      toStatus: 'DRAFT',
+      metadata: {},
+      createdAt: new Date(),
+    });
+
+    // Create a new instance of the service for each test
+    claimsService = new MockClaimsService(mockPrismaClient);
+  });
+
+  describe('createClaim', () => {
+    it('should create a new claim with claim lines', async () => {
+      const createInput: CreateClaimInput = {
+        userId: 'user-123',
+        insurancePlanId: 'plan-123',
+        reportId: 'report-123',
+        serviceDate: new Date(),
+        notes: 'Test claim',
+        claimLines: [
+          {
+            cptCode: '99213',
+            description: 'Office Visit',
+            units: 1,
+            charge: 100.50,
+            icd10Codes: ['J45.901'], 
+            serviceDate: new Date(),
+          },
+        ],
+      };
+
+      const result = await claimsService.createClaim(createInput);
+
+      expect(mockPrismaClient.claim.create).toHaveBeenCalledWith({
+        data: {
+          userId: createInput.userId,
+          insurancePlanId: createInput.insurancePlanId,
+          reportId: createInput.reportId,
+          serviceDate: createInput.serviceDate,
+          notes: createInput.notes,
+          status: 'DRAFT',
+        },
+      });
+
+      expect(mockPrismaClient.claimLine.createMany).toHaveBeenCalledWith({
+        data: createInput.claimLines.map(line => ({
+          claimId: mockClaim.id,
+          cptCode: line.cptCode,
+          description: line.description,
+          units: line.units,
+          charge: line.charge,
+          icd10Codes: line.icd10Codes,
+          serviceDate: line.serviceDate,
+          modifier: line.modifier,
+        })),
+      });
+
+      expect(result).toEqual({
+        ...mockClaim,
+        claimLines: mockClaimLines,
+      });
+    });
+
+    it('should throw an error if user is not found', async () => {
+      mockPrismaClient.user.findUnique.mockResolvedValueOnce(null);
+      
+      const createInput: CreateClaimInput = {
+        userId: 'non-existent-user',
+        insurancePlanId: 'plan-123',
+        reportId: 'report-123',
+        serviceDate: new Date(),
+        claimLines: [],
+      };
+
+      await expect(claimsService.createClaim(createInput)).rejects.toThrow('User not found');
+    });
+  });
+
+  // Add more test cases for other methods...
+});

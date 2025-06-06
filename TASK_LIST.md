@@ -191,6 +191,69 @@
 - [ ] End-to-end testing for chat flows
 - [ ] Performance testing with multiple concurrent users
 
+## Phase 5: Insurance Claims Implementation
+
+### 5.1 Database Schema Extensions ✅ COMPLETED
+- [x] Create Prisma schema for insurance claims:
+  - [x] Create InsurancePlan model with fields for payer info, member details, and plan type
+  - [x] Create Claim model with status tracking and relationships
+  - [x] Implement ClaimLine for individual services with CPT codes and charges
+  - [x] Add ClaimEvent for audit trail of claim status changes
+  - [x] Enhance ClaimLine with additional fields for claim processing
+  - [x] Add necessary indexes for performance optimization
+  - [x] Execute database migrations
+  - [x] Update Prisma Client
+  - [ ] Create EligibilityCheck model for verification results
+  - [ ] Add DenialPattern model for tracking common denial reasons
+  - [ ] Set up proper relations and indexes for performance
+  - [ ] Create database migration script
+  - [ ] Add seed data for testing
+  - [ ] Document schema relationships and field purposes
+
+### 5.2 Claims Processing Core Module (In Progress)
+- [x] Build ClaimsProcessor service:
+  - [x] Create `ClaimsService` class with TypeScript interfaces
+  - [x] Implement claim creation and validation
+  - [x] Add claim submission logic with status updates
+  - [x] Create claim line item processing
+  - [x] Add support for claim attachments
+  - [x] Implement claim status tracking and updates
+  - [x] Add error handling and logging
+  - [x] Implement claim search and filtering
+  - [x] Add claim update functionality
+  - [x] Create claim status change history
+
+### 5.3 API Implementation (Completed)
+- [x] Create API routes for claims management:
+  - [x] `POST /api/claims` - Create a new claim
+  - [x] `GET /api/claims` - List all claims with filtering
+  - [x] `GET /api/claims/:id` - Get claim details
+  - [x] `PATCH /api/claims/:id` - Update a claim
+  - [x] `DELETE /api/claims/:id` - Cancel a claim
+  - [x] `POST /api/claims/:id/submit` - Submit a claim for processing
+  - [x] `GET /api/claims/:id/events` - Get claim events history
+  - [x] `POST /api/claims/:id/events` - Add a custom claim event
+  
+- [x] Implement API utilities and middleware:
+  - [x] Request validation
+  - [x] Error handling
+  - [x] Authentication/authorization
+  - [x] CORS support
+  - [x] Standardized response format
+  - [ ] Create claim validation rules engine
+  - [ ] Develop status transition management
+  - [ ] Add comprehensive event logging system
+  - [ ] Implement retry mechanism for failed operations
+  - [ ] Add metrics and monitoring hooks
+  - [ ] Create API endpoints for claim operations
+  - [ ] Document API contracts and error codes
+
+### Next Steps for Insurance Claims
+1. Extend the database with EligibilityCheck and DenialPattern models, including migrations and seed data.
+2. Implement advanced validation rules and status transition logic in the API.
+3. Add event logging, retry, and monitoring features.
+4. Document the schema and API contracts.
+
 ## Future Enhancements
 
 ### AI Coach Advanced Features
@@ -231,6 +294,89 @@
   - [x] Disable performance logging output while preserving tracking functionality.
   - [x] Document changes in blood-ocr-parsing.md file.
 
+## Insurance Claims Implementation
+
+### Database Schema (Checkpoint 5.1)
+- [x] Added InsurancePlan model with all required fields
+- [x] Added Claim model with proper relations and status enum
+
+### Eligibility Verification Service (Checkpoint 5.2)
+- [x] Implemented EligibilityChecker service
+  - [x] Core eligibility checking functionality
+  - [x] Support for multiple payers
+  - [x] Caching layer with TTL support
+  - [x] Error handling and validation
+- [x] Created base parser and validator interfaces
+- [x] Implemented DefaultEligibilityParser
+  - [x] Handles various response formats
+  - [x] Type conversion and normalization
+  - [x] Error handling for malformed responses
+- [x] Implemented DefaultEligibilityValidator
+  - [x] Insurance plan validation rules
+  - [x] Date range validation
+  - [x] Member ID format validation
+  - [x] Plan type validation
+- [x] Added caching support
+  - [x] Memory cache implementation
+  - [x] Redis cache implementation (optional)
+  - [x] Cache invalidation
+- [x] Comprehensive test coverage
+  - [x] Unit tests for all components
+  - [x] Integration tests
+  - [x] Example implementation
+- [x] Documentation
+  - [x] API reference
+  - [x] Usage examples
+  - [x] Extension guide
+- [x] Added ClaimLine model for individual service lines
+- [x] Added ClaimEvent model for audit trail
+- [x] Added EligibilityCheck model
+- [x] Added DenialPattern model
+- [x] Created all necessary relations between models
+- [x] Added proper indexes for performance
+
+### Database Seeding (Completed)
+- [x] Created seed script with test data
+- [x] Added test user with hashed password
+- [x] Added sample insurance plans (BCBS and Aetna)
+- [x] Added sample report
+- [x] Added sample claims
+- [x] Added claim lines
+- [x] Added claim events
+- [x] Added eligibility checks
+- [x] Added denial patterns
+- [ ] Add denial patterns
+
+### Core Claims Processing (Checkpoint 5.2)
+- [ ] Implement ClaimsProcessor class
+  - [ ] Create claims from reports
+  - [ ] Generate claim numbers
+  - [ ] Calculate charges
+  - [ ] Update claim statuses
+
+### Eligibility Verification (Checkpoint 5.3)
+- [ ] Implement EligibilityChecker class
+- [ ] Add caching for recent checks
+- [ ] Create API endpoint for eligibility checks
+
+### EDI 837 Generation (Checkpoint 5.4)
+- [ ] Implement EDI837Generator class
+- [ ] Create endpoint to generate EDI files
+- [ ] Update claim status to READY after generation
+
+### User Interface (Checkpoint 5.5)
+- [ ] Create ClaimsList component
+- [ ] Create InsuranceManager component
+- [ ] Build claims dashboard
+- [ ] Add insurance plan management
+
+### Automated Claims Creation (Checkpoint 5.6)
+- [ ] Create API endpoint for claim creation
+- [ ] Add UI for creating claims from reports
+- [ ] Implement claim status updates
+
+## Completed Tasks
+
 - [x] Advanced Blood Test OCR Parsing Enhancements
   - [x] Fix biomarker name normalization in BloodTestParser.normalizeBiomarkerObjects method
   - [x] Enhance BloodTestParser.extractBiomarkers to always run both traditional and generic extractors
@@ -257,3 +403,54 @@
   - [ ] Integrate `VelocityDepthNormalPass` into the Three.js rendering pipeline
   - [ ] Test realism effects (temporal reprojection, velocity, depth, normal passes)
   - [ ] Document module usage and integration steps (if necessary)
+
+## 5.4 Insurance Claims Automation: New Features & Enhancements (from updated insurance-claims.md)
+
+### Database & Schema
+- [ ] Finalize and document all new/extended models: InsurancePlan, Claim, ClaimLine, ClaimEvent, EligibilityCheck, DenialPattern, ClaimStatus enum
+- [ ] Add/verify new fields and relations (e.g., eligibilities on InsurancePlan, claimEvents on Claim, etc.)
+- [ ] Add migration scripts for new/updated schema
+- [ ] Update seed data for insurance plans, claims, claim lines, events, eligibility checks, denial patterns
+
+### Claims Processing Core
+- [ ] Implement ClaimsProcessor class with createClaimFromReport and updateClaimStatus
+- [ ] Implement generateCPTCodes(report) and helpers for blood, DNA, microbiome
+- [ ] Implement calculateCharges(cptCodes) with CPT price table
+- [ ] Add advanced claim validation logic (validateClaim)
+- [ ] Enforce claim status transitions: DRAFT → READY → SUBMITTED → ACCEPTED/REJECTED/DENIED/PARTIALLY_PAID/PAID/APPEALED
+
+### Eligibility Verification
+- [ ] Implement EligibilityChecker class with checkEligibility, performEligibilityCheck, formatEligibilityResult
+- [ ] Create/verify API route: /api/claims/eligibility (POST)
+- [ ] Add UI for eligibility check and display
+
+### EDI 837 Generation
+- [ ] Implement EDI837Generator class with all required segment methods
+- [ ] Create/verify API route: /api/claims/generate-edi (POST)
+- [ ] Add UI for EDI file status and download
+
+### Denial Pattern Tracking
+- [ ] Implement logic to track and upsert DenialPattern records on claim denial
+- [ ] Add prevention rules and frequency tracking
+
+### UI/UX Enhancements
+- [ ] Claims List: Show claim status, allow creation, editing, and viewing
+- [ ] Insurance Manager: List, add, edit, delete insurance plans; check eligibility; show linked claims
+- [ ] Claim Details: Show claim lines, events, eligibility, EDI file status
+- [ ] Inline editing and management of claim lines and events
+
+### Testing & Validation
+- [ ] Add tests for ClaimsProcessor (creation, validation, status updates)
+- [ ] Add tests for EligibilityChecker (mock and real scenarios)
+- [ ] Add tests for EDI837Generator (segment correctness)
+- [ ] Add tests for API routes (claims, eligibility, EDI generation)
+
+### Monitoring & Reliability
+- [ ] Add comprehensive event logging system
+- [ ] Implement retry mechanism for failed operations
+- [ ] Add metrics and monitoring hooks
+
+### Documentation
+- [ ] Document schema relationships and field purposes
+- [ ] Document API contracts and error codes
+- [ ] Document EDI segment mapping and logic

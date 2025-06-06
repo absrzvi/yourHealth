@@ -2,6 +2,28 @@ For Your Health MVP - Complete Implementation Code
 WINDSURF INSTRUCTIONS
 IMPORTANT: Use the code provided below exactly as written. Only generate new code if absolutely necessary for connecting components. This is an UPDATE to an existing application, not a new build. Follow the checkpoints and pause for testing at each one.
 
+## Claims/EDI Features Update (2025-06-05)
+
+### EDI File Download
+- Added `/api/claims/download-edi/[fileName]` API endpoint for secure EDI file downloads.
+  - Only serves `.edi` files from the `edi-files` directory.
+  - Validates file names and restricts access to authenticated users.
+  - Returns 404 if file not found, 400 if invalid request.
+
+### ClaimsToolsPanel UI
+- Updated EDI tab to:
+  - Show a download button after EDI file generation, linking to the new endpoint.
+  - Log all downloads via `/api/claims/log-edi-download` for audit/compliance.
+  - Show errors if download or logging fails.
+
+### Audit Logging
+- `/api/claims/log-edi-download` API endpoint records all EDI downloads as `ClaimEvent` entries.
+- Ensures HIPAA compliance and full traceability of access to PHI.
+
+### Security & Compliance
+- All endpoints require authentication.
+- File serving and logging are designed for HIPAA compliance (no direct PHI exposure, full event audit trail).
+
 Phase 1: Foundation & Core Infrastructure
 Checkpoint 1.1: Database Schema Update
 File: prisma/schema.prisma

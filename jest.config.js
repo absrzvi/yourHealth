@@ -68,6 +68,8 @@ const customJestConfig = {
     '!**/node_modules/**',
     '!**/.next/**',
   ],
+  // setupFiles: ['<rootDir>/jest.setup.js'], // Removed to prevent double-loading and ReferenceError
+
 };
 
 module.exports = createJestConfig(customJestConfig);

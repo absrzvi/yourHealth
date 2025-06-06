@@ -22,6 +22,7 @@ A modern, AI-powered health platform that helps you understand and improve your 
 - 📊 Improved database schema for chat messages and sessions
 - 🧪 Added comprehensive error handling and logging
 - 🛡️ Implemented proper input validation and sanitization
+- 📈 Insurance claims automation with full backend workflow and testing
 
 ## 🚀 Tech Stack
 
@@ -31,6 +32,7 @@ A modern, AI-powered health platform that helps you understand and improve your 
 - **State Management**: React Context + Zustand
 - **Database**: Prisma + SQLite
 - **Authentication**: NextAuth.js
+- **Claims Automation**: Automated 8-stage claims workflow, EDI, eligibility, and event tracking
 
 ### Chat & AI
 - **AI Integration**: OpenAI API with streaming responses
