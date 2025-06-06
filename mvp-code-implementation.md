@@ -2,7 +2,40 @@ For Your Health MVP - Complete Implementation Code
 WINDSURF INSTRUCTIONS
 IMPORTANT: Use the code provided below exactly as written. Only generate new code if absolutely necessary for connecting components. This is an UPDATE to an existing application, not a new build. Follow the checkpoints and pause for testing at each one.
 
-## Claims/EDI Features Update (2025-06-05)
+## Claims/EDI Features Update (2025-06-06)
+
+### Claim Update & UI Enhancements
+- Fixed 400 Bad Request error when updating claims
+  - Made `claimLines` optional for updates using `isUpdate` flag in validation
+  - Modified PUT endpoint to allow partial updates and keeping the same status
+  - Refined frontend to send only necessary fields for updates
+- Added status transition UI features
+  - Created color-coded status transition legend showing valid workflow transitions
+  - Implemented color-coded claim rows in the claims table based on status
+  - Improved visual clarity for claim status workflow compliance
+
+### EDI 837 File Generation & Viewing
+- Implemented EDI 837 file generation for healthcare claims
+  - Created `EDI837Generator` class to build compliant X12 837P segments
+  - Added formatting utilities for EDI dates, times, and control numbers
+  - Implemented proper segment building with required loops and fields
+
+- Added in-app EDI viewer modal with tabbed interface
+  - Created Dialog component using Radix UI primitives
+  - Implemented Tabs component with formatted and raw EDI views
+  - Added download functionality for generated EDI files
+  - Provided clear loading/error states and user feedback
+  
+- Implemented new API endpoints for EDI management
+  - Added `/api/claims/[id]/edi` endpoint to fetch existing EDI content
+  - Added `/api/claims/[id]/generate-edi` endpoint to create new EDI files
+  - Enhanced error handling with descriptive messages
+  - Added database storage for EDI files to avoid regeneration
+
+- Updated database schema for EDI file storage
+  - Added `EdiFile` model to Prisma schema
+  - Created relationship between claims and EDI files
+  - Applied database migrations for the new model
 
 ### EDI File Download
 - Added `/api/claims/download-edi/[fileName]` API endpoint for secure EDI file downloads.
@@ -1655,6 +1688,63 @@ These decisions ensure a reliable, maintainable parser that can handle the varie
 
 🛑 CHECKPOINT 3.5: Verify blood test parser functionality, then commit
 
+## Phase 5: Insurance Claims & Eligibility Features (June 2025)
+
+### Checkpoint 5.1: Insurance Eligibility Verification
+
+#### Implementation Overview
+1. **Backend API Enhancements**
+   - Fixed authentication in eligibility API endpoint using NextAuth's `getServerSession`
+   - Changed enum approach to string literals for eligibility status
+   - Enhanced ClaimEvent creation logic with proper error handling
+   - Added conditional claim event creation based on claimId validity
+   - Implemented proper database integrity with required relationship connections
+
+2. **Frontend Component Fixes**
+   - Corrected JSX syntax errors in InsuranceManager.tsx
+   - Fixed dialog component nesting with proper React Fragment usage
+   - Improved UI for showing eligibility status and details
+   - Enhanced error handling and loading states
+
+3. **Eligibility Check System**
+   - Implemented eligibility verification with coverage details
+   - Created modular eligibility checker with caching functionality
+   - Added support for basic eligibility checks when real-time APIs unavailable
+   - Included detailed coverage information (deductible, coinsurance, out-of-pocket max)
+   - Stored eligibility check results for audit and analysis
+
+#### Key Components Updated
+- `InsuranceManager.tsx`: Fixed UI and dialog display
+- `app/api/claims/eligibility/route.ts`: Corrected authentication and database operations
+- `lib/claims/eligibility/checker.ts`: Core eligibility verification system
+
+#### Security & Compliance
+- Protected all endpoints with proper authentication
+- Ensured all eligibility checks are logged for HIPAA compliance
+- Added proper error handling and user feedback
+
+🛑 CHECKPOINT 5.1: Insurance Eligibility Verification completed and tested. Commit changes.
+
+### Checkpoint 5.2: Claims Management System (Pending)
+
+1. **Claims Creation & Updates**
+   - [ ] Implement claim creation with multiple service lines
+   - [ ] Add validation for required claim fields
+   - [ ] Implement claim status workflow
+   - [ ] Create UI for claim management
+
+2. **Security & Integration**
+   - [ ] Ensure HIPAA compliance for all operations
+   - [ ] Integrate with eligibility verification system
+   - [ ] Add audit logging for claim modifications
+
+### Next Steps
+1. Fix 'Remember Me' functionality in authentication flow
+2. Implement Claims Management System as outlined in Checkpoint 5.2
+3. Enhance AI Coach with health metric feedback
+4. Add support for additional health report types
+5. Improve dashboard visualizations and insights
+
 FINAL TESTING CHECKLIST
 
 Authentication Flow
@@ -1691,6 +1781,14 @@ AI Features
  Generate weekly report
  Chat responds with user data
  No general health advice
+
+
+Insurance & Claims
+
+ ✓ Eligibility verification works
+ ✓ Coverage details display correctly
+ ☐ Claim creation and submission
+ ☐ Claim status workflow management
 
 
 Performance
