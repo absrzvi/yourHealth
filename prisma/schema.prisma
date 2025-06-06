@@ -190,6 +190,7 @@ model Claim {
   claimEvents           ClaimEvent[]
   claimLines            ClaimLine[]
   eligibilityCheck      EligibilityCheck?
+  ediFiles              EdiFile[]
 
   @@index([userId])
   @@index([claimNumber])
@@ -253,6 +254,18 @@ model DenialPattern {
   frequency       Int      @default(1)
   lastOccurred    DateTime
   preventionRule  Json?
+}
+
+model EdiFile {
+  id         String   @id @default(cuid())
+  claimId    String
+  fileName   String
+  filePath   String
+  content    String
+  createdAt  DateTime @default(now())
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  
+  @@index([claimId])
 }
 
 model BloodTest {

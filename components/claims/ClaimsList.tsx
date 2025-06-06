@@ -1,5 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { EDIViewer } from './EDIViewer';
+import { FileText, Loader2 } from 'lucide-react';
 
 interface Claim {
   id: string;
@@ -13,6 +15,7 @@ interface Claim {
   insurancePlan?: any;
   eligibilityCheck?: any;
   denialPatterns?: any[];
+  ediFileLocation?: string | null;
 }
 
 export function ClaimsList() {
@@ -47,6 +50,10 @@ export function ClaimsList() {
     serviceDate: '',
   });
   const [lineLoading, setLineLoading] = useState(false);
+  const [ediModalOpen, setEdiModalOpen] = useState(false);
+  const [currentEdiClaimId, setCurrentEdiClaimId] = useState<string | null>(null);
+  const [currentEdiClaimNumber, setCurrentEdiClaimNumber] = useState<string | null>(null);
+  const [checkingEdi, setCheckingEdi] = useState<string | null>(null);
 
   async function fetchClaims() {
     setLoading(true);
@@ -309,6 +316,18 @@ export function ClaimsList() {
   if (loading) return <div>Loading claims...</div>;
   if (error) return <div className="text-red-600">Error: {error}</div>;
 
+  const openEdiModal = (claim: Claim) => {
+    setCurrentEdiClaimId(claim.id);
+    setCurrentEdiClaimNumber(claim.claimNumber);
+    setEdiModalOpen(true);
+  };
+
+  const closeEdiModal = () => {
+    setEdiModalOpen(false);
+    setCurrentEdiClaimId(null);
+    setCurrentEdiClaimNumber(null);
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Claims List</h2>
@@ -467,6 +486,23 @@ export function ClaimsList() {
                         <td className="border px-4 py-2 flex gap-2">
                           <button className="bg-yellow-500 text-white px-3 py-1 rounded" onClick={() => startEdit(claim)}>Edit</button>
                           <button className="bg-red-600 text-white px-3 py-1 rounded" onClick={() => deleteClaim(claim.id)} disabled={deleteLoading === claim.id}>{deleteLoading === claim.id ? 'Deleting...' : 'Delete'}</button>
+                          <button 
+                            className={`flex items-center text-white px-3 py-1 rounded ${claim.ediFileLocation ? 'bg-green-600' : 'bg-blue-600'}`}
+                            onClick={() => openEdiModal(claim)}
+                            disabled={checkingEdi === claim.id}
+                          >
+                            {checkingEdi === claim.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                <span>Loading</span>
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="w-4 h-4 mr-1" />
+                                <span>{claim.ediFileLocation ? 'Show EDI' : 'Create EDI'}</span>
+                              </>
+                            )}
+                          </button>
                         </td>
                       </>
                     )}
@@ -592,6 +628,13 @@ export function ClaimsList() {
           )}
         </>
       )}
+      {/* EDI Viewer Modal */}
+      <EDIViewer 
+        isOpen={ediModalOpen} 
+        onClose={closeEdiModal} 
+        claimId={currentEdiClaimId} 
+        claimNumber={currentEdiClaimNumber} 
+      />
     </div>
   );
 } 

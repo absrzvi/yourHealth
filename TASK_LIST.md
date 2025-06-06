@@ -359,16 +359,36 @@
 - [ ] Add caching for recent checks
 - [ ] Create API endpoint for eligibility checks
 
-### EDI 837 Generation (Checkpoint 5.4)
-- [ ] Implement EDI837Generator class
-- [ ] Create endpoint to generate EDI files
-- [ ] Update claim status to READY after generation
+### EDI 837 Generation and Viewing (Checkpoint 5.4) ✅ COMPLETED
+- [x] Implement EDI837Generator class
+  - [x] Create methods to build X12 837P segments
+  - [x] Add utilities for EDI formatting
+  - [x] Implement proper claim information extraction
+- [x] Create endpoints to manage EDI files
+  - [x] `GET /api/claims/[id]/edi` - Fetch existing EDI content
+  - [x] `POST /api/claims/[id]/generate-edi` - Generate new EDI content
+- [x] Add EDI viewer UI component
+  - [x] Create modal dialog with formatted/raw views
+  - [x] Add download functionality
+  - [x] Implement loading and error states
+- [x] Update database schema for EDI storage
+  - [x] Add `EdiFile` model with relations to claims
+  - [x] Run schema migrations and update Prisma client
 
 ### User Interface (Checkpoint 5.5)
-- [ ] Create ClaimsList component
-- [ ] Create InsuranceManager component
-- [ ] Build claims dashboard
-- [ ] Add insurance plan management
+- [x] Create ClaimsList component
+  - [x] Implement claim status color-coding
+  - [x] Add status transition legend with visual workflow
+  - [x] Fix claim update functionality
+  - [x] Implement validated status transitions
+- [x] Create InsuranceManager component
+  - [x] Implement CRUD operations for insurance plans
+  - [x] Add eligibility checking interface
+  - [x] Create plan listing with filtering
+  - [x] Add plan-claim relationship viewing
+- [x] Build basic claims dashboard
+  - [x] Integrate ClaimsList, InsuranceManager and ClaimsToolsPanel
+- [x] Add insurance plan management
 
 ### Automated Claims Creation (Checkpoint 5.6)
 - [ ] Create API endpoint for claim creation
@@ -413,16 +433,25 @@
 - [ ] Update seed data for insurance plans, claims, claim lines, events, eligibility checks, denial patterns
 
 ### Claims Processing Core
-- [ ] Implement ClaimsProcessor class with createClaimFromReport and updateClaimStatus
-- [ ] Implement generateCPTCodes(report) and helpers for blood, DNA, microbiome
-- [ ] Implement calculateCharges(cptCodes) with CPT price table
-- [ ] Add advanced claim validation logic (validateClaim)
-- [ ] Enforce claim status transitions: DRAFT → READY → SUBMITTED → ACCEPTED/REJECTED/DENIED/PARTIALLY_PAID/PAID/APPEALED
+- [x] Implement ClaimsProcessor class with createClaimFromReport and updateClaimStatus
+  - [x] Basic structure for generateCPTCodes and calculateCharges
+  - [x] Claim creation from report data
+- [ ] Enhance generateCPTCodes(report) with specialized helpers for blood, DNA, microbiome
+- [ ] Complete calculateCharges(cptCodes) with CPT price table
+- [x] Add claim validation logic (validateClaimInput)
+  - [x] Support for partial updates vs new claims
+  - [x] Business rule validation
+- [x] Enforce claim status transitions: DRAFT → READY → SUBMITTED → ACCEPTED/REJECTED/DENIED/PARTIALLY_PAID/PAID/APPEALED
 
 ### Eligibility Verification
-- [ ] Implement EligibilityChecker class with checkEligibility, performEligibilityCheck, formatEligibilityResult
-- [ ] Create/verify API route: /api/claims/eligibility (POST)
-- [ ] Add UI for eligibility check and display
+- [x] Implement basic eligibility checking functionality
+  - [x] API route: /api/claims/eligibility (POST)
+  - [x] Integration with InsuranceManager UI
+  - [x] Event logging for eligibility checks
+- [ ] Enhance EligibilityChecker with real provider integrations
+  - [ ] Implement robust eligibility verification logic
+  - [ ] Add error handling and retries
+- [x] Add caching for recent eligibility checks
 
 ### EDI 837 Generation
 - [ ] Implement EDI837Generator class with all required segment methods
