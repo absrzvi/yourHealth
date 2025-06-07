@@ -6,7 +6,8 @@ type MessageRole = 'USER' | 'ASSISTANT';
 type MessageType = 'text' | 'chart' | 'dashboard' | 'error';
 type MessageStatus = 'sending' | 'sent' | 'error' | 'streaming';
 
-interface ChatMessage {
+// Export the ChatMessage interface for use in other components
+export interface ChatMessage {
   id: string;
   role: MessageRole;
   type: MessageType;
@@ -18,7 +19,8 @@ interface ChatMessage {
   llmModel?: string | null;
 }
 
-interface ChatSession {
+// Export the ChatSession interface for use in other components
+export interface ChatSession {
   id: string;
   title: string | null;  // Make title nullable to match backend
   updatedAt: Date;
@@ -316,12 +318,23 @@ export const useChatContext = (): ChatContextValue => {
 
               if (data.done) {
                 // Stream completed - update the assistant message with final content
+                // Include source information from the done event if available
                 const finalMessage: ChatMessage = {
                   ...assistantMessage!,
                   content: responseText,
                   status: 'sent',
-                  timestamp: new Date()
+                  timestamp: new Date(),
+                  // Map source to llmProvider if provided in the done event
+                  llmProvider: data.source || assistantMessage?.llmProvider
                 };
+                
+                // Log the final message with source information for debugging
+                console.log('%c FINAL MESSAGE WITH SOURCE ', 'background: #440000; color: #ffff00', {
+                  messageId: tempAssistantId,
+                  finalSource: finalMessage?.llmProvider,
+                  sourceFromDone: data.source,
+                  fullMessage: finalMessage
+                });
                 
                 // Update the message in the UI
                 setMessages(prev => 
@@ -334,15 +347,50 @@ export const useChatContext = (): ChatContextValue => {
               } else if (data.content) {
                 // Append chunk to response
                 responseText += data.content;
+                
+                // Check if source information is available in the chunk
+                const sourceInfo = data.source || null;
+                
+                // Log source information for debugging
+                if (sourceInfo) {
+                  console.log('%c STREAMING SOURCE INFO ', 'background: #333; color: #bada55', {
+                    messageId: tempAssistantId,
+                    source: sourceInfo,
+                    data
+                  });
+                }
 
-                // Update the UI with the latest response
+                // Update the UI with the latest response and source if available
                 setMessages(prev => 
                   prev.map(msg => 
                     msg.id === tempAssistantId 
-                      ? { ...msg, content: responseText }
+                      ? { 
+                          ...msg, 
+                          content: responseText,
+                          // Update llmProvider if source is available in the chunk
+                          llmProvider: sourceInfo || msg.llmProvider
+                        }
                       : msg
                   )
                 );
+                
+                // Log the updated message for debugging
+                if (sourceInfo) {
+                  // Use a properly typed function to find the updated message
+                  const findUpdatedMsg = (messages: ChatMessage[]): ChatMessage | undefined => {
+                    return messages.find(msg => msg.id === tempAssistantId);
+                  };
+                  
+                  // Get the current messages to find the updated one
+                  setMessages(prev => {
+                    const updatedMsg = findUpdatedMsg(prev);
+                    console.log('%c UPDATED MESSAGE ', 'background: #222; color: #ff9', {
+                      message: updatedMsg,
+                      source: sourceInfo
+                    });
+                    return prev; // Return unchanged, we're just logging
+                  });
+                }
               } else if (data.error) {
                 throw new Error(data.error);
               }

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/db';
+// Import both OpenAI and local chat functions for fallback capability
 import { streamChatCompletion } from '@/lib/ai/chat';
+import { streamLocalChatCompletion, checkLocalApiAvailability } from '@/lib/ai/local-chat';
 
 type ChatMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -125,7 +127,6 @@ export async function POST(req: NextRequest) {
           ? `${message.substring(0, 27)}...` 
           : message;
           
-        // Create new chat session
         chatSession = await prisma.chatSession.create({
           data: {
             title,
@@ -134,67 +135,114 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (error) {
-      console.error('Error managing chat session:', error);
-      return NextResponse.json(
-        { error: 'Failed to manage chat session' },
-        { status: 500 }
-      );
+      return handleApiError(error, 'Failed to create or retrieve chat session');
     }
 
-    // Save user message to database
-    const userMessage = await prisma.chatMessage.create({
-      data: {
-        content: message,
-        role: 'USER',
-        chatSessionId: chatSession.id,
-      },
-      select: {
-        id: true,
-        content: true,
-        role: true,
-        chatSessionId: true,
-        createdAt: true,
-      },
-    });
+    // Save the user message to the database
+    try {
+      await prisma.chatMessage.create({
+        data: {
+          content: message,
+          role: 'USER',
+          chatSessionId: chatSession.id,
+        },
+      });
+    } catch (error) {
+      return handleApiError(error, 'Failed to save user message');
+    }
 
-    // Get recent messages for context (excluding the current message)
-    const recentMessages = await prisma.chatMessage.findMany({
-      where: { 
-        chatSessionId: chatSession.id,
-        id: { not: userMessage.id } // Exclude the current message
-      },
-      orderBy: { createdAt: 'asc' },
-      take: MAX_CONTEXT_MESSAGES - 1, // Leave room for the system message
-    });
+    // Get previous messages for context
+    let previousMessages: any[] = [];
+    try {
+      previousMessages = await prisma.chatMessage.findMany({
+        where: { 
+          chatSessionId: chatSession.id,
+          role: { in: ['USER', 'ASSISTANT'] } // Only include user and assistant messages
+        },
+        orderBy: { createdAt: 'desc' },
+        take: MAX_CONTEXT_MESSAGES,
+        select: {
+          content: true,
+          role: true,
+        },
+      });
+      
+      // Reverse to get chronological order
+      previousMessages.reverse();
+      
+    } catch (error) {
+      console.warn('Failed to retrieve previous messages:', error);
+      // Continue without context if we can't get previous messages
+    }
 
-    // Format messages for the AI
+    // Format messages for the AI model
     const formattedMessages: ChatMessage[] = [
       SYSTEM_MESSAGE,
-      ...recentMessages.map(msg => ({
+      ...previousMessages.map(msg => ({
         role: msg.role.toLowerCase() as 'user' | 'assistant',
         content: msg.content,
       })),
-      {
-        role: 'user' as const,
-        content: message,
-      },
     ];
 
     // Create a streaming response
-    const stream = new ReadableStream<Uint8Array>({
+    const stream = new ReadableStream({
       async start(controller) {
+        const encoder = new TextEncoder();
         let fullResponse = '';
+        let useLocalBackend = true;
+        
+        // Send initial SSE format
+        controller.enqueue(encoder.encode('event: start\ndata: {}\n\n'));
         
         try {
-          // Process the AI response stream
-          for await (const chunk of streamChatCompletion(formattedMessages)) {
-            fullResponse += chunk;
+          // Check if local API is available
+          useLocalBackend = await checkLocalApiAvailability();
+          console.log(`Using ${useLocalBackend ? 'local' : 'OpenAI'} backend for chat`);
+          
+          // Extract user profile data if available (for local backend)
+          let userProfile = {};
+          // Extract user profile data from database if available
+          try {
+            const userRecord = await prisma.user.findUnique({
+              where: { email: session.user.email },
+              select: { 
+                id: true,
+                name: true,
+                // Only include fields that exist in the User model
+                // Add other fields as needed, ensure they exist in the Prisma schema
+              },
+            });
             
-            // Send the chunk to the client
-            const encoder = new TextEncoder();
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`)
-            );
+            if (userRecord) {
+              userProfile = userRecord;
+            }
+          } catch (error) {
+            console.warn('Could not fetch user profile data:', error);
+          }
+          
+          // Process the AI response stream
+          if (useLocalBackend) {
+            // Use local FastAPI backend with Ollama
+            for await (const chunk of streamLocalChatCompletion(
+              message, 
+              userProfile,
+              chatSession.id
+            )) {
+              fullResponse += chunk;
+              
+              // Send the chunk to the client with source indicator
+              const data = JSON.stringify({ content: chunk, source: 'ollama' });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
+          } else {
+            // Fallback to OpenAI
+            for await (const chunk of streamChatCompletion(formattedMessages)) {
+              fullResponse += chunk;
+              
+              // Send the chunk to the client with source indicator
+              const data = JSON.stringify({ content: chunk, source: 'openai' });
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
           }
           
           // Save the assistant's response to the database
@@ -209,16 +257,17 @@ export async function POST(req: NextRequest) {
           }
           
           // Send completion signal
-          const encoder = new TextEncoder();
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+          const doneData = JSON.stringify({ done: true, source: useLocalBackend ? 'ollama' : 'openai' });
+          controller.enqueue(encoder.encode(`data: ${doneData}\n\n`));
           controller.close();
           
         } catch (error) {
-          console.error('Error in chat stream:', error);
-          const encoder = new TextEncoder();
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: 'An error occurred while generating the response' })}\n\n`)
-          );
+          console.error(`Error in ${useLocalBackend ? 'local' : 'OpenAI'} chat stream:`, error);
+          const errorData = JSON.stringify({ 
+            error: 'An error occurred while generating the response',
+            details: error instanceof Error ? error.message : String(error)
+          });
+          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
           controller.close();
         }
       },

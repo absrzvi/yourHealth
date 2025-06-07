@@ -1,5 +1,39 @@
 # Task List - For Your Health MVP
 
+## AI Coach Chat Implementation
+
+### Core Functionality
+- [x] Implement ChatWidget component with animations
+- [x] Create EnhancedChatInterface with welcome screen
+- [x] Implement message streaming with SSE
+- [x] Add support for multiple LLM providers (Ollama/OpenAI)
+- [ ] Implement session management
+- [ ] Add message persistence
+- [ ] Implement typing indicators
+- [ ] Add error handling and retry logic
+
+### UI/UX
+- [x] Implement responsive chat interface
+- [x] Add animations and transitions
+- [ ] Implement dark/light theme support
+- [ ] Add loading states and skeletons
+- [ ] Implement message status indicators
+- [ ] Add keyboard shortcuts
+
+### Features
+- [x] Quick action buttons
+- [ ] Message search functionality
+- [ ] Message history navigation
+- [ ] File upload support
+- [ ] Rich message formatting
+- [ ] Code syntax highlighting
+
+### Integration
+- [ ] Connect to health data API
+- [ ] Implement authentication
+- [ ] Add user preferences
+- [ ] Implement analytics
+
 ## Current Status
 - **Backend Type Safety & Metadata**:
   - [x] Enforced strict DocumentMetadata typing (url/domain fields)
@@ -99,28 +133,48 @@
   - [ ] React UI components for medical interface
   - [ ] Visualization libraries for health data
 
-### 1. MCP-RAG AI Coach Implementation
-- [ ] MCP Server Setup
-  - [ ] Install mcp Python package and dependencies
-  - [ ] Configure CPU-optimized ColBERT-v2 model
-  - [ ] Setup memory-optimized vector database
-  - [ ] Configure hybrid search with BM25
-  - [ ] Test server functionality with basic queries
-- [ ] Knowledge Base Preparation
-  - [ ] Prepare medical corpus for ingestion
-  - [ ] Create document preprocessing pipeline
-  - [ ] Implement chunking strategies for medical content
-  - [ ] Document quality filtering and normalization
-  - [ ] Ingest and index documents into vector store
-- [ ] AI Coach Backend Development
-  - [ ] Create FastAPI server with REST endpoints
-  - [ ] Implement WebSocket interface for streaming
-  - [ ] Add response formatting and markdown support
-  - [ ] Implement error handling and fallback strategies
-  - [ ] Create middleware for request validation
-- [ ] Agentic RAG System
-  - [ ] Implement medical entity extraction
-  - [ ] Create specialized retrievers for medical domains
+### 1. MCP-RAG (Local, HIPAA, ChromaDB, Ollama) Implementation
+
+#### (Note: Previous Qdrant/ColBERT/cloud steps are now obsolete and replaced by the following local-first, HIPAA-compliant plan)
+
+- [ ] **Local LLM & Vector Store Setup**
+  - [ ] Install Ollama and pull required models (`llama3.2:3b`, `phi3:mini`, etc.)
+  - [ ] Install Python dependencies (`chromadb`, `ollama`, `sentence-transformers`, `fastapi`, `uvicorn`, etc.)
+  - [ ] Set up ChromaDB vector store using `HealthVectorStore`
+
+- [ ] **Backend Implementation**
+  - [ ] Implement/verify `HealthVectorStore` in `app/core/vector_store.py`
+  - [ ] Implement/verify `LocalHealthLLM` in `app/core/llm_engine.py`
+  - [ ] Implement/verify agent orchestration in `app/core/ai_agents.py`
+  - [ ] Implement FastAPI backend (`app/main.py`) with endpoints for chat, ingest, retrieval
+
+- [ ] **Security**
+  - [ ] Implement/verify encryption layer in `app/core/security.py` for all stored data
+  - [ ] Ensure secure handling of env variables and encryption keys
+
+- [ ] **Testing**
+  - [ ] Run example usage script for end-to-end verification
+  - [ ] Test streaming responses & multi-agent orchestration
+
+- [ ] **Deployment**
+  - [ ] Build and run Docker container using provided Dockerfile
+  - [ ] Test system in Docker for local-only operation
+
+- [ ] **Documentation & Tracking**
+  - [ ] Update TASK_LIST.md and mvp-code-implementation.md to reflect these steps
+  - [ ] Document issues/deviations in ai-mcp-rag.md
+
+---
+
+*Obsolete/replaced tasks (for reference):*
+- [ ] (REPLACED) Install mcp Python package and dependencies
+- [ ] (REPLACED) Configure CPU-optimized ColBERT-v2 model
+- [ ] (REPLACED) Setup memory-optimized vector database (Qdrant/Postgres)
+- [ ] (REPLACED) Configure hybrid search with BM25
+- [ ] (REPLACED) Integrate Qdrant or Postgres pgvector
+- [ ] (REPLACED) Integrate OpenAI or cloud LLM
+
+(See ai-mcp-rag.md for full rationale and updated implementation details)
   - [ ] Add reasoning layer for clinical relevance
   - [ ] Implement lightweight reranking
   - [ ] Create citation system for medical claims
