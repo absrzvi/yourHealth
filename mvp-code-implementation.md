@@ -1545,6 +1545,53 @@ npx prisma generate
 npm run dev
 🛑 CHECKPOINT 3.4: Ensure all dependencies install and app runs, then commit
 
+## Phase 5: MCP-RAG AI Coach Implementation (June 2025)
+
+### Checkpoint 5.1: MCP Server Setup & Hybrid Search
+- Install `mcp`, `colbert-ai`, `chromadb`, `rank-bm25`, and all dependencies (CPU-only)
+- Configure ColBERT-v2 for 8GB RAM, set up ChromaDB for vector storage
+- Implement hybrid search: dense (ColBERT) + sparse (BM25)
+- Test retrieval with sample queries
+
+### Checkpoint 5.2: Medical Corpus Ingestion & Indexing
+- Prepare medical documents/corpus for ingestion
+- Preprocess and chunk content for optimal retrieval
+- Ingest into vector DB (ChromaDB) with metadata
+- Validate retrieval quality and document coverage
+
+### Checkpoint 5.3: FastAPI Backend & WebSocket Integration
+- Create FastAPI app with REST and WebSocket endpoints
+- Implement `/query` for standard search, `/ws` for streaming
+- Add request validation, error handling, markdown formatting
+- Test backend locally with curl and websocket client
+
+### Checkpoint 5.4: Agentic RAG & Lightweight Reranking
+- Implement rule-based extraction for medical entities, code, protocols
+- Add reranking with CPU-optimized cross-encoder model
+- Integrate citation system for factual claims
+- Validate output with clinical scenarios
+
+### Checkpoint 5.5: React Frontend Integration (WebSocket Streaming)
+- Build React chat component with `react-use-websocket`
+- Implement real-time streaming of AI responses
+- Add message formatting, typing indicator, error feedback
+- Ensure accessibility and responsive design
+
+### Checkpoint 5.6: Dockerization & Deployment
+- Write Dockerfile for backend (FastAPI + MCP + models)
+- Add Docker Compose for full stack (backend, ChromaDB, frontend)
+- Set memory/resource limits for all services
+- Document environment variables and config
+
+### Checkpoint 5.7: Testing, Optimization & Compliance
+- Write unit/integration tests for backend and frontend
+- Benchmark retrieval speed and memory usage
+- Optimize chunking, search params for 8GB RAM
+- Review for HIPAA compliance: security, logging, env vars
+- Document all endpoints and configuration in README
+
+🛑 CHECKPOINT 5.1: MCP server and hybrid search running locally, commit and test
+
 Checkpoint 3.5: Blood Test Parser Implementation
 
 The blood test parser has been implemented with the following design decisions:
