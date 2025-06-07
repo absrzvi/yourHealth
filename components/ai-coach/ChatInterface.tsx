@@ -7,28 +7,27 @@ import { VisualizationMessage } from './VisualizationMessage';
 import { MessageSearch } from '../chat/MessageSearch';
 import { Search, X, Send, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { handleSendMessage as streamingSendMessage } from './handleSendMessage';
+import { 
+  Message, 
+  MessageStatus, 
+  MessageRole, 
+  MessageType,
+  LLMProvider,
+  ChatSession
+} from '@/types/chat.types';
 
-type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'error';
-type MessageRole = 'USER' | 'ASSISTANT';
+// Re-export types for external use
+export type { 
+  Message as ChatMessage, 
+  MessageStatus, 
+  MessageRole, 
+  MessageType,
+  LLMProvider,
+  ChatSession as ChatSessionType
+};
 
-type MessageType = 'text' | 'chart' | 'dashboard' | 'error';
-
-interface Message {
-  id: string;
-  role: MessageRole;
-  type: MessageType;
-  content: string | Record<string, any>;
-  timestamp: Date;
-  status?: MessageStatus;
-  chatSessionId?: string;
-}
-
-interface ChatSession {
-  id: string;
-  title: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// ChatSession type is now imported from chat.types.ts
 
 interface ChatInterfaceProps {
   isOpen: boolean;
@@ -36,27 +35,121 @@ interface ChatInterfaceProps {
   onMouseLeave: () => void;
   initialMessages?: Message[];
   sessionId?: string;
+  showDebug?: boolean; // Make debug panel optional
 }
 
-// Component to render different message types
-const MessageContent: FC<{ message: Message }> = ({ message }) => {
-  if (message.type === 'text' || typeof message.content === 'string') {
-    return <div className="message-content">{message.content as string}</div>;
-  }
+// Separate components for better organization
+const MessageStatusIndicator: FC<{ status: MessageStatus }> = ({ status }) => {
+  const statusIcons: Record<MessageStatus, JSX.Element> = {
+    sending: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+    sent: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    ),
+    delivered: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    ),
+    read: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M20 6L9 17l-5-5" />
+        <path d="M20 12L9 23l-5-5" />
+      </svg>
+    ),
+    error: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+    ),
+    streaming: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-pulse">
+        <circle cx="12" cy="12" r="10" />
+      </svg>
+    ),
+  };
 
-  if (message.type === 'chart' || message.type === 'dashboard' || message.type === 'error') {
+  return (
+    <div className="ml-1 text-gray-400 flex items-center">
+      {statusIcons[status] || null}
+    </div>
+  );
+};
+
+const TypingIndicator: FC = () => {
+  return (
+    <div className="flex gap-1 p-2">
+      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+    </div>
+  );
+};
+
+const SourceBadge: FC<{ source?: LLMProvider }> = ({ source }) => {
+  const badgeConfig: Record<LLMProvider, { color: string; emoji: string; label: string }> = {
+    ollama: { color: 'bg-green-500', emoji: '🟢', label: 'Local' },
+    openai: { color: 'bg-orange-500', emoji: '🟠', label: 'OpenAI' },
+    pending: { color: 'bg-gray-400', emoji: '⚪', label: 'Processing' },
+    error: { color: 'bg-red-500', emoji: '🔴', label: 'Error' },
+  };
+
+  const config = source ? badgeConfig[source] : badgeConfig.pending;
+
+  return (
+    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-white text-xs font-semibold ${config.color}`}>
+      <span>{config.emoji}</span>
+      <span>{config.label}</span>
+    </div>
+  );
+};
+
+const MessageBubble: FC<{ message: Message; isLast: boolean }> = React.memo(
+  ({ message, isLast }) => {
+    const isUser = message.role === 'USER';
+    
     return (
-      <div className="w-full max-w-3xl">
-        <VisualizationMessage
-          type={message.type}
-          data={message.content}
-        />
+      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} mb-2`}>
+        <div className={`flex items-end max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div
+            className={`
+              ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}
+              rounded-2xl px-4 py-3 ${isUser ? 'ml-2' : 'mr-2'}
+              break-words whitespace-pre-wrap shadow-sm
+              ${isLast ? 'animate-highlight' : ''}
+            `}
+          >
+            {typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}
+          </div>
+          {!isUser && message.status && <MessageStatusIndicator status={message.status} />}
+        </div>
+        
+        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+          <span>{format(message.timestamp, 'h:mm a')}</span>
+          {!isUser && <SourceBadge source={message.llmProvider} />}
+        </div>
       </div>
     );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.message.content === nextProps.message.content &&
+      prevProps.message.status === nextProps.message.status &&
+      prevProps.message.llmProvider === nextProps.message.llmProvider &&
+      prevProps.isLast === nextProps.isLast
+    );
   }
+);
 
-  return null;
-};
+MessageBubble.displayName = 'MessageBubble';
 
 const ChatInterface: FC<ChatInterfaceProps> = ({
   isOpen = true,
@@ -64,642 +157,316 @@ const ChatInterface: FC<ChatInterfaceProps> = ({
   onMouseLeave = () => {},
   initialMessages = [],
   sessionId,
-}) => {
+  showDebug = false, // Default to false for production
+}): JSX.Element => {
   const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const messageRefCallback = useCallback((node: HTMLDivElement | null, id: string) => {
-    if (node) {
-      messageRefs.current[id] = node;
-    } else {
-      delete messageRefs.current[id];
+  const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  
+  const handleSearchResultClick = useCallback((sessionId: string, messageId: string) => {
+    setShowSearch(false);
+    // TODO: Implement scroll to message
+  }, []);
+  
+  const updateCurrentSessionId = useCallback((sessionId: string | undefined) => {
+    setCurrentSessionId(sessionId);
+    if (typeof window !== 'undefined') {
+      if (sessionId) {
+        localStorage.setItem('currentChatSessionId', sessionId);
+      } else {
+        localStorage.removeItem('currentChatSessionId');
+      }
     }
   }, []);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Message status component
-  const MessageStatusIndicator = ({ status }: { status: MessageStatus }) => {
-    const getStatusIcon = () => {
-      switch (status) {
-        case 'sending':
-          return (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2v4m0 12v4m-8-8H2m20 0h-4m-1.6-6.4l-2.8 2.8m-11.2 0L4.4 7.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          );
-        case 'sent':
-          return (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          );
-        case 'delivered':
-          return (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          );
-        case 'read':
-          return (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          );
-        case 'error':
-          return (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          );
-        default:
-          return null;
-      }
-    };
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
-    return (
-      <span className="message-status" style={messageStatusStyle}>
-        {getStatusIcon()}
-      </span>
-    );
-  };
-
-  // Typing indicator component
-  const TypingIndicator = () => (
-    <div style={typingIndicatorStyle}>
-      <div className="typing-dots">
-        <span className="dot dot-1" style={typingDotStyle}></span>
-        <span className="dot dot-2" style={typingDotStyle}></span>
-        <span className="dot dot-3" style={typingDotStyle}></span>
-      </div>
-      <span className="typing-text" style={typingTextStyle}>Aria is typing</span>
-    </div>
-  );
-
-    // Move formatTime outside to prevent recreation on each render
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  // Memoize the MessageBubble component with a custom comparison function
-  const MessageBubble = React.memo(function MessageBubble({ 
-    message, 
-    isLast 
-  }: { 
-    message: Message; 
-    isLast: boolean 
-  }) {
-    const isUser = message.role === 'USER';
+  const loadChatSession = useCallback(async (sessionId: string) => {
+    if (!sessionId) return;
     
-    // Use useMemo for styles that don't need to be recreated on every render
-    const bubbleStyle = React.useMemo<React.CSSProperties>(() => ({
-      position: 'relative',
-      alignSelf: isUser ? 'flex-end' : 'flex-start',
-      maxWidth: '85%',
-      margin: '4px 0',
-      padding: '12px 16px',
-      borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-      backgroundColor: isUser ? '#3b82f6' : '#f3f4f6',
-      color: isUser ? 'white' : '#1f2937',
-      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-      transition: 'all 0.2s ease-out',
-      opacity: 1, // Always show messages as visible
-      animation: isLast ? 'fadeIn 0.3s ease-out forwards' : 'none',
-    }), [isUser, isLast]);
-
-    const timeStyle = React.useMemo<React.CSSProperties>(() => ({
-      fontSize: '0.7rem',
-      opacity: 0.7,
-      marginTop: '4px',
-      display: 'flex',
-      justifyContent: isUser ? 'flex-end' : 'flex-start',
-      alignItems: 'center',
-      gap: '4px',
-      color: isUser ? 'rgba(255, 255, 255, 0.8)' : '#9ca3af',
-    }), [isUser]);
-
-    // Only re-render if message content or status changes
-    const messageContent = React.useMemo(() => {
-      const content = typeof message.content === 'string' 
-        ? message.content 
-        : JSON.stringify(message.content);
-      return (
-        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {content}
-        </div>
-      );
-    }, [message.content]);
-
-    const messageTime = React.useMemo(() => (
-      <div style={timeStyle}>
-        {formatTime(message.timestamp)}
-        {isUser && message.status && (
-          <MessageStatusIndicator status={message.status} />
-        )}
-      </div>
-    ), [isUser, message.status, message.timestamp, timeStyle]);
-
-    return (
-      <div 
-        className={`message-bubble ${isUser ? 'user' : 'assistant'}`}
-        style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: isUser ? 'flex-end' : 'flex-start',
-          margin: '8px 0',
-          contain: 'content', // Improves rendering performance
-        }}
-      >
-        <div style={bubbleStyle}>
-          {messageContent}
-          {messageTime}
-        </div>
-      </div>
-    );
-  }, (prevProps, nextProps) => {
-    // Only re-render if these specific props change
-    return (
-      prevProps.message.content === nextProps.message.content &&
-      prevProps.message.status === nextProps.message.status &&
-      prevProps.isLast === nextProps.isLast
-    );
-  });
-
-  // Message status indicator styles
-  const messageStatusStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    marginLeft: '8px',
-    opacity: 0.7,
-  };
-
-  const typingIndicatorStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '8px 16px',
-    margin: '4px 0',
-  };
-
-  const typingTextStyle: React.CSSProperties = {
-    fontSize: '0.8rem',
-    color: '#6b7280',
-    marginLeft: '8px',
-  };
-
-  const typingDotStyle: React.CSSProperties = {
-    width: '6px',
-    height: '6px',
-    margin: '0 2px',
-    backgroundColor: '#6b7280',
-    borderRadius: '50%',
-    display: 'inline-block',
-  };
-
-  // Input container style
-  const inputContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '1rem',
-    backgroundColor: 'var(--background)',
-    borderTop: '1px solid var(--border)'
-  };
-
-  // Message content style
-  const messageContentStyle = (role: MessageRole): React.CSSProperties => ({
-    maxWidth: '85%',
-    padding: '12px 16px',
-    borderRadius: role === 'USER' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-    backgroundColor: role === 'USER' ? '#3b82f6' : '#f3f4f6',
-    color: role === 'USER' ? 'white' : '#1f2937',
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-  });
-
-  // Button styles
-  const buttonStyles: React.CSSProperties = {
-    padding: '0.5rem 1.25rem',
-    borderRadius: '9999px',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  };
-
-  const buttonDisabledStyle: React.CSSProperties = {
-    ...buttonStyles,
-    opacity: 0.7,
-    cursor: 'not-allowed',
-  };
-
-  // Add missing handler functions
-  const handleButtonHover = () => {
-    // Handle button hover effect
-  };
-
-  const handleButtonLeave = () => {
-    // Handle button leave effect
-  };
-
-  const handleButtonFocus = () => {
-    // Handle button focus
-  };
-
-  const handleButtonBlur = () => {
-    // Handle button blur
-  };
-
-  // Fetch chat sessions and messages
-  const fetchChatSessions = useCallback(async () => {
-    if (!session?.user?.email) return;
-
     try {
-      const response = await fetch('/api/chat');
-      if (!response.ok) throw new Error('Failed to fetch chat sessions');
-      const data = await response.json();
-      setChatSessions(data.sessions || []);
-
-      // If we have a sessionId but no messages, load that session
-      if (currentSessionId && messages.length === 0) {
-        await loadChatSession(currentSessionId);
-      } else if (data.sessions?.length > 0 && !currentSessionId) {
-        // Load the most recent session by default
-        await loadChatSession(data.sessions[0].id);
-      }
-    } catch (error) {
-      console.error('Error fetching chat sessions:', error);
-    }
-  }, [session, currentSessionId, messages.length]);
-
-  // Load messages for a specific chat session
-  const loadChatSession = async (sessionId: string) => {
-    try {
-      const response = await fetch(`/api/chat?chatSessionId=${sessionId}`);
-      if (!response.ok) throw new Error('Failed to fetch chat messages');
-      const data = await response.json();
+      setIsLoading(true);
+      const response = await fetch(`/api/chat/sessions/${sessionId}`);
       
-      if (data.messages && Array.isArray(data.messages)) {
-        setMessages(data.messages);
-      } else {
-        // Fallback to mock response if no messages found
-        setMessages([{
-          id: '1',
-          role: 'ASSISTANT',
-          type: 'text',
-          content: 'This is a mock response. In a real app, this would come from the API.',
-          timestamp: new Date(),
-        } as Message]);
+      if (response.ok) {
+        const data = await response.json();
+        const typedMessages: Message[] = (data.messages || []).map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        setMessages(typedMessages);
+        updateCurrentSessionId(sessionId);
+      } else if (response.status === 404) {
+        await createNewChat();
       }
     } catch (error) {
       console.error('Error loading chat session:', error);
-      // Set a default error message
-      setMessages([{
-        id: 'error-1',
-        role: 'ASSISTANT',
-        type: 'text',
-        content: 'Failed to load chat messages. Please try again later.',
-        timestamp: new Date(),
-      } as Message]);
-    }
-  };
-
-  // Create a new chat session
-  const createNewChat = async () => {
-    try {
-      setIsLoading(true);
-      // ... (rest of the code remains the same)
-    } catch (error) {
-      console.error('Error creating new chat:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [updateCurrentSessionId]);
 
-  // Handle sending a message
-  const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
+  const createNewChat = useCallback(async (initialMessage?: string) => {
+    try {
+      const response = await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: initialMessage ? initialMessage.slice(0, 30) + (initialMessage.length > 30 ? '...' : '') : 'New Chat' 
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        updateCurrentSessionId(data.id);
+        setMessages([]);
+        return data.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error creating new chat session:', error);
+      return null;
+    }
+  }, [updateCurrentSessionId]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'USER',
-      type: 'text',
-      content: inputText,
-      timestamp: new Date(),
-      status: 'sending',
-      chatSessionId: currentSessionId,
-    };
+  const handleSendMessage = useCallback(async (messageContent: string) => {
+    if (!messageContent.trim() || isLoading) return;
 
-    // Add user message to UI immediately for better UX
-    setMessages((prev => [...prev, userMessage]));
-    setIsLoading(true);
-    setIsTyping(true);
-    setInputText('');
-
-    // Create a new AbortController for this request
+    // Create abort controller for this request
     const controller = new AbortController();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     abortControllerRef.current = controller;
 
+    // Generate message IDs
+    const userMessageId = `user-${Date.now()}`;
+    const aiMessageId = `ai-${Date.now()}`;
+
+    // Create messages with proper typing
+    const userMessage: Message = {
+      id: userMessageId,
+      role: 'USER',
+      type: 'text',
+      content: messageContent,
+      timestamp: new Date(),
+      status: 'sent',
+      chatSessionId: currentSessionId || undefined,
+      llmProvider: undefined
+    };
+
+    const aiMessage: Message = {
+      id: aiMessageId,
+      role: 'ASSISTANT',
+      type: 'text',
+      content: '',
+      timestamp: new Date(),
+      status: 'sending',
+      chatSessionId: currentSessionId || undefined,
+      llmProvider: 'pending' as const
+    };
+
+    // Add messages to the chat
+    setMessages(prev => [...prev, userMessage, aiMessage]);
+    setInputText('');
+    setIsLoading(true);
+    setIsTyping(true);
+
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: inputText,
-          chatSessionId: currentSessionId,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Update the messages with the server's response
-      const aiMessage: Message = {
-        id: data.id || `ai-${Date.now()}`,
-        role: 'ASSISTANT',
-        type: 'text',
-        content: data.content || 'I apologize, but I encountered an issue processing your request.',
-        timestamp: new Date(data.timestamp || Date.now()),
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
+      await streamingSendMessage(
+        messageContent,
+        currentSessionId,
+        setMessages,
+        setIsLoading,
+        setIsTyping,
+        scrollToBottom,
+        controller,
+        aiMessageId
+      );
     } catch (error) {
-      // Don't show error if the request was aborted
-      if (error && typeof error === 'object' && 'name' in error && error.name !== 'AbortError') {
-        console.error('Error sending message:', error);
-
-        // Show error message to the user
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: 'ASSISTANT',
-          type: 'text',
-          content: 'Sorry, I encountered an error. Please try again.',
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, errorMessage]);
-      } else if (error) {
-        console.error('Request was aborted or encountered an unknown error:', error);
-      }
+      console.error('Error sending message:', error);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === aiMessageId
+            ? {
+                ...msg,
+                content: 'Sorry, there was an error processing your message. Please try again.',
+                status: 'error',
+                timestamp: new Date(),
+                llmProvider: 'error' as const
+              }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
       setIsTyping(false);
       abortControllerRef.current = null;
     }
-  };
+  }, [isLoading, currentSessionId, scrollToBottom]);
 
-  // Scroll to a specific message
-  const scrollToMessage = (messageId: string) => {
-    const messageElement = messageRefs.current[messageId];
-    if (messageElement) {
-      messageElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-      // Add highlight effect
-      messageElement.style.transition = 'background-color 0.5s ease';
-      messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-      const timer = setTimeout(() => {
-        if (messageElement) {
-          messageElement.style.backgroundColor = '';
-        }
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  };
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping, scrollToBottom]);
 
-  // Handle search result click
-  const handleSearchResultClick = (sessionId: string, messageId: string) => {
-    if (sessionId !== currentSessionId) {
-      // If the message is in a different session, switch to that session
-      setCurrentSessionId(sessionId);
-      // Wait for the session to load, then scroll to the message
-      setTimeout(() => scrollToMessage(messageId), 300);
-    } else {
-      // If in the same session, just scroll to the message
-      scrollToMessage(messageId);
+  useEffect(() => {
+    if (currentSessionId) {
+      loadChatSession(currentSessionId);
     }
-  };
+  }, [currentSessionId, loadChatSession]);
 
   return (
     <div 
-      style={{
-        position: 'fixed',
-        bottom: '1rem',
-        right: '1rem',
-        width: '400px',
-        maxHeight: '600px',
-        backgroundColor: 'white',
-        borderRadius: '0.75rem',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 50,
-        opacity: isOpen ? 1 : 0,
-        visibility: isOpen ? 'visible' : 'hidden',
-        transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
-        transition: 'opacity 0.2s ease, transform 0.2s ease, visibility 0.2s',
-      }}
+      className={`
+        fixed bottom-4 right-4 w-[400px] max-h-[600px] bg-white rounded-xl
+        shadow-2xl flex flex-col z-50 transition-all duration-200
+        ${isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible translate-y-5'}
+      `}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <style jsx global>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes highlight {
-          0% { background-color: rgba(59, 130, 246, 0.3); }
-          100% { background-color: transparent; }
-        }
-      `}</style>
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0.75rem 1rem',
-        borderBottom: '1px solid #e5e7eb',
-      }}>
-        <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>AI Health Coach</div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.25rem',
-              borderRadius: '0.375rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#4b5563',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          >
-            <Search size={18} />
-          </button>
-        </div>
+      <div className="flex justify-between items-center p-4 border-b">
+        <h2 className="font-semibold text-lg">AI Health Coach</h2>
+        <button
+          type="button"
+          onClick={() => setShowSearch(true)}
+          className="p-2 text-gray-500 hover:text-gray-700"
+          aria-label="Search messages"
+        >
+          <Search size={20} />
+        </button>
       </div>
 
+      {/* Debug Panel - Only show in development */}
+      {showDebug && (
+        <div className="p-2 bg-gray-50 border-b text-xs text-gray-600">
+        <div className="font-semibold">Debug Info:</div>
+        <div>Session: {currentSessionId || 'none'}</div>
+        <div>Messages: {messages.length}</div>
+      </div>
+      )}
+
       {/* Messages Container */}
-      <div style={{ padding: '1rem', overflowY: 'auto', flex: 1 }}>
-        {messages.map((message, index) => (
-          <div 
-            key={message.id} 
-            ref={(el) => messageRefCallback(el, message.id)}
-            style={{
-              marginBottom: index === messages.length - 1 ? 0 : '0.5rem',
-              transition: 'background-color 0.3s ease',
-            }}
-          >
-            <MessageBubble message={message} isLast={index === messages.length - 1} />
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 text-center p-4">
+            <h3 className="font-semibold mb-2">Welcome to AI Health Coach</h3>
+            <p>Send a message to get started</p>
           </div>
-        ))}
-        {isTyping && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '8px 16px',
-            margin: '4px 0',
-          }}>
-            <div style={messageContentStyle('ASSISTANT')}>
-              <TypingIndicator />
-            </div>
-          </div>
+        ) : (
+          <>
+            {messages.map((message, index) => (
+              <MessageBubble 
+                key={message.id} 
+                message={message} 
+                isLast={index === messages.length - 1} 
+              />
+            ))}
+            {isTyping && (
+              <div className="flex items-start">
+                <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                  <TypingIndicator />
+                </div>
+              </div>
+            )}
+          </>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div style={inputContainerStyle}>
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder="Message AI Health Coach..."
-          style={{
-            padding: '0.625rem 1rem',
-            paddingRight: '3.5rem',
-            borderRadius: '9999px',
-            border: '1px solid #d1d5db',
-            width: '100%',
-            fontSize: '0.9375rem',
-            lineHeight: '1.5',
-            outline: 'none',
-            transition: 'all 0.2s',
+      <div className="p-4 border-t">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (inputText.trim()) {
+              handleSendMessage(inputText);
+            }
           }}
-          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-          disabled={isLoading}
-        />
-        <div style={{
-          position: 'absolute',
-          right: '0.75rem',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          display: 'flex',
-          gap: '0.25rem',
-        }}>
-          {inputText && (
-            <button
-              onClick={() => setInputText('')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                borderRadius: '0.375rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9ca3af',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#6b7280')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
-            >
-              <X size={18} />
-            </button>
-          )}
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || !inputText.trim()}
-            style={{
-              background: isLoading || !inputText.trim() ? '#93c5fd' : '#3b82f6',
-              border: 'none',
-              cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
-              padding: '0.375rem',
-              borderRadius: '9999px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading && inputText.trim()) {
-                e.currentTarget.style.background = '#2563eb';
+          className="relative"
+        >
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Message AI Health Coach..."
+            className="w-full pl-4 pr-20 py-3 rounded-full border focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (inputText.trim()) {
+                  handleSendMessage(inputText);
+                }
               }
             }}
-            onMouseLeave={(e) => {
-              if (!isLoading && inputText.trim()) {
-                e.currentTarget.style.background = '#3b82f6';
-              }
-            }}
-          >
-            {isLoading ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
+          />
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+            {inputText && (
+              <button
+                type="button"
+                onClick={() => setInputText('')}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Clear message"
               >
-                <div
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    borderTopColor: 'white',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                  }}
-                />
-                Sending...
-              </div>
-            ) : (
-              <Send size={18} />
+                <X size={18} />
+              </button>
             )}
-          </button>
-        </div>
+            <button
+              type="submit"
+              disabled={isLoading || !inputText.trim()}
+              className={`
+                p-2 rounded-full transition-colors
+                ${isLoading || !inputText.trim() 
+                  ? 'bg-blue-300 cursor-not-allowed' 
+                  : 'bg-blue-500 hover:bg-blue-600 cursor-pointer'}
+              `}
+              aria-label="Send message"
+            >
+              {isLoading ? (
+                <Loader2 size={18} className="animate-spin text-white" />
+              ) : (
+                <Send size={18} className="text-white" />
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Search Overlay */}
-      <MessageSearch
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        currentSessionId={currentSessionId}
-        onResultClick={handleSearchResultClick}
-      />
+      {showSearch && (
+        <div className="absolute inset-0 bg-white z-10 p-4">
+          <MessageSearch
+            isOpen={showSearch}
+            onClose={() => setShowSearch(false)}
+            currentSessionId={currentSessionId}
+            onResultClick={handleSearchResultClick}
+          />
+        </div>
+      )}
+      
+      <style jsx>{`
+        @keyframes highlight {
+          0% { background-color: rgba(59, 130, 246, 0.1); }
+          100% { background-color: transparent; }
+        }
+        
+        .animate-highlight {
+          animation: highlight 2s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
