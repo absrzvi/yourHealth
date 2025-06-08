@@ -73,6 +73,7 @@ interface PrismaExtensions {
     upsert: (args: Record<string, unknown>) => Promise<AgentTaskData>;
     count: (args?: { where?: Record<string, unknown> }) => Promise<number>;
     aggregate: (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+    delete: (args: { where: { id: string } }) => Promise<AgentTaskData>;
   };
   agentKnowledge: {
     findUnique: (args: Record<string, unknown>) => Promise<AgentKnowledgeData | null>;
@@ -163,6 +164,13 @@ export class SimplifiedBillingAgent {
   }
 
   /**
+   * Check if the agent is running
+   */
+  public getRunningStatus(): boolean {
+    return this.isRunning;
+  }
+
+  /**
    * Get a task by its ID
    */
   public async getTaskById(taskId: string): Promise<TaskWithMetadata | null> {
@@ -225,6 +233,163 @@ export class SimplifiedBillingAgent {
       };
       return taskWithMetadata;
     });
+  }
+
+
+  /**
+   * Get the current queue size
+   */
+  public getQueueSize(): number {
+    return this.taskQueue.length;
+  }
+
+  /**
+   * Create a new task
+   */
+  public async createTask(taskData: {
+    taskType: string;
+    entityId: string;
+    entityType: string;
+    priority?: number;
+    metadata?: Record<string, unknown>;
+  }): Promise<TaskWithMetadata> {
+    // Create task in database
+    const task = await this.prisma.agentTask.create({
+      data: {
+        taskType: taskData.taskType,
+        entityId: taskData.entityId,
+        entityType: taskData.entityType,
+        status: AgentTaskStatus.PENDING,
+        priority: taskData.priority || 1,
+        attempts: 0,
+        maxAttempts: 5,
+        scheduledFor: new Date(),
+        metadata: taskData.metadata || {}
+      }
+    });
+    
+    // Convert to TaskWithMetadata
+    const taskWithMetadata: TaskWithMetadata = {
+      id: String(task.id),
+      taskType: task.taskType as TaskType,
+      data: { entityId: task.entityId, entityType: task.entityType },
+      status: convertTaskStatus(String(task.status)),
+      priority: Number(task.priority),
+      attempts: Number(task.attempts),
+      maxAttempts: Number(task.maxAttempts),
+      scheduledFor: task.scheduledFor instanceof Date ? task.scheduledFor : new Date(task.scheduledFor),
+      createdAt: task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt),
+      updatedAt: task.updatedAt instanceof Date ? task.updatedAt : new Date(task.updatedAt),
+      errorData: task.error ? { message: String(task.error) } : null,
+      resultData: task.result ? (typeof task.result === 'string' ? JSON.parse(String(task.result)) : task.result as Record<string, unknown>) : null,
+      metadata: (task.metadata as Record<string, unknown>) || {}
+    };
+    
+    // Add to queue if agent is running
+    if (this.isRunning) {
+      this.taskQueue.push(taskWithMetadata);
+      // Trigger queue processing
+      setTimeout(() => this.processQueue(), 100);
+    }
+    
+    return taskWithMetadata;
+  }
+
+  /**
+   * Retry a failed task
+   */
+  public async retryTask(taskId: string): Promise<TaskWithMetadata | null> {
+    // Get the task
+    const task = await this.getTaskById(taskId);
+    
+    if (!task) {
+      return null;
+    }
+    
+    // Only retry failed tasks
+    if (task.status !== AgentTaskStatus.FAILED) {
+      throw new Error(`Cannot retry task with status: ${task.status}`);
+    }
+    
+    // Update task in database
+    const updatedTask = await this.prisma.agentTask.update({
+      where: { id: taskId },
+      data: {
+        status: AgentTaskStatus.PENDING,
+        attempts: 0, // Reset attempts
+        scheduledFor: new Date(), // Schedule for immediate execution
+        error: null // Clear previous error
+      }
+    });
+    
+    // Convert to TaskWithMetadata
+    const taskWithMetadata: TaskWithMetadata = {
+      id: String(updatedTask.id),
+      taskType: updatedTask.taskType as TaskType,
+      data: { entityId: updatedTask.entityId, entityType: updatedTask.entityType },
+      status: convertTaskStatus(String(updatedTask.status)),
+      priority: Number(updatedTask.priority),
+      attempts: Number(updatedTask.attempts),
+      maxAttempts: Number(updatedTask.maxAttempts),
+      scheduledFor: updatedTask.scheduledFor instanceof Date ? updatedTask.scheduledFor : new Date(updatedTask.scheduledFor),
+      createdAt: updatedTask.createdAt instanceof Date ? updatedTask.createdAt : new Date(updatedTask.createdAt),
+      updatedAt: updatedTask.updatedAt instanceof Date ? updatedTask.updatedAt : new Date(updatedTask.updatedAt),
+      errorData: updatedTask.error ? { message: String(updatedTask.error) } : null,
+      resultData: updatedTask.result ? (typeof updatedTask.result === 'string' ? JSON.parse(String(updatedTask.result)) : updatedTask.result as Record<string, unknown>) : null,
+      metadata: (updatedTask.metadata as Record<string, unknown>) || {}
+    };
+    
+    // Add to queue if agent is running
+    if (this.isRunning) {
+      this.taskQueue.push(taskWithMetadata);
+      // Trigger queue processing
+      setTimeout(() => this.processQueue(), 100);
+    }
+    
+    return taskWithMetadata;
+  }
+
+  /**
+   * Delete a task
+   */
+  public async deleteTask(taskId: string): Promise<boolean> {
+    try {
+      // Check if task exists
+      const task = await this.getTaskById(taskId);
+      
+      if (!task) {
+        return false;
+      }
+      
+      // Remove from queue if present
+      this.taskQueue = this.taskQueue.filter(t => t.id !== taskId);
+      
+      // Delete from database
+      // Using direct prisma client access since our interface doesn't expose delete
+      await this.prisma.$queryRaw`DELETE FROM AgentTask WHERE id = ${taskId}`;
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting task ${taskId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Manually trigger queue processing
+   */
+  public async triggerProcessQueue(): Promise<boolean> {
+    if (!this.isRunning) {
+      throw new Error('Cannot process queue when agent is not running');
+    }
+    
+    // Reload tasks from database to ensure we have the latest state
+    await this.loadTasksFromDatabase();
+    
+    // Trigger queue processing
+    setTimeout(() => this.processQueue(), 100);
+    
+    return true;
   }
 
   /**
