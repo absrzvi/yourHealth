@@ -843,6 +843,18 @@
 
 ## 5.4 Insurance Claims Automation: New Features & Enhancements (from updated insurance-claims.md)
 
+### Billing Agent Module
+- [x] Fix TypeScript errors in SimplifiedBillingAgent.ts and taskProcessors.ts
+  - [x] Create dedicated TypeScript configuration (billing-agent-tsconfig.json) with proper settings
+  - [x] Set target to ES2015 to support private identifiers in Prisma client
+  - [x] Use NodeNext for module and moduleResolution
+  - [x] Enable skipLibCheck to avoid errors from node_modules
+- [x] Create compilation script (compile-billing-agent.mjs) using ES module syntax
+- [x] Clean up temporary files causing compilation conflicts
+- [x] Document billing agent module structure and functionality
+- [ ] Implement unit and integration tests for billing agent
+- [ ] Integrate billing agent with claims processing workflow
+
 ### Database & Schema
 - [x] Finalize and document all new/extended models: InsurancePlan, Claim, ClaimLine, ClaimEvent, EligibilityCheck, DenialPattern, ClaimStatus enum
 - [x] Add/verify new fields and relations (e.g., eligibilities on InsurancePlan, claimEvents on Claim, etc.)

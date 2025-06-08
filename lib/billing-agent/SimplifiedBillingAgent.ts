@@ -27,17 +27,20 @@ function convertTaskStatus(status: string): AgentTaskStatus {
 interface AgentTaskData {
   id: string;
   taskType: TaskType;
-  data: Record<string, unknown>;
+  entityId: string;
+  entityType: string;
   metadata?: Record<string, unknown> | null;
   status: string;
   priority: number;
   attempts: number;
   maxAttempts: number;
   scheduledFor: Date;
+  startedAt?: Date | null;
+  completedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   error?: string | null;
-  result?: string | null;
+  result?: Record<string, unknown> | null;
 }
 
 // Define interfaces for knowledge data structure
@@ -173,7 +176,7 @@ export class SimplifiedBillingAgent {
     const taskWithMetadata: TaskWithMetadata = {
       id: String(task.id),
       taskType: task.taskType as TaskType,
-      data: (task.data as Record<string, unknown>) || {},
+      data: { entityId: task.entityId, entityType: task.entityType },
       status: convertTaskStatus(String(task.status)),
       priority: Number(task.priority),
       attempts: Number(task.attempts),
@@ -182,7 +185,7 @@ export class SimplifiedBillingAgent {
       createdAt: task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt),
       updatedAt: task.updatedAt instanceof Date ? task.updatedAt : new Date(task.updatedAt),
       errorData: task.error ? { message: String(task.error) } : null,
-      resultData: task.result ? (typeof task.result === 'string' ? JSON.parse(task.result) : task.result as Record<string, unknown>) : null,
+      resultData: task.result ? (typeof task.result === 'string' ? JSON.parse(String(task.result)) : task.result as Record<string, unknown>) : null,
       metadata: (task.metadata as Record<string, unknown>) || {}
     };
     
@@ -208,7 +211,7 @@ export class SimplifiedBillingAgent {
       const taskWithMetadata: TaskWithMetadata = {
         id: String(task.id),
         taskType: task.taskType as TaskType,
-        data: (task.data as Record<string, unknown>) || {},
+        data: { entityId: task.entityId, entityType: task.entityType },
         status: convertTaskStatus(String(task.status)),
         priority: Number(task.priority),
         attempts: Number(task.attempts),
@@ -313,7 +316,7 @@ export class SimplifiedBillingAgent {
         const taskWithMetadata: TaskWithMetadata = {
           id: String(task.id),
           taskType: task.taskType as TaskType,
-          data: (task.data as Record<string, unknown>) || {},
+          data: { entityId: task.entityId, entityType: task.entityType },
           status: convertTaskStatus(String(task.status)),
           priority: Number(task.priority),
           attempts: Number(task.attempts),
