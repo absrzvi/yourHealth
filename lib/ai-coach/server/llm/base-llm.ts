@@ -41,6 +41,7 @@ export interface LLMResponse {
   confidence?: number;
   complete: boolean;
   error?: string;
+  provider?: 'ollama' | 'openai' | 'cpu' | 'cloud' | 'mock' | 'error';
 }
 
 /**
@@ -50,6 +51,7 @@ export interface StreamChunk {
   text: string;
   isComplete: boolean;
   error?: string;
+  provider?: 'ollama' | 'openai' | 'cpu' | 'cloud' | 'mock' | 'error';
 }
 
 /**
