@@ -1,289 +1,350 @@
 /**
- * CPU-Compatible Medical LLM Implementation
+ * CPUMedicalLLM - Local LLM implementation using Ollama for fast CPU-based medical inference
  * 
- * Implements a medical LLM optimized for CPU inference without GPU requirements.
- * Uses ONNX Runtime for optimal performance on CPU-only environments [PA].
+ * This module implements a local LLM interface using Ollama for fast on-device inference.
+ * It handles domain-specific medical prompting and response formatting.
+ * @module CPUMedicalLLM
  */
 
-import { BaseLLM, LLMOptions, LLMResponse, MedicalPrompt, StreamChunk } from './base-llm';
-import { CPU_MODEL_CONFIG, MEDICAL_DISCLAIMERS } from '../../shared/constants/medical-constants';
+import { BaseLLM, LLMOptions, LLMResponse, StreamChunk, MedicalPrompt as BaseMedicalPrompt } from './base-llm';
 import { MedicalDomain } from '../../shared/types/ai-coach-types';
-import path from 'path';
+import { 
+  checkOllamaAvailability, 
+  generateOllamaCompletion, 
+  listOllamaModels, 
+  streamOllamaCompletion
+} from './ollama-connector';
 
-// Mock imports for now - these would be replaced with actual implementations
-// Using dependency minimalism principle to avoid heavy dependencies until needed [DM]
-type TokenizerType = object; // Replace with actual tokenizer type if known
-type OnnxSessionType = object; // Replace with actual ONNX session type if known
-type ModelType = object; // Replace with actual model type if known
+// Simple logger implementation
+const logger = {
+  info: (message: string) => console.log(`[CPUMedicalLLM] INFO: ${message}`),
+  error: (message: string, error?: Error | unknown) => console.error(`[CPUMedicalLLM] ERROR: ${message}`, error || ''),
+  warn: (message: string) => console.warn(`[CPUMedicalLLM] WARN: ${message}`),
+  debug: (message: string) => console.debug(`[CPUMedicalLLM] DEBUG: ${message}`),
+};
+
+/**
+ * Default CPU model configuration for medical LLM
+ */
+const CPU_MODEL_CONFIG = {
+  modelName: 'cpu-medical-llm',
+  ollamaModelName: 'llama2:latest',
+  contextWindow: 4096,
+  embeddingDimensions: 768,
+  temperature: 0.7,
+  maxTokens: 1024,
+  systemPrompt: 'You are a knowledgeable assistant providing general health information. Always provide helpful but responsible health guidance.',
+};
+
+/**
+ * Standard medical disclaimers to include in prompts
+ */
+const MEDICAL_DISCLAIMERS = {
+  GENERAL: 'IMPORTANT: The information provided should not be considered medical advice. Always consult with a qualified healthcare provider for diagnosis and treatment.',
+  EMERGENCY: 'In case of medical emergency, call emergency services immediately.',
+  MEDICATION: 'Do not start, stop, or change any medication regimen without consulting your healthcare provider.',
+  ACCURACY: 'While I strive to provide accurate information, medical knowledge evolves rapidly, and I may not have the most current information.'
+};
 
 /**
  * CPUMedicalLLM - Optimized for medical inference on CPU hardware
+ * Now integrates with local Ollama API for optimized inference
  */
 export class CPUMedicalLLM extends BaseLLM {
-  private modelPath: string;
-  private tokenizer: TokenizerType | null;
-  private session: OnnxSessionType | null;
-  private isLoaded: boolean;
-  private loadPromise: Promise<void> | null;
+  private readonly ollamaModelName: string;
+  private availabilityCache: boolean | null = null;
+  private checkPromise: Promise<boolean> | null = null;
   private medicalDomainContext: Record<MedicalDomain, string>;
   
   /**
-   * Initialize the CPU-optimized medical LLM
+   * Initialize the Ollama-based medical LLM
+   * @param modelName The display name for the model
+   * @param options Additional options for the LLM
    */
-  constructor(
-    modelName: string = CPU_MODEL_CONFIG.MEDICAL_LLM.MODEL_NAME,
-    modelPath?: string
-  ) {
+  constructor(modelName: string = CPU_MODEL_CONFIG.modelName, options?: LLMOptions & { ollamaModelName?: string }) {
+    // Initialize base class with model name and default options
     super(modelName, {
-      temperature: CPU_MODEL_CONFIG.MEDICAL_LLM.TEMPERATURE,
-      maxTokens: CPU_MODEL_CONFIG.MEDICAL_LLM.MAX_LENGTH,
+      temperature: CPU_MODEL_CONFIG.temperature,
+      maxTokens: CPU_MODEL_CONFIG.maxTokens,
+      ...options
     });
     
-    this.modelPath = modelPath || path.join(process.cwd(), 'data', 'models', modelName);
-    this.tokenizer = null;
-    this.session = null;
-    this.isLoaded = false;
-    this.loadPromise = null;
+    // Set the Ollama model name (used for API calls)
+    this.ollamaModelName = options?.ollamaModelName || CPU_MODEL_CONFIG.ollamaModelName;
     
     // Initialize domain-specific context for prompt enhancement
     this.medicalDomainContext = this.initializeDomainContext();
     
-    // Set environment variables for CPU optimization
-    this.configureEnvironment();
+    // Check Ollama availability on initialization
+    this.checkAvailability().catch(err => {
+      logger.error('Failed to check Ollama availability during initialization', err);
+    });
+    
+    logger.info(`CPUMedicalLLM initialized with Ollama model: ${this.ollamaModelName}`);
   }
   
   /**
-   * Complete a prompt with the LLM
-   * This implementation includes medical safety features [SFT]
+   * Initialize domain-specific context for healthcare domains
+   * This enriches prompts with relevant medical context
    */
-  async complete(prompt: string | MedicalPrompt, options?: LLMOptions): Promise<LLMResponse> {
-    const mergedOptions = { ...this.defaultOptions, ...options };
-    const startTime = Date.now();
-    
-    try {
-      // Ensure model is loaded
-      await this.ensureModelLoaded();
-      
-      // Format medical prompt with safety considerations
-      const formattedPrompt = this.formatEnhancedMedicalPrompt(prompt);
-      
-      // For now, return a placeholder response since this is just the skeleton implementation
-      // In a real implementation, we would:
-      // 1. Tokenize the input with this.tokenizer
-      // 2. Run inference with this.session
-      // 3. Decode the output tokens to text
-      
-      const responseText = this.mockInference(formattedPrompt, mergedOptions);
-      const latencyMs = Date.now() - startTime;
-      
-      return {
-        text: responseText,
-        modelName: this.modelName,
-        tokensUsed: this.estimateTokens(formattedPrompt) + this.estimateTokens(responseText),
-        latencyMs,
-        confidence: 0.85, // Placeholder confidence score
-        complete: true
-      };
-    } catch (error) {
-      console.error('CPU Medical LLM inference error:', error);
-      return {
-        text: '',
-        modelName: this.modelName,
-        complete: false,
-        error: error instanceof Error ? error.message : 'Unknown error in LLM inference'
-      };
+  private initializeDomainContext(): Record<MedicalDomain, string> {
+    return {
+      [MedicalDomain.GENERAL]: 'You are a knowledgeable health assistant providing general health information.',
+      [MedicalDomain.CARDIOLOGY]: 'You are a cardiology information provider offering guidance on heart health.',
+      [MedicalDomain.ENDOCRINOLOGY]: 'You are an endocrinology specialist providing information on hormonal systems.',
+      [MedicalDomain.NEUROLOGY]: 'You are a neurology information provider offering guidance on brain and nervous system health.',
+      [MedicalDomain.GENETICS]: 'You are a genetics information provider explaining genetic concepts in healthcare.',
+      [MedicalDomain.NUTRITION]: 'You are a nutrition expert providing evidence-based dietary advice.',
+      [MedicalDomain.IMMUNOLOGY]: 'You are an immunology information provider explaining immune system concepts.',
+      [MedicalDomain.GASTROENTEROLOGY]: 'You are a gastroenterology information provider offering guidance on digestive health.',
+      [MedicalDomain.LABORATORY]: 'You are a medical lab information provider helping interpret basic lab results.',
+      [MedicalDomain.PHARMACOLOGY]: 'You are a pharmacology information provider explaining medication concepts.',
+      [MedicalDomain.MICROBIOME]: 'You are a microbiome specialist providing information on gut health and microorganisms.',
+    };
+  }
+  
+  /**
+   * Check if Ollama is available and the needed model exists
+   * Caches the result to avoid redundant checks
+   */
+  async checkAvailability(): Promise<boolean> {
+    // Return cached result if available
+    if (this.availabilityCache !== null) {
+      return this.availabilityCache;
     }
-  }
-  
-  /**
-   * Stream a response for a given prompt
-   */
-  async *stream(
-    prompt: string | MedicalPrompt,
-    options?: LLMOptions,
-    onChunk?: (chunk: StreamChunk) => void
-  ): AsyncGenerator<StreamChunk> {
-    const mergedOptions = { ...this.defaultOptions, ...options, streaming: true };
     
-    try {
-      // Ensure model is loaded
-      await this.ensureModelLoaded();
-      
-      // Format medical prompt with safety considerations
-      const formattedPrompt = this.formatEnhancedMedicalPrompt(prompt);
-      
-      // For demonstration, we'll simulate streaming with chunks
-      // In a real implementation, we would generate tokens one by one
-      
-      const mockResponse = this.mockInference(formattedPrompt, mergedOptions);
-      const chunks = this.simulateStreamingChunks(mockResponse);
-      
-      for (const chunkText of chunks) {
-        const chunk: StreamChunk = {
-          text: chunkText,
-          isComplete: chunkText === chunks[chunks.length - 1]
-        };
+    // Return existing promise if already checking
+    if (this.checkPromise) {
+      return this.checkPromise;
+    }
+    
+    // Create and cache the promise
+    this.checkPromise = (async () => {
+      try {
+        logger.info(`Checking Ollama availability for model: ${this.ollamaModelName}`);
         
-        if (onChunk) {
-          onChunk(chunk);
+        // First check if Ollama server is available
+        const isServerAvailable = await checkOllamaAvailability();
+        
+        if (!isServerAvailable) {
+          logger.warn('Ollama server is not available');
+          this.availabilityCache = false;
+          return false;
         }
         
-        yield chunk;
+        // Then check if the requested model is available
+        const models = await listOllamaModels();
+        const modelExists = models.some(model => {
+          if (typeof model === 'string') {
+            return model === this.ollamaModelName || model.includes(this.ollamaModelName);
+          } else if (typeof model === 'object' && model !== null && 'name' in model) {
+            const modelName = (model as { name: string }).name;
+            return modelName === this.ollamaModelName || modelName.includes(this.ollamaModelName);
+          }
+          return false;
+        });
         
-        // Simulate streaming delay
-        await new Promise(resolve => setTimeout(resolve, 50));
+        if (!modelExists) {
+          logger.warn(`Ollama model '${this.ollamaModelName}' not found`);
+        } else {
+          logger.info(`Ollama model '${this.ollamaModelName}' is available`);
+        }
+        
+        this.availabilityCache = modelExists;
+        return modelExists;
+      } catch (error) {
+        logger.error('Error checking Ollama availability', error);
+        this.availabilityCache = false;
+        return false;
+      } finally {
+        // Clear the promise after completion
+        this.checkPromise = null;
       }
-    } catch (error) {
-      const errorChunk: StreamChunk = {
-        text: '',
-        isComplete: true,
-        error: error instanceof Error ? error.message : 'Unknown error during streaming'
-      };
-      
-      if (onChunk) {
-        onChunk(errorChunk);
-      }
-      
-      yield errorChunk;
-    }
+    })();
+    
+    return this.checkPromise;
   }
   
   /**
    * Format a medical prompt with domain-specific context and safety instructions
-   * Enhanced version that includes medical domain context [CA]
+   * Enhanced version that includes medical domain context
    */
-  protected formatEnhancedMedicalPrompt(prompt: string | MedicalPrompt): string {
-    if (typeof prompt === 'string') {
-      // Basic prompt formatting with general medical disclaimer
-      return `${prompt}\n\n${MEDICAL_DISCLAIMERS.GENERAL}`;
-    }
+  private formatEnhancedMedicalPrompt(prompt: string | BaseMedicalPrompt): string {
+    // Start with safe system prompt
+    let formattedPrompt = CPU_MODEL_CONFIG.systemPrompt + '\n\n';
     
-    // Start with standard formatting
-    let formattedPrompt = super.formatMedicalPrompt(prompt);
-    
-    // Add domain-specific context if available
-    if (prompt.medicalDomain && this.medicalDomainContext[prompt.medicalDomain]) {
-      formattedPrompt = `${this.medicalDomainContext[prompt.medicalDomain]}\n\n${formattedPrompt}`;
-    }
-    
-    // Add appropriate medical disclaimer
-    if (prompt.includeDisclaimer !== false) {
-      const domain = prompt.medicalDomain || 'GENERAL';
-      formattedPrompt += `\n\n${MEDICAL_DISCLAIMERS[domain as keyof typeof MEDICAL_DISCLAIMERS] || MEDICAL_DISCLAIMERS.GENERAL}`;
+    // Handle domain-specific medical context
+    if (typeof prompt !== 'string') {
+      if ('medicalDomain' in prompt && prompt.medicalDomain && this.medicalDomainContext[prompt.medicalDomain]) {
+        formattedPrompt += this.medicalDomainContext[prompt.medicalDomain] + '\n\n';
+      }
+      
+      // Add medical disclaimers
+      formattedPrompt += MEDICAL_DISCLAIMERS.GENERAL + '\n';
+      formattedPrompt += MEDICAL_DISCLAIMERS.EMERGENCY + '\n\n';
+      
+      // Add the actual user query
+      formattedPrompt += 'User Query: ' + (prompt.query || '');
+    } else {
+      // Add medical disclaimers
+      formattedPrompt += MEDICAL_DISCLAIMERS.GENERAL + '\n';
+      formattedPrompt += MEDICAL_DISCLAIMERS.EMERGENCY + '\n\n';
+      
+      // Add the actual user query
+      formattedPrompt += 'User Query: ' + prompt;
     }
     
     return formattedPrompt;
   }
   
   /**
-   * Ensure the model is loaded before inference
+   * Complete a prompt with the LLM using Ollama
+   * This implementation includes medical safety features
    */
-  private async ensureModelLoaded(): Promise<void> {
-    if (this.isLoaded) return;
+  async complete(prompt: string | BaseMedicalPrompt, options?: LLMOptions): Promise<LLMResponse> {
+    const mergedOptions = { ...this.defaultOptions, ...options };
     
-    if (!this.loadPromise) {
-      this.loadPromise = this.loadModel();
-    }
-    
-    return this.loadPromise;
-  }
-  
-  /**
-   * Load the model and tokenizer for inference
-   * ONNX Runtime provides optimized CPU inference [PA]
-   */
-  private async loadModel(): Promise<void> {
     try {
-      console.log(`Loading CPU-optimized medical model: ${this.modelName}`);
+      // Check Ollama availability
+      const isAvailable = await this.checkAvailability();
       
-      // In a real implementation, we would:
-      // 1. Load the tokenizer
-      // this.tokenizer = await import('tokenizers').then(m => 
-      //   m.Tokenizer.fromPretrained(this.modelPath + '/tokenizer'));
+      if (!isAvailable) {
+        throw new Error(`Ollama LLM service unavailable for model: ${this.ollamaModelName}`);
+      }
       
-      // 2. Create and initialize ONNX session
-      // const ort = await import('onnxruntime-node');
-      // this.session = await ort.InferenceSession.create(
-      //   this.modelPath + '/model.onnx', 
-      //   { executionProviders: ['CPUExecutionProvider'] }
-      // );
+      // Format medical prompt with safety considerations
+      const formattedPrompt = this.formatEnhancedMedicalPrompt(prompt);
       
-      // For now, we'll just set a flag indicating the model is "loaded"
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading time
+      logger.info(`Generating completion using Ollama model ${this.ollamaModelName}`);
+      logger.debug(`Estimated input tokens: ${this.estimateTokens(formattedPrompt)}`);
       
-      this.isLoaded = true;
-      console.log(`Model ${this.modelName} loaded successfully`);
+      // Send request to Ollama
+      const response = await generateOllamaCompletion({
+        model: this.ollamaModelName,
+        prompt: formattedPrompt,
+        options: {
+          temperature: mergedOptions.temperature,
+          num_predict: mergedOptions.maxTokens
+        }
+      });
+      
+      // Log completion time
+      logger.debug(`Completion generated`);
+      
+      // Calculate token usage (input + output)
+      const tokensUsed = this.estimateTokens(formattedPrompt) + this.estimateTokens(response.response);
+      
+      return {
+        text: response.response,
+        modelName: this.modelName,
+        tokensUsed: tokensUsed,
+        latencyMs: 0, // Latency tracking removed
+        confidence: 0.85, // Default confidence for local model
+        provider: 'ollama',
+        complete: true
+      };
+      
     } catch (error) {
-      console.error('Failed to load CPU medical model:', error);
-      throw new Error(`Failed to load model ${this.modelName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      this.loadPromise = null;
+      // Log the error and return an error response
+      logger.error('Error in CPUMedicalLLM.complete', error);
+      
+      return {
+        text: 'There was an error processing your request with the local medical model. Please try again later.',
+        modelName: this.modelName,
+        confidence: 0,
+        latencyMs: 0, // Latency tracking removed
+        error: error instanceof Error ? error.message : String(error),
+        provider: 'error',
+        complete: true,
+        tokensUsed: 0
+      };
     }
   }
   
   /**
-   * Configure environment for optimal CPU inference performance [PA]
+   * Stream a response for a given prompt using Ollama
+   * Implements streaming via Ollama's streaming API
    */
-  private configureEnvironment(): void {
-    // Set thread count for optimal CPU performance
-    process.env.OMP_NUM_THREADS = CPU_MODEL_CONFIG.ONNX_RUNTIME.THREADS.toString();
-    process.env.MKL_NUM_THREADS = CPU_MODEL_CONFIG.ONNX_RUNTIME.THREADS.toString();
+  async *stream(
+    prompt: string | BaseMedicalPrompt,
+    options?: LLMOptions,
+    onChunk?: (chunk: StreamChunk) => void
+  ): AsyncGenerator<StreamChunk> {
+    const mergedOptions = { ...this.defaultOptions, ...options };
     
-    // Disable CUDA to ensure CPU-only operation
-    process.env.CUDA_VISIBLE_DEVICES = '';
-  }
-  
-  /**
-   * Create domain-specific medical context for enriching prompts
-   */
-  private initializeDomainContext(): Record<MedicalDomain, string> {
-    return {
-      [MedicalDomain.GENERAL]: 'You are a medical AI assistant providing general health information.',
-      [MedicalDomain.CARDIOLOGY]: 'You are a medical AI assistant with expertise in cardiology, focusing on heart health and cardiovascular conditions.',
-      [MedicalDomain.ENDOCRINOLOGY]: 'You are a medical AI assistant with expertise in endocrinology, focusing on hormones and metabolic conditions.',
-      [MedicalDomain.NEUROLOGY]: 'You are a medical AI assistant with expertise in neurology, focusing on the nervous system and neurological conditions.',
-      [MedicalDomain.GENETICS]: 'You are a medical AI assistant with expertise in medical genetics, focusing on genetic conditions and hereditary factors.',
-      [MedicalDomain.NUTRITION]: 'You are a medical AI assistant with expertise in clinical nutrition, focusing on dietary needs and nutritional health.',
-      [MedicalDomain.IMMUNOLOGY]: 'You are a medical AI assistant with expertise in immunology, focusing on immune system function and disorders.',
-      [MedicalDomain.GASTROENTEROLOGY]: 'You are a medical AI assistant with expertise in gastroenterology, focusing on digestive system health.',
-      [MedicalDomain.LABORATORY]: 'You are a medical AI assistant with expertise in laboratory medicine, focusing on interpreting medical test results.',
-      [MedicalDomain.PHARMACOLOGY]: 'You are a medical AI assistant with expertise in pharmacology, focusing on medications and their effects.',
-      [MedicalDomain.MICROBIOME]: 'You are a medical AI assistant with expertise in microbiome science, focusing on gut health and microbial communities.'
-    };
-  }
-  
-  /**
-   * Mock inference function - to be replaced with actual ONNX inference
-   * This is just for development scaffolding [CA]
-   */
-  private mockInference(prompt: string, options: LLMOptions): string {
-    const isMedicationQuery = prompt.toLowerCase().includes('medication') || prompt.toLowerCase().includes('drug');
-    const isSymptomQuery = prompt.toLowerCase().includes('symptom') || prompt.toLowerCase().includes('pain');
-    
-    // Return different mock responses based on the type of query
-    if (isMedicationQuery) {
-      return 'Based on general medical information, this medication is typically used to treat specific conditions. However, medications can have different effects for different people based on their medical history, other medications they take, and individual factors. It\'s important to consult with your healthcare provider about any medications. This information is not a substitute for professional medical advice.';
-    } else if (isSymptomQuery) {
-      return 'The symptoms you\'ve described could be associated with several different conditions. It\'s important not to self-diagnose based on this information. I recommend consulting with a healthcare professional who can conduct a proper examination and take into account your full medical history. This information is educational only and not a substitute for professional medical advice.';
-    } else {
-      return 'Based on general medical knowledge, I can provide some information on this topic. However, everyone\'s health situation is unique, and it\'s always best to consult with healthcare professionals for personalized advice. This information is for educational purposes only and not intended as medical advice.';
+    try {
+      // Check Ollama availability
+      const isAvailable = await this.checkAvailability();
+      
+      if (!isAvailable) {
+        const errorChunk: StreamChunk = {
+          text: `Ollama service or model '${this.ollamaModelName}' unavailable.`,
+          isComplete: true,
+          error: `Ollama service unavailable for model: ${this.ollamaModelName}`,
+          provider: 'error'
+        };
+        
+        if (onChunk) onChunk(errorChunk);
+        yield errorChunk;
+        return;
+      }
+      
+      // Format enhanced medical prompt
+      const formattedPrompt = this.formatEnhancedMedicalPrompt(prompt);
+      
+      logger.info(`Streaming completion using Ollama model ${this.ollamaModelName}`);
+      
+      // Stream response from Ollama
+      const ollamaOptions = {
+        model: this.ollamaModelName,
+        prompt: formattedPrompt,
+        options: {
+          temperature: mergedOptions.temperature,
+          num_predict: mergedOptions.maxTokens
+        }
+      };
+      
+      // Process streaming chunks
+      for await (const ollamaChunk of streamOllamaCompletion(ollamaOptions)) {
+        // Skip empty chunks
+        if (!ollamaChunk.response) continue;
+        
+        const streamChunk: StreamChunk = {
+          text: ollamaChunk.response,
+          isComplete: ollamaChunk.done || false,
+          provider: 'ollama'
+        };
+        
+        // Send chunk to callback if provided
+        if (onChunk) onChunk(streamChunk);
+        
+        // Yield chunk to caller
+        yield streamChunk;
+      }
+      
+      // Final chunk with complete flag if not already sent
+      const finalChunk: StreamChunk = {
+        text: '',
+        isComplete: true,
+        provider: 'ollama'
+      };
+      
+      if (onChunk) onChunk(finalChunk);
+      yield finalChunk;
+      
+    } catch (error) {
+      logger.error('Error in CPUMedicalLLM.stream', error);
+      
+      // Yield error chunk for graceful failure
+      const errorChunk: StreamChunk = {
+        text: 'There was an error processing your request with the local medical model.',
+        error: error instanceof Error ? error.message : String(error),
+        isComplete: true,
+        provider: 'error'
+      };
+      
+      if (onChunk) onChunk(errorChunk);
+      yield errorChunk;
     }
-  }
-  
-  /**
-   * Simulate streaming by breaking response into chunks
-   * For development purposes only [CA]
-   */
-  private simulateStreamingChunks(fullText: string): string[] {
-    // Break the text into words and then into chunks of words
-    const words = fullText.split(' ');
-    const chunks = [];
-    const chunkSize = 3; // Number of words per chunk
-    
-    for (let i = 0; i < words.length; i += chunkSize) {
-      chunks.push(words.slice(i, i + chunkSize).join(' '));
-    }
-    
-    return chunks;
   }
 }
