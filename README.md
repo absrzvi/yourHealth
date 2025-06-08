@@ -8,6 +8,8 @@ A modern, AI-powered health platform that helps you understand and improve your 
 - ✅ Enforced strict typing for DocumentMetadata (url/domain fields)
 - ✅ Refactored backend to ensure all metadata is type-safe and HIPAA-ready
 - ✅ Fixed all backend type errors and improved API handler compatibility
+- ✅ Fixed TypeScript errors in billing agent module with proper configuration
+- ✅ Created dedicated TypeScript configuration for billing agent compilation
 
 
 ### AI Coach & Chat
@@ -79,6 +81,7 @@ A modern, AI-powered health platform that helps you understand and improve your 
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utilities and shared logic
 │   ├── ai/               # AI integration code
+│   ├── billing-agent/     # Billing automation and task processing
 │   ├── db/               # Database utilities
 │   └── parsers/          # Data parsers
 ├── prisma/               # Database schema and migrations

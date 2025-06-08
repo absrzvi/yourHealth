@@ -7,7 +7,18 @@ const generateEdi = async (claimData: any) => {
 };
 
 const checkEligibility = async (eligibilityData: any) => {
-  return { isEligible: true, details: 'MOCK_ELIGIBILITY_DETAILS' };
+  return { 
+    isEligible: true, 
+    details: 'MOCK_ELIGIBILITY_DETAILS',
+    status: 'active',
+    deductible: 1000,
+    deductibleMet: 500,
+    outOfPocketMax: 5000,
+    outOfPocketMet: 1000,
+    copay: 20,
+    coinsurance: 0.2,
+    responseData: { raw: 'MOCK_RESPONSE_DATA' }
+  };
 };
 
 const prisma = new PrismaClient();
@@ -91,7 +102,7 @@ export async function processCreateClaimTask(task: TaskWithMetadata): Promise<an
  * Process a task to check eligibility for a claim
  */
 export async function processCheckEligibilityTask(task: TaskWithMetadata): Promise<any> {
-  const { claimId } = task.metadata;
+  const claimId = task.metadata?.claimId as string;
   
   if (!claimId) {
     throw new Error('Claim ID is required for CHECK_ELIGIBILITY task');
@@ -196,7 +207,7 @@ export async function processCheckEligibilityTask(task: TaskWithMetadata): Promi
  * Process a task to generate EDI file for a claim
  */
 export async function processGenerateEdiTask(task: TaskWithMetadata): Promise<any> {
-  const { claimId } = task.metadata;
+  const claimId = task.metadata?.claimId as string;
   
   if (!claimId) {
     throw new Error('Claim ID is required for GENERATE_EDI task');
@@ -274,7 +285,7 @@ export async function processGenerateEdiTask(task: TaskWithMetadata): Promise<an
  * Process a task to submit a claim to the clearinghouse
  */
 export async function processSubmitClaimTask(task: TaskWithMetadata): Promise<any> {
-  const { claimId } = task.metadata;
+  const claimId = task.metadata?.claimId as string;
   
   if (!claimId) {
     throw new Error('Claim ID is required for SUBMIT_CLAIM task');
@@ -290,7 +301,9 @@ export async function processSubmitClaimTask(task: TaskWithMetadata): Promise<an
     throw new Error(`Claim not found: ${claimId}`);
   }
   
-  if (!claim.ediFiles || claim.ediFiles.length === 0) {
+  // Check if EDI files exist (using metadata as a workaround)
+  const ediFiles = (claim as any).ediFiles || [];
+  if (ediFiles.length === 0) {
     throw new Error(`No EDI file found for claim: ${claimId}`);
   }
   
@@ -328,7 +341,7 @@ export async function processSubmitClaimTask(task: TaskWithMetadata): Promise<an
  * Process a task to check the status of a submitted claim
  */
 export async function processCheckStatusTask(task: TaskWithMetadata): Promise<any> {
-  const { claimId } = task.metadata;
+  const claimId = task.metadata?.claimId as string;
   
   if (!claimId) {
     throw new Error('Claim ID is required for CHECK_STATUS task');
@@ -358,12 +371,13 @@ export async function processCheckStatusTask(task: TaskWithMetadata): Promise<an
   // Determine status based on probabilities
   const random = Math.random();
   let cumulativeProbability = 0;
-  let newStatus = ClaimStatus.SUBMITTED;
+  let newStatus: ClaimStatus = ClaimStatus.SUBMITTED;
   
   for (const option of statusOptions) {
     cumulativeProbability += option.probability;
     if (random <= cumulativeProbability) {
-      newStatus = option.status;
+      // Type assertion to convert string to ClaimStatus
+      newStatus = option.status as ClaimStatus;
       break;
     }
   }
@@ -373,7 +387,8 @@ export async function processCheckStatusTask(task: TaskWithMetadata): Promise<an
     const processedDate = new Date();
     let denialReason = null;
     
-    if (newStatus === ClaimStatus.REJECTED || newStatus === ClaimStatus.DENIED) {
+    // Check if status indicates rejection or denial
+  if (newStatus === 'REJECTED' || newStatus === 'DENIED') {
       const reasons = [
         'Missing information',
         'Service not covered',
@@ -406,7 +421,8 @@ export async function processCheckStatusTask(task: TaskWithMetadata): Promise<an
     });
     
     // If denied, create a pattern in the knowledge base
-    if (newStatus === ClaimStatus.DENIED && denialReason) {
+    // Check if status indicates denial and has reason
+  if (newStatus === 'DENIED' && denialReason) {
       await prisma.denialPattern.create({
         data: {
           payerId: claim.insurancePlanId,
@@ -433,7 +449,8 @@ export async function processCheckStatusTask(task: TaskWithMetadata): Promise<an
  * Process a task to file an appeal for a denied claim
  */
 export async function processFileAppealTask(task: TaskWithMetadata): Promise<any> {
-  const { claimId, appealReason } = task.metadata;
+  const claimId = task.metadata?.claimId as string;
+  const appealReason = task.metadata?.appealReason as string;
   
   if (!claimId) {
     throw new Error('Claim ID is required for FILE_APPEAL task');
@@ -471,9 +488,9 @@ export async function processFileAppealTask(task: TaskWithMetadata): Promise<any
           eventData: { 
             source: 'BILLING_AGENT', 
             taskId: task.id,
-            appealReason,
+            appealReason: appealReason,
             appealDate: new Date().toISOString()
-          }
+          } as any // Type assertion to any to avoid Prisma JSON type issues
         }
       }
     }
