@@ -509,6 +509,58 @@
 4. All core CRUD operations, eligibility checking, and EDI generation are working
 5. The system is ready for testing and can be enhanced with the advanced features as needed
 
+## Phase 6: Billing Agent Implementation
+
+### Phase 6.1: Database Setup
+- [ ] Add schema to `prisma/schema.prisma`
+  - [ ] Create AgentTask model with fields for task type, entity ID, status, priority, etc.
+  - [ ] Create AgentKnowledge model for tracking success/failure patterns
+  - [ ] Add proper indexes and relations
+- [ ] Run migration: `npx prisma migrate dev`
+- [ ] Verify tables created in database
+
+### Phase 6.2: Core Implementation
+- [ ] Create `lib/billing-agent/SimplifiedBillingAgent.ts`
+  - [ ] Implement task queue management (add, process, prioritize)
+  - [ ] Add task processing functions (create claim, check eligibility, generate EDI, submit claim, check status, file appeal)
+  - [ ] Implement start/stop functionality
+  - [ ] Add error handling and retry logic
+  - [ ] Implement knowledge tracking (success/failure patterns)
+- [ ] Test agent can start/stop
+- [ ] Verify task processing works
+
+### Phase 6.3: API Endpoints
+- [ ] Create `/api/agent/start` endpoint
+- [ ] Create `/api/agent/stop` endpoint
+- [ ] Create `/api/agent/status` endpoint
+- [ ] Create `/api/agent/process-claim` endpoint
+- [ ] Create `/api/agent/tasks` endpoint for task monitoring
+- [ ] Test all endpoints with Postman
+
+### Phase 6.4: Frontend Integration
+- [ ] Add `AgentDashboard` component
+  - [ ] Implement agent control UI (start/stop)
+  - [ ] Add status display with queue length and task stats
+  - [ ] Create learning summary section
+- [ ] Add `TaskMonitor` component
+  - [ ] Create task list with status badges
+  - [ ] Add real-time updates
+  - [ ] Implement error display
+- [ ] Add to admin dashboard
+- [ ] Test UI updates in real-time
+
+### Phase 6.5: Testing
+- [ ] Process a test claim end-to-end
+- [ ] Verify task queue works correctly
+- [ ] Check learning/knowledge updates
+- [ ] Test error handling and retries
+
+### Phase 6.6: Optimization
+- [ ] Monitor memory usage
+- [ ] Ensure no memory leaks
+- [ ] Verify runs within 16GB RAM constraint
+- [ ] Test with multiple concurrent claims
+
 ## Future Enhancements
 
 ### AI Coach Advanced Features
