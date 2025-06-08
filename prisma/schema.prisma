@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -308,4 +308,53 @@ model Biomarker {
   @@index([name])
   @@index([category])
   @@index([status])
+}
+
+enum AgentTaskStatus {
+  PENDING
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  FAILED
+  RETRYING
+}
+
+model AgentTask {
+  id          String          @id @default(cuid())
+  taskType    String          // CREATE_CLAIM, CHECK_ELIGIBILITY, GENERATE_EDI, SUBMIT_CLAIM, CHECK_STATUS, FILE_APPEAL
+  entityId    String          // ID of the related entity (claim, report, etc.)
+  entityType  String          // Type of entity (Claim, Report, etc.)
+  status      AgentTaskStatus @default(PENDING)
+  priority    Int             @default(5) // 1-10, 1 being highest
+  attempts    Int             @default(0)
+  maxAttempts Int             @default(3)
+  scheduledFor DateTime        @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  result      Json?
+  metadata    Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  @@index([taskType])
+  @@index([entityId])
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledFor])
+}
+
+model AgentKnowledge {
+  id           String   @id @default(cuid())
+  category     String   // Task type or knowledge category
+  payerId      String   // Insurance payer ID or "GENERIC"
+  pattern      Json     // Pattern data (can include rules, examples, etc.)
+  successCount Int      @default(0)
+  failureCount Int      @default(0)
+  lastUpdated  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  
+  @@unique([category, payerId])
+  @@index([category])
+  @@index([payerId])
 }
