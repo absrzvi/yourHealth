@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Get authenticated session
     const session = await getServerSession(authOptions);
@@ -17,11 +17,11 @@ export async function GET(req: NextRequest) {
     // Fetch insurance plans for the user
     const insurancePlans = await prisma.insurancePlan.findMany({
       where: {
-        userId: userId,
-        isActive: true
+        userId: userId
+        // Removed isActive field as it doesn't exist in the schema
       },
       orderBy: {
-        isPrimary: 'desc' // Primary plans first
+        createdAt: 'desc' // Order by creation date instead of isPrimary which doesn't exist
       }
     });
 

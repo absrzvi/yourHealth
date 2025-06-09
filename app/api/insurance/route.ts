@@ -45,12 +45,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Create a copy of data without non-existent fields
+    const validData = { ...data };
+    
+    // Remove fields that don't exist in the schema
+    delete validData.isActive;
+    delete validData.isPrimary;
+    
     const newPlan = await prisma.insurancePlan.create({
       data: {
-        ...data,
+        ...validData,
         userId: session.user.id,
-        isActive: data.isActive ?? true,
-        isPrimary: data.isPrimary ?? false,
         effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : new Date(),
         expirationDate: data.expirationDate ? new Date(data.expirationDate) : null,
       },

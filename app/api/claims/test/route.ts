@@ -291,9 +291,8 @@ async function getDefaultInsurancePlan(userId: string): Promise<string> {
         payerName: 'Test Insurance Co.',
         payerId: 'TEST123',
         memberId: `MEM-${Date.now().toString().slice(-6)}`,
-        planType: 'COMMERCIAL',
-        isPrimary: true,
-        isActive: true,
+        planName: 'Standard Plan',
+        relationToInsured: 'self',
         effectiveDate: new Date(),
         groupNumber: 'GRP12345',
       },
@@ -310,3 +309,4 @@ async function getDefaultInsurancePlan(userId: string): Promise<string> {
     throw new Error(`Failed to get or create insurance plan: ${(error as Error).message}`);
   }
 }
+
