@@ -1,0 +1,856 @@
+// components/ai-coach/ChatInterface.tsx
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback, FC } from 'react';
+import { useSession } from 'next-auth/react';
+import { VisualizationMessage } from './VisualizationMessage';
+import { MessageSearch } from '../chat/MessageSearch';
+import { Search, X, Send, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { handleSendMessage as streamingSendMessage } from './handleSendMessage';
+
+type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'error';
+type MessageRole = 'USER' | 'ASSISTANT';
+
+type MessageType = 'text' | 'chart' | 'dashboard' | 'error';
+
+interface Message {
+  id: string;
+  role: MessageRole;
+  type: MessageType;
+  content: string | Record<string, any>;
+  timestamp: Date;
+  status?: MessageStatus;
+  chatSessionId?: string;
+  source?: 'ollama' | 'openai' | 'pending'; // Indicates if response is from local Ollama or OpenAI API or pending
+}
+
+interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface ChatInterfaceProps {
+  isOpen: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  initialMessages?: Message[];
+  sessionId?: string;
+}
+
+// Component to render different message types
+const MessageContent: FC<{ message: Message }> = ({ message }) => {
+  if (message.type === 'text' || typeof message.content === 'string') {
+    return <div className="message-content">{message.content as string}</div>;
+  }
+
+  if (message.type === 'chart' || message.type === 'dashboard' || message.type === 'error') {
+    return (
+      <div className="w-full max-w-3xl">
+        <VisualizationMessage
+          type={message.type}
+          data={message.content}
+        />
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const ChatInterface: FC<ChatInterfaceProps> = ({
+  isOpen = true,
+  onMouseEnter = () => {},
+  onMouseLeave = () => {},
+  initialMessages = [],
+  sessionId,
+}): JSX.Element => {
+  const { data: session } = useSession();
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  // Use localStorage to persist the current session ID across page refreshes
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(() => {
+    // Try to get from props first, then localStorage
+    if (sessionId) return sessionId;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('currentChatSessionId') || undefined;
+    }
+    return undefined;
+  });
+  
+  // Custom setter for currentSessionId that also updates localStorage
+  const updateCurrentSessionId = (sessionId: string | undefined) => {
+    console.log('Updating current session ID:', sessionId, 'Previous:', currentSessionId);
+    setCurrentSessionId(sessionId);
+    if (sessionId) {
+      localStorage.setItem('currentChatSessionId', sessionId);
+      console.log('Saved session ID to localStorage:', sessionId);
+    } else {
+      localStorage.removeItem('currentChatSessionId');
+      console.log('Removed session ID from localStorage');
+    }
+  };
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const messageRefCallback = useCallback((node: HTMLDivElement | null, id: string) => {
+    if (node) {
+      messageRefs.current[id] = node;
+    } else {
+      delete messageRefs.current[id];
+    }
+  }, []);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Message status component
+  const MessageStatusIndicator = ({ status }: { status: MessageStatus }) => {
+    const getStatusIcon = () => {
+      switch (status) {
+        case 'sending':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4m0 12v4m-8-8H2m20 0h-4m-1.6-6.4l-2.8 2.8m-11.2 0L4.4 7.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'sent':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'delivered':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'read':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        case 'error':
+          return (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <span className="message-status" style={messageStatusStyle}>
+        {getStatusIcon()}
+      </span>
+    );
+  };
+
+  // Typing indicator component
+  const TypingIndicator = () => (
+    <div style={typingIndicatorStyle}>
+      <div className="typing-dots">
+        <span className="dot dot-1" style={typingDotStyle}></span>
+        <span className="dot dot-2" style={typingDotStyle}></span>
+        <span className="dot dot-3" style={typingDotStyle}></span>
+      </div>
+      <span className="typing-text" style={typingTextStyle}>Aria is typing</span>
+    </div>
+  );
+
+    // Move formatTime outside to prevent recreation on each render
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Memoize the MessageBubble component with a custom comparison function
+  const MessageBubble = React.memo(function MessageBubble({ 
+    message, 
+    isLast 
+  }: { 
+    message: Message; 
+    isLast: boolean 
+  }) {
+    const isUser = message.role === 'USER';
+    
+    // Debug source field
+    console.log('MessageBubble rendering with source:', message.source, 'for message:', message.id);
+    
+    // Use useMemo for styles that don't need to be recreated on every render
+    const bubbleStyle = React.useMemo<React.CSSProperties>(() => ({
+      position: 'relative',
+      padding: '10px 14px',
+      borderRadius: '12px',
+      backgroundColor: isUser ? '#3b82f6' : '#f3f4f6',
+      color: isUser ? 'white' : '#111827',
+      maxWidth: '85%',
+      wordBreak: 'break-word',
+      borderBottomLeftRadius: isUser ? '12px' : '0',
+      borderBottomRightRadius: isUser ? '0' : '12px',
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+    }), [isUser]);
+
+    // Source badge style for AI responses - moved to avoid duplicate declaration
+
+    // Time display
+    const messageTimeStyle = React.useMemo<React.CSSProperties>(() => ({
+      fontSize: '0.75rem',
+      marginTop: '4px',
+      display: 'flex',
+      justifyContent: isUser ? 'flex-end' : 'flex-start',
+      alignItems: 'center',
+      gap: '4px',
+      color: isUser ? 'rgba(255, 255, 255, 0.8)' : '#9ca3af',
+    }), [isUser]);
+    
+    // Source badge style for AI responses
+    const sourceBadgeStyle = React.useMemo<React.CSSProperties>(() => {
+      // Select background color based on source
+      let bgColor = '#9ca3af'; // Default gray for pending
+      if (message.source === 'ollama') bgColor = '#4ade80'; // Green for local
+      else if (message.source === 'openai') bgColor = '#f97316'; // Orange for OpenAI
+      
+      console.log('Message source in badge style:', message.id, message.source);
+      
+      return {
+        fontSize: '0.7rem',
+        padding: '2px 8px',
+        borderRadius: '9999px',
+        fontWeight: 500,
+        marginBottom: '4px',
+        marginTop: '2px',
+        alignSelf: 'flex-start',
+        backgroundColor: bgColor,
+        color: 'white',
+        display: 'inline-block', // Always show badge for debugging
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)', // Enhanced shadow
+      };
+    }, [message.source, message.id]);
+
+    // Only re-render if message content or status changes
+    const messageContent = React.useMemo(() => {
+      const content = typeof message.content === 'string' 
+        ? message.content 
+        : JSON.stringify(message.content);
+      return (
+        <div className="message-content">
+          <MessageContent message={message} />
+        </div>
+      );
+    }, [message.content, message.type]);
+
+    const messageTime = (
+      <div style={messageTimeStyle}>
+        {formatTime(message.timestamp)}
+        {message.status && (
+          <span style={{ marginLeft: '4px' }}>
+            <MessageStatusIndicator status={message.status} />
+          </span>
+        )}
+      </div>
+    );
+    
+    // Source indicator for AI responses - EXTRA PROMINENT FOR DEBUGGING
+    const sourceIndicator = !isUser && (
+      <div style={{
+        padding: '5px 12px',
+        fontSize: '1rem',
+        fontWeight: 'bold',
+        borderRadius: '8px',
+        marginBottom: '8px',
+        backgroundColor: message.source === 'ollama' ? '#4ade80' : 
+                         message.source === 'openai' ? '#f97316' : 
+                         '#9ca3af',
+        color: 'white',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+        border: '2px solid rgba(0,0,0,0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+      }}>
+        <span style={{ fontSize: '1.2rem' }}>
+          {message.source === 'ollama' ? '🟢' : 
+           message.source === 'openai' ? '🟠' : 
+           '⚪'}
+        </span>
+        <span>
+          {message.source === 'ollama' ? 'Local AI' : 
+           message.source === 'openai' ? 'OpenAI' : 
+           'Processing...'}
+        </span>
+        <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+          (source: {message.source || 'unknown'})
+        </span>
+      </div>
+    );
+
+    return (
+      <div
+        ref={node => messageRefCallback(node, message.id)}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isUser ? 'flex-end' : 'flex-start',
+          margin: '8px 0',
+          contain: 'content', // Improves rendering performance
+        }}
+      >
+        {sourceIndicator}
+        <div style={bubbleStyle}>
+          {messageContent}
+          {messageTime}
+        </div>
+      </div>
+    );
+  }, (prevProps, nextProps) => {
+    // Debug memoization comparisons
+    console.log('%c MEMO COMPARISON ', 'background: #4b0082; color: #ffffff', {
+      id: nextProps.message.id,
+      contentSame: prevProps.message.content === nextProps.message.content,
+      statusSame: prevProps.message.status === nextProps.message.status,
+      sourceSame: prevProps.message.source === nextProps.message.source,
+      prevSource: prevProps.message.source,
+      nextSource: nextProps.message.source,
+      isLastSame: prevProps.isLast === nextProps.isLast
+    });
+    
+    // IMPORTANT: Return false to always re-render for debugging
+    return false;
+    
+    // Normal memoization logic (commented out for debugging)
+    // return (
+    //   prevProps.message.content === nextProps.message.content &&
+    //   prevProps.message.status === nextProps.message.status &&
+    //   prevProps.message.source === nextProps.message.source &&
+    //   prevProps.isLast === nextProps.isLast
+    // );
+  });
+
+  // Message status indicator styles
+  const messageStatusStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    marginLeft: '8px',
+    opacity: 0.7,
+  };
+
+  const typingIndicatorStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    margin: '4px 0',
+  };
+
+  const typingTextStyle: React.CSSProperties = {
+    fontSize: '0.8rem',
+    color: '#6b7280',
+    marginLeft: '8px',
+  };
+
+  const typingDotStyle: React.CSSProperties = {
+    width: '6px',
+    height: '6px',
+    margin: '0 2px',
+    backgroundColor: '#6b7280',
+    borderRadius: '50%',
+    display: 'inline-block',
+  };
+
+  // Input container style
+  const inputContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1rem',
+    backgroundColor: 'var(--background)',
+    borderTop: '1px solid var(--border)'
+  };
+
+  // Message content style
+  const messageContentStyle = (role: MessageRole): React.CSSProperties => ({
+    maxWidth: '85%',
+    padding: '12px 16px',
+    borderRadius: role === 'USER' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+    backgroundColor: role === 'USER' ? '#3b82f6' : '#f3f4f6',
+    color: role === 'USER' ? 'white' : '#1f2937',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+  });
+
+  // Button styles
+  const buttonStyles: React.CSSProperties = {
+    padding: '0.5rem 1.25rem',
+    borderRadius: '9999px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  };
+
+  const buttonDisabledStyle: React.CSSProperties = {
+    ...buttonStyles,
+    opacity: 0.7,
+    cursor: 'not-allowed',
+  };
+
+  // Add missing handler functions
+  const handleButtonHover = () => {
+    // Handle button hover effect
+  };
+
+  const handleButtonLeave = () => {
+    // Handle button leave effect
+  };
+
+  const handleButtonFocus = () => {
+    // Handle button focus
+  };
+
+  const handleButtonBlur = () => {
+    // Handle button blur
+  };
+
+  // Load messages for a specific chat session
+  const loadChatSession = async (sessionId: string) => {
+    try {
+      // Update the current session ID with localStorage persistence
+      updateCurrentSessionId(sessionId);
+      
+      const response = await fetch(`/api/chat?chatSessionId=${sessionId}`);
+      if (!response.ok) throw new Error('Failed to fetch chat messages');
+      const data = await response.json();
+      
+      if (data.messages && Array.isArray(data.messages)) {
+        setMessages(data.messages);
+      } else {
+        // Fallback to mock response if no messages found
+        setMessages([{
+          id: '1',
+          role: 'ASSISTANT',
+          type: 'text',
+          content: 'This is a mock response. In a real app, this would come from the API.',
+          timestamp: new Date(),
+        } as Message]);
+      }
+    } catch (error) {
+      console.error('Error loading chat session:', error);
+      // Set a default error message
+      setMessages([{
+        id: 'error-1',
+        role: 'ASSISTANT',
+        type: 'text',
+        content: 'Failed to load chat messages. Please try again later.',
+        timestamp: new Date(),
+      } as Message]);
+    }
+  };
+
+  // Fetch chat sessions and messages
+  const fetchChatSessions = useCallback(async () => {
+    if (!session?.user?.email) return;
+
+    try {
+      const response = await fetch('/api/chat');
+      if (!response.ok) throw new Error('Failed to fetch chat sessions');
+      const data = await response.json();
+      setChatSessions(data.sessions || []);
+
+      console.log('Fetched chat sessions:', data.sessions, 'Current session ID:', currentSessionId);
+
+      // If we have a sessionId but no messages, load that session
+      if (currentSessionId && messages.length === 0) {
+        console.log('Loading existing session:', currentSessionId);
+        await loadChatSession(currentSessionId);
+      } else if (data.sessions?.length > 0 && !currentSessionId) {
+        // Load the most recent session by default
+        console.log('Loading most recent session:', data.sessions[0].id);
+        await loadChatSession(data.sessions[0].id);
+      } else if (!currentSessionId && data.sessions?.length === 0) {
+        // No sessions and no current session - create a clean state
+        console.log('No sessions available, starting fresh');
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error fetching chat sessions:', error);
+    }
+  }, [session, currentSessionId, messages.length]);
+
+  // Create a new chat session
+  const createNewChat = async () => {
+    try {
+      setIsLoading(true);
+      // Clear messages
+      setMessages([]);
+      // Clear current session ID - this will also remove from localStorage
+      updateCurrentSessionId(undefined);
+      // Reset input
+      setInputText('');
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle sending a message - uses our streaming-compatible handler
+  const handleSendMessage = async () => {
+    if (!inputText.trim()) return;
+    
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+    
+    await streamingSendMessage(
+      inputText,
+      currentSessionId,
+      setMessages,
+      setIsLoading,
+      setIsTyping,
+      scrollToBottom,
+      abortControllerRef
+    );
+    
+    // Clear input after sending
+    setInputText('');
+  };
+
+  // Scroll to a specific message
+  const scrollToMessage = (messageId: string) => {
+    const messageElement = messageRefs.current[messageId];
+    if (messageElement) {
+      messageElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      // Add highlight effect
+      messageElement.style.transition = 'background-color 0.5s ease';
+      messageElement.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+      const timer = setTimeout(() => {
+        if (messageElement) {
+          messageElement.style.backgroundColor = '';
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  };
+
+  // Handle search result click
+  const handleSearchResultClick = (sessionId: string, messageId: string) => {
+    if (sessionId !== currentSessionId) {
+      // If the message is in a different session, switch to that session
+      setCurrentSessionId(sessionId);
+      // Wait for the session to load, then scroll to the message
+      setTimeout(() => scrollToMessage(messageId), 300);
+    } else {
+      // If in the same session, just scroll to the message
+      scrollToMessage(messageId);
+    }
+  };
+
+return (
+  <div 
+    style={{
+      position: 'fixed',
+      bottom: '1rem',
+      right: '1rem',
+      width: '400px',
+      maxHeight: '600px',
+      backgroundColor: 'white',
+      borderRadius: '0.75rem',
+      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 50,
+      opacity: isOpen ? 1 : 0,
+      visibility: isOpen ? 'visible' : 'hidden',
+      transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
+      transition: 'opacity 0.2s ease, transform 0.2s ease, visibility 0.2s',
+    }}
+    onMouseEnter={onMouseEnter}
+    onMouseLeave={onMouseLeave}
+  >
+    <style jsx global>{`
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes highlight {
+        0% { background-color: rgba(59, 130, 246, 0.3); }
+        100% { background-color: transparent; }
+      }
+    `}</style>
+    {/* Header */}
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '0.75rem 1rem',
+      borderBottom: '1px solid #e5e7eb',
+    }}>
+      <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>AI Health Coach</div>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0.25rem',
+            borderRadius: '0.375rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#4b5563',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+        >
+          <Search size={18} />
+        </button>
+      </div>
+    </div>
+
+    {/* Debug Panel */}
+    <div style={{
+      padding: '10px',
+      backgroundColor: '#f8f9fa',
+      borderBottom: '1px solid #dee2e6',
+      fontSize: '14px',
+      fontFamily: 'monospace',
+    }}>
+      <div><strong>DEBUG INFO:</strong></div>
+      <div>Session ID: {currentSessionId || 'none'}</div>
+      <div>Messages: {messages.length}</div>
+      <div>Last message source: {messages.length > 0 && messages[messages.length-1].source}</div>
+    </div>
+
+    {/* Messages Container */}
+    <div style={{
+      flex: 1,
+      overflowY: 'auto',
+      padding: '1rem',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {messages.map((message, index) => (
+        <div 
+          key={message.id} 
+          ref={(el) => messageRefCallback(el, message.id)}
+          style={{
+            marginBottom: index === messages.length - 1 ? 0 : '0.5rem',
+            transition: 'background-color 0.3s ease',
+          }}
+        >
+          <MessageBubble message={message} isLast={index === messages.length - 1} />
+        </div>
+      ))}
+      {isTyping && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '8px 16px',
+          margin: '4px 0',
+        }}>
+          <div style={messageContentStyle('ASSISTANT')}>
+            <TypingIndicator />
+          </div>
+        </div>
+      )}
+      
+      <div ref={messagesEndRef} />
+    </div>
+
+    {/* Input */}
+    <div style={inputContainerStyle}>
+      <input
+        type="text"
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Message AI Health Coach..."
+        style={{
+          padding: '0.625rem 1rem',
+          paddingRight: '3.5rem',
+          borderRadius: '9999px',
+          border: '1px solid #d1d5db',
+          width: '100%',
+          fontSize: '0.9375rem',
+          lineHeight: '1.5',
+          outline: 'none',
+          transition: 'all 0.2s',
+        }}
+        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+        disabled={isLoading}
+      />
+        opacity: isOpen ? 1 : 0,
+        visibility: isOpen ? 'visible' : 'hidden',
+        transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
+        transition: 'opacity 0.2s ease, transform 0.2s ease, visibility 0.2s',
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <style jsx global>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes highlight {
+          0% { background-color: rgba(59, 130, 246, 0.3); }
+          100% { background-color: transparent; }
+        }
+      `}</style>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.75rem 1rem',
+        borderBottom: '1px solid #e5e7eb',
+      }}>
+        <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>AI Health Coach</div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              borderRadius: '0.375rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#4b5563',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <Search size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Container */}
+      <div style={{ padding: '1rem', overflowY: 'auto', flex: 1 }}>
+        {messages.map((message, index) => (
+          <div 
+            key={message.id} 
+            ref={(el) => messageRefCallback(el, message.id)}
+            style={{
+              marginBottom: index === messages.length - 1 ? 0 : '0.5rem',
+              transition: 'background-color 0.3s ease',
+            }}
+          >
+            <MessageBubble message={message} isLast={index === messages.length - 1} />
+          </div>
+        ))}
+        {isTyping && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '8px 16px',
+            margin: '4px 0',
+          }}>
+            <div style={messageContentStyle('ASSISTANT')}>
+              <TypingIndicator />
+            </div>
+          </div>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div style={inputContainerStyle}>
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Message AI Health Coach..."
+          style={{
+            padding: '0.625rem 1rem',
+            paddingRight: '3.5rem',
+            borderRadius: '9999px',
+            border: '1px solid #d1d5db',
+            width: '100%',
+            fontSize: '0.9375rem',
+            lineHeight: '1.5',
+            outline: 'none',
+            transition: 'all 0.2s',
+          }}
+          onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+          disabled={isLoading}
+        />
+        <div style={{
+          position: 'absolute',
+          right: '0.75rem',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          display: 'flex',
+          gap: '0.25rem',
+        }}>
+          {inputText && (
+            <button
+              onClick={() => setInputText('')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                borderRadius: '0.375rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#9ca3af',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#6b7280')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
+            >
+              <X size={18} />
+            </button>
+          )}
+          <button
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputText.trim()}
+            style={{
+              background: isLoading || !inputText.trim() ? '#93c5fd' : '#3b82f6',
+              border: 'none',
+              cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
+              padding: '0.375rem',
+              borderRadius: '9999px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Search Overlay */}
+      <MessageSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        currentSessionId={currentSessionId}
+        onResultClick={handleSearchResultClick}
+      />
+    </div>
+  );
+};
+
+export default ChatInterface;

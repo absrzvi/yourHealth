@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { EligibilityChecker } from '../../../../lib/claims/eligibility/checker';
+import { EnhancedEligibilityChecker } from '../../../../lib/claims/eligibility/enhanced-checker';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
+import { logger } from '../../../../lib/logger';
 
 const prisma = new PrismaClient();
 // Status is a string in the model, not an enum
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Extract request data
-    const { insurancePlanId, serviceDate, forceRefresh = false, serviceCode, claimId } = await req.json();
+    const { insurancePlanId, serviceDate, serviceCode, claimId } = await req.json();
     
     // Validate required fields
     if (!insurancePlanId) {
@@ -41,12 +42,8 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
     
-    // Initialize eligibility checker
-    const eligibilityChecker = new EligibilityChecker({
-      prisma,
-      cacheType: 'memory',
-      cacheOptions: { ttl: 3600 } // 1 hour TTL
-    });
+    // Initialize enhanced eligibility checker
+    const eligibilityChecker = new EnhancedEligibilityChecker();
     
     // Parse service date if provided
     let parsedServiceDate: Date | undefined;
@@ -60,22 +57,24 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Perform eligibility check
-    const eligibilityResult = await eligibilityChecker.checkEligibility(
-      insurancePlan.memberId,
-      {
-        forceRefresh,
-        serviceDate: parsedServiceDate,
-        context: { serviceCode }
-      }
-    );
+    // Perform enhanced eligibility check
+    const eligibilityResult = await eligibilityChecker.checkEligibility(insurancePlanId);
+    
+    // Determine if eligible based on status
+    const isEligible = eligibilityResult.status === 'active';
     
     // Create an eligibility check record
     const eligibilityCheck = await prisma.eligibilityCheck.create({
       data: {
-        status: eligibilityResult.isEligible ? 'ELIGIBLE' : 'INELIGIBLE',
+        status: isEligible ? 'ELIGIBLE' : 'INELIGIBLE',
         responseData: eligibilityResult as unknown as Prisma.InputJsonValue,
         checkedAt: new Date(),
+        deductible: eligibilityResult.deductible,
+        deductibleMet: eligibilityResult.deductibleMet,
+        outOfPocketMax: eligibilityResult.outOfPocketMax,
+        outOfPocketMet: eligibilityResult.outOfPocketMet,
+        copay: eligibilityResult.copay,
+        coinsurance: eligibilityResult.coinsurance,
         insurancePlan: {
           connect: { id: insurancePlanId }
         },
@@ -95,7 +94,8 @@ export async function POST(req: NextRequest) {
           eventType: 'eligibility_checked',
           eventData: { 
             eligibilityCheckId: eligibilityCheck.id,
-            isEligible: eligibilityResult.isEligible,
+            isEligible: isEligible,
+            status: eligibilityResult.status,
             serviceDate: parsedServiceDate?.toISOString() || new Date().toISOString(),
             serviceCode
           },
@@ -108,17 +108,32 @@ export async function POST(req: NextRequest) {
       console.log('Skipping claim event creation - no valid claimId provided');
     }
     
+    // Calculate patient responsibility for a sample charge
+    const sampleCharge = 500; // Example charge amount
+    const patientResponsibility = eligibilityChecker.calculatePatientResponsibility(
+      eligibilityResult,
+      sampleCharge
+    );
+
     // Return eligibility result to client
     return NextResponse.json({
-      isEligible: eligibilityResult.isEligible,
-      coverage: eligibilityResult.coverage,
-      plan: eligibilityResult.plan,
+      isEligible: isEligible,
+      status: eligibilityResult.status,
+      coverage: {
+        deductible: eligibilityResult.deductible,
+        deductibleMet: eligibilityResult.deductibleMet,
+        outOfPocketMax: eligibilityResult.outOfPocketMax,
+        outOfPocketMet: eligibilityResult.outOfPocketMet,
+        copay: eligibilityResult.copay,
+        coinsurance: eligibilityResult.coinsurance,
+        coverageDetails: eligibilityResult.coverageDetails
+      },
+      patientResponsibility,
       eligibilityCheckId: eligibilityCheck.id,
-      error: eligibilityResult.error,
       checkedAt: eligibilityCheck.checkedAt
     });
   } catch (error) {
-    console.error('Eligibility check failed:', error);
+    logger.error(`Eligibility check failed: ${error instanceof Error ? error.message : String(error)}`);
     return NextResponse.json({ 
       error: 'Failed to check eligibility', 
       details: error instanceof Error ? error.message : String(error) 

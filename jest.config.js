@@ -14,6 +14,9 @@ const customJestConfig = {
     '**/?(*.)+(spec|test).[jt]s?(x)',
     '**/test/**/*.test.ts' // Include our test directory
   ],
+  setupFiles: [
+    '<rootDir>/jest.polyfills.js',
+  ],
   setupFilesAfterEnv: [
     '<rootDir>/jest.setup.js',
     '<rootDir>/__tests__/setup.ts',

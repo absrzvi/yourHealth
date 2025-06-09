@@ -1,0 +1,8 @@
+{
+  "sample_date": "2024-05-01",
+  "bacteria": [
+    { "taxon": "Bacteroides", "abundance": 0.23 },
+    { "taxon": "Firmicutes", "abundance": 0.45 },
+    { "taxon": "Lactobacillus", "abundance": 0.05 }
+  ]
+}

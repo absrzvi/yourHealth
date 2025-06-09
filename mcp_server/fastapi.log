@@ -1,0 +1,286 @@
+2025-06-07 20:18:21,193 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:20:15,127 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:20:15,138 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:20:15,139 - main - INFO - OpenAI API key set
+2025-06-07 20:20:38,294 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:20:38,299 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:20:38,299 - main - INFO - OpenAI API key set
+2025-06-07 20:21:18,527 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:21:18,532 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:21:18,534 - main - INFO - OpenAI API key set
+2025-06-07 20:38:20,067 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:38:20,071 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:38:20,072 - main - INFO - OpenAI API key set
+2025-06-07 20:39:56,330 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:39:56,334 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:39:56,334 - main - INFO - OpenAI API key set
+2025-06-07 20:40:33,127 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:40:33,131 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:40:33,132 - main - INFO - OpenAI API key set
+2025-06-07 20:42:42,512 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "Hello, how are you?"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 20:42:42,919 - main - INFO - Making streaming request to Ollama...
+2025-06-07 20:42:52,491 - main - INFO - Ollama response status: 200
+2025-06-07 20:42:59,056 - main - INFO - Ollama stream completed successfully
+2025-06-07 20:42:59,057 - main - INFO - Chat stream ended
+2025-06-07 20:45:05,586 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:45:05,590 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 20:45:05,591 - main - INFO - OpenAI API key set
+2025-06-07 20:57:05,538 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:57:05,539 - main - INFO - Database support enabled
+2025-06-07 20:57:05,539 - main - INFO - HTTP client support enabled
+2025-06-07 20:57:05,540 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 20:57:05,543 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 21:05:50,279 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 21:05:50,280 - main - INFO - Database support enabled
+2025-06-07 21:05:50,280 - main - INFO - HTTP client support enabled
+2025-06-07 21:05:50,280 - main - INFO - Starting MCP-RAG AI Coach Server
+2025-06-07 21:05:50,284 - main - WARNING - No database connection string provided. Running without database.
+2025-06-07 21:05:50,284 - main - INFO - OpenAI API key set
+2025-06-07 21:08:17,083 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "Hello, how are you?"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:08:17,396 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:08:24,532 - main - INFO - Ollama response status: 200
+2025-06-07 21:08:32,458 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:08:32,464 - main - INFO - Chat stream ended
+2025-06-07 21:10:10,625 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi r u there"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:10:10,921 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:10:11,617 - main - INFO - Ollama response status: 200
+2025-06-07 21:10:14,511 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:10:14,513 - main - INFO - Chat stream ended
+2025-06-07 21:19:18,571 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi r u there"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:19:18,879 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:19:27,013 - main - INFO - Ollama response status: 200
+2025-06-07 21:19:29,012 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:19:29,023 - main - INFO - Chat stream ended
+2025-06-07 21:22:43,869 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi there"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:22:44,197 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:22:50,232 - main - INFO - Ollama response status: 200
+2025-06-07 21:22:52,746 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:22:52,751 - main - INFO - Chat stream ended
+2025-06-07 21:27:50,330 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:27:50,621 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:27:52,431 - main - INFO - Ollama response status: 200
+2025-06-07 21:27:55,216 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:27:55,224 - main - INFO - Chat stream ended
+2025-06-07 21:32:12,050 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi how are you"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:32:12,377 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:32:17,317 - main - INFO - Ollama response status: 200
+2025-06-07 21:32:21,726 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:32:21,730 - main - INFO - Chat stream ended
+2025-06-07 21:32:55,291 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:32:55,565 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:32:55,787 - main - INFO - Ollama response status: 200
+2025-06-07 21:32:59,516 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:32:59,517 - main - INFO - Chat stream ended
+2025-06-07 21:46:21,614 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:46:21,999 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:46:28,632 - main - INFO - Ollama response status: 200
+2025-06-07 21:46:34,115 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:46:34,126 - main - INFO - Chat stream ended
+2025-06-07 21:53:46,652 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 21:53:46,994 - main - INFO - Making streaming request to Ollama...
+2025-06-07 21:53:54,444 - main - INFO - Ollama response status: 200
+2025-06-07 21:53:56,874 - main - INFO - Ollama stream completed successfully
+2025-06-07 21:53:56,877 - main - INFO - Chat stream ended
+2025-06-07 22:36:39,156 - main - INFO - Sending request to Ollama with payload: {
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful health assistant named Aria."
+    },
+    {
+      "role": "user",
+      "content": "hey"
+    }
+  ],
+  "stream": true,
+  "options": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "num_ctx": 2048
+  }
+}
+2025-06-07 22:36:39,544 - main - INFO - Making streaming request to Ollama...
+2025-06-07 22:36:47,596 - main - INFO - Ollama response status: 200
+2025-06-07 22:36:49,339 - main - INFO - Ollama stream completed successfully
+2025-06-07 22:36:49,361 - main - INFO - Chat stream ended

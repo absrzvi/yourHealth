@@ -1,0 +1,110 @@
+{
+  "report_id": "VIO-2024-02-15-XYZ789",
+  "test_type": "Health_Intelligence_Test",
+  "collection_date": "2024-02-10",
+  "analysis_date": "2024-02-15",
+  "patient_info": {
+    "sample_id": "VIO789234",
+    "age": 35,
+    "gender": "female"
+  },
+  "microbiome_results": {
+    "diversity_metrics": {
+      "shannon_diversity": 3.45,
+      "simpson_diversity": 0.89,
+      "richness": 245,
+      "evenness": 0.76
+    },
+    "bacterial_composition": {
+      "phylum_level": {
+        "Firmicutes": 45.2,
+        "Bacteroidetes": 38.5,
+        "Proteobacteria": 8.3,
+        "Actinobacteria": 5.1,
+        "Verrucomicrobia": 2.9
+      },
+      "genus_level": {
+        "Bacteroides": 22.3,
+        "Faecalibacterium": 18.5,
+        "Prevotella": 12.1,
+        "Roseburia": 8.7,
+        "Bifidobacterium": 6.2,
+        "Akkermansia": 2.9,
+        "Ruminococcus": 4.5,
+        "Blautia": 3.8,
+        "Eubacterium": 2.4,
+        "Lactobacillus": 1.8
+      },
+      "species_level": {
+        "Faecalibacterium_prausnitzii": 15.2,
+        "Bacteroides_vulgatus": 8.9,
+        "Prevotella_copri": 7.3,
+        "Roseburia_intestinalis": 5.4,
+        "Bifidobacterium_longum": 3.8,
+        "Akkermansia_muciniphila": 2.9,
+        "Ruminococcus_bromii": 2.1,
+        "Bacteroides_fragilis": 1.2
+      }
+    },
+    "functional_pathways": {
+      "butyrate_production": {
+        "score": 72,
+        "status": "Optimal",
+        "pathway_abundance": 0.145
+      },
+      "lps_biosynthesis": {
+        "score": 45,
+        "status": "Needs Attention",
+        "pathway_abundance": 0.089
+      },
+      "vitamin_k2_production": {
+        "score": 68,
+        "status": "Good",
+        "pathway_abundance": 0.098
+      },
+      "b_vitamin_synthesis": {
+        "score": 55,
+        "status": "Moderate",
+        "pathway_abundance": 0.076
+      },
+      "beta_glucuronidase_activity": {
+        "score": 82,
+        "status": "High",
+        "pathway_abundance": 0.165
+      },
+      "sulfate_reduction": {
+        "score": 35,
+        "status": "Low",
+        "pathway_abundance": 0.042
+      }
+    },
+    "metabolites_detected": {
+      "short_chain_fatty_acids": {
+        "butyrate": "High",
+        "propionate": "Normal",
+        "acetate": "Normal",
+        "valerate": "Low"
+      },
+      "inflammatory_markers": {
+        "calprotectin": "Low",
+        "lactoferrin": "Normal",
+        "beta_defensin": "Normal"
+      },
+      "neurotransmitter_related": {
+        "gaba_production": "Moderate",
+        "serotonin_precursors": "Low",
+        "dopamine_metabolism": "Normal"
+      }
+    },
+    "dysbiosis_markers": {
+      "firmicutes_bacteroidetes_ratio": 1.17,
+      "pathogen_detection": {
+        "h_pylori": "Not Detected",
+        "c_difficile": "Not Detected",
+        "candida_overgrowth": "Mild"
+      },
+      "intestinal_permeability": "Moderate",
+      "inflammation_index": 3.2
+    }
+  }
+}

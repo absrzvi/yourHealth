@@ -17,6 +17,7 @@ model User {
   bloodTests        BloodTest[]        @relation("UserBloodTests")
   chatSessions      ChatSession[]
   claims            Claim[]            @relation("UserClaims")
+  claimDrafts       ClaimDraft[]       @relation("UserClaimDrafts")
   dnaSequences      DNASequence[]
   healthMetrics     HealthMetric[]
   insurancePlans    InsurancePlan[]    @relation("UserInsurancePlans")
@@ -35,6 +36,7 @@ model Report {
   createdAt  DateTime    @default(now())
   bloodTests BloodTest[] @relation("ReportBloodTests")
   claims     Claim[]     @relation("ReportClaims")
+  claimDrafts ClaimDraft[] @relation("ReportClaimDrafts")
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -144,22 +146,24 @@ enum ClaimStatus {
 }
 
 model InsurancePlan {
-  id            String   @id @default(cuid())
-  userId        String
-  payerName     String
-  payerId       String
-  memberId      String
-  groupNumber   String?
-  planType      String
-  isPrimary     Boolean  @default(true)
-  isActive      Boolean  @default(true)
-  effectiveDate DateTime
-  termDate      DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  claims        Claim[] @relation("InsurancePlanClaims")
-  eligibilities EligibilityCheck[]
-  user          User     @relation("UserInsurancePlans", fields: [userId], references: [id], onDelete: Cascade)
+  id                String             @id @default(cuid())
+  userId            String
+  payerId           String
+  payerName         String
+  planName          String?
+  memberId          String
+  groupNumber       String?
+  subscriberName    String?
+  subscriberDOB     DateTime?
+  relationToInsured String              @default("self")
+  effectiveDate     DateTime?
+  expirationDate    DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  claims            Claim[]             @relation("InsurancePlanClaims")
+  claimDrafts       ClaimDraft[]        @relation("InsurancePlanClaimDrafts")
+  eligibilities     EligibilityCheck[]
+  user              User                @relation("UserInsurancePlans", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([memberId])
@@ -182,6 +186,30 @@ model Claim {
   processedDate         DateTime?
   ediFileLocation       String?
   clearinghouseId       String?
+  
+  // New fields for EDI 837P requirements
+  placeOfService        String?
+  priorAuthNumber       String?
+  referralNumber        String?
+  admissionDate         DateTime?
+  dischargeDate         DateTime?
+  patientAccountNum     String?
+  acceptAssignment      Boolean           @default(true)
+  totalCoinsurance      Float?
+  totalDeductible       Float?
+  
+  // Provider information
+  renderingProviderNPI  String?
+  referringProviderNPI  String?
+  facilityNPI           String?
+  
+  // Additional identifiers
+  medicalRecordNumber   String?
+  
+  // Audit fields
+  ediValidatedAt        DateTime?
+  ediValidationErrors   Json?
+  
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   insurancePlan         InsurancePlan     @relation("InsurancePlanClaims", fields: [insurancePlanId], references: [id])
@@ -266,6 +294,59 @@ model EdiFile {
   claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
   
   @@index([claimId])
+}
+
+model ClaimDraft {
+  id                    String    @id @default(cuid())
+  userId                String
+  reportId              String?
+  insurancePlanId       String?
+  draftName             String?
+  draftData             Json
+  pdfParseConfidence    Float?
+  pdfParseResults       Json?
+  lastEditedSection     String?
+  completedSections     Json?
+  validationErrors      Json?
+  biomarkers            Json?
+  
+  // Patient information
+  patientFirstName      String?
+  patientLastName       String?
+  patientDOB            DateTime?
+  patientGender         String?
+  patientAddress        String?
+  patientCity           String?
+  patientState          String?
+  patientZip            String?
+  patientPhone          String?
+  
+  // Provider information
+  providerName          String?
+  providerNPI           String?
+  providerTaxId         String?
+  providerAddress       String?
+  providerCity          String?
+  providerState         String?
+  providerZip           String?
+  
+  // Specimen information
+  specimenId            String?
+  collectionDate        DateTime?
+  receivedDate          DateTime?
+  
+  // Audit fields
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  lastAutoSave          DateTime  @default(now())
+  
+  // Relations
+  user                  User      @relation("UserClaimDrafts", fields: [userId], references: [id], onDelete: Cascade)
+  report                Report?   @relation("ReportClaimDrafts", fields: [reportId], references: [id])
+  insurancePlan         InsurancePlan? @relation("InsurancePlanClaimDrafts", fields: [insurancePlanId], references: [id])
+  
+  @@index([userId])
+  @@index([reportId])
 }
 
 model BloodTest {
