@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { EDIViewer } from './EDIViewer';
+import { EDIFileStatus } from './EDIFileStatus';
 import { FileText, Loader2 } from 'lucide-react';
 
 interface Claim {
@@ -613,6 +614,17 @@ export function ClaimsList() {
                   <div>{JSON.stringify(selectedClaim.eligibilityCheck)}</div>
                 </div>
               )}
+
+              {/* EDI File Status Card */}
+              <div className="mt-6">
+                <EDIFileStatus
+                  claimId={selectedClaim.id}
+                  claimNumber={selectedClaim.claimNumber}
+                  ediFileLocation={selectedClaim.ediFileLocation}
+                  status={selectedClaim.status}
+                  onRefresh={fetchClaims}
+                />
+              </div>
 
               {selectedClaim.denialPatterns && selectedClaim.denialPatterns.length > 0 && (
                 <div className="mt-4">
