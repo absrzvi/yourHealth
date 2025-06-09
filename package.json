@@ -12,7 +12,8 @@
     "test:coverage": "jest --coverage",
     "db:seed": "node prisma/seed.js",
     "db:studio": "npx prisma studio",
-    "db:backup": "node scripts/backup-db.js"
+    "db:backup": "node scripts/backup-db.js",
+    "db:create-admin": "node scripts/run-create-admin.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -60,6 +61,7 @@
     "react": "^18.2.0",
     "react-day-picker": "^9.7.0",
     "react-dom": "^18.2.0",
+    "react-dropzone": "^14.3.8",
     "recharts": "^2.15.3",
     "redis": "^5.5.5",
     "sonner": "^2.0.4",

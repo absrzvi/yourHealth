@@ -17,6 +17,8 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       rememberMe?: boolean;  // Made optional to match User interface
+      role?: string;  // User role (ADMIN or USER)
+      active?: boolean; // User active status
     };
     rememberMe?: boolean;  // Made optional to match User interface
     expires: string;
@@ -36,6 +38,8 @@ declare module "next-auth" {
     name?: string | null;
     image?: string | null;
     rememberMe?: boolean;  // Made optional to match Session interface
+    role?: string;  // User role (ADMIN or USER)
+    active?: boolean; // User active status
   }
 
   /**
@@ -46,6 +50,8 @@ declare module "next-auth" {
     email?: string;
     name?: string | null;
     rememberMe: boolean;
+    role?: string;  // User role (ADMIN or USER)
+    active?: boolean; // User active status
     exp?: number;
     iat?: number;
     jti?: string;
@@ -83,6 +89,12 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Check if user is active
+        if (user.active === false) {
+          console.log(`Login attempt for inactive account: ${credentials.email}`);
+          return null;
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
@@ -92,6 +104,12 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Update last login time
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() }
+        });
+
         // Log the received rememberMe value from credentials
         console.log(`Authorize: Credentials received rememberMe: ${credentials.rememberMe}`);
 
@@ -99,6 +117,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          active: user.active,
           // Pass rememberMe from credentials; ensure it's a boolean
           rememberMe: String(credentials.rememberMe).toLowerCase() === 'true'
         };
@@ -113,6 +133,8 @@ export const authOptions: NextAuthOptions = {
         email: string;
         name: string | null;
         rememberMe: boolean;
+        role: string;
+        active: boolean;
         exp: number;
         sub?: string;
         [key: string]: any; // Allow other properties
@@ -154,6 +176,18 @@ export const authOptions: NextAuthOptions = {
             if (typeof token.rememberMe === 'boolean') return token.rememberMe;
             return false;
           })(),
+          // User role with explicit type checking
+          role: (() => {
+            if (typeof user.role === 'string') return user.role;
+            if (typeof token.role === 'string') return token.role;
+            return 'USER'; // Default role
+          })(),
+          // User active status with explicit type checking
+          active: (() => {
+            if (typeof user.active === 'boolean') return user.active;
+            if (typeof token.active === 'boolean') return token.active;
+            return true; // Default active status
+          })(),
           // Expiration will be set below
           exp: 0,
           // Subject (sub) with fallback to id if available
@@ -194,6 +228,10 @@ export const authOptions: NextAuthOptions = {
         name: typeof token.name === 'string' ? token.name : null,
         // Remember me flag with default to false
         rememberMe: typeof token.rememberMe === 'boolean' ? token.rememberMe : false,
+        // User role with default to USER
+        role: typeof token.role === 'string' ? token.role : 'USER',
+        // User active status with default to true
+        active: typeof token.active === 'boolean' ? token.active : true,
         // Expiration time with default to 0
         exp: typeof token.exp === 'number' ? token.exp : 0,
         // Subject (sub) with fallback to id if available
@@ -308,7 +346,9 @@ export const authOptions: NextAuthOptions = {
         email: safeToken.email,
         name: safeToken.name,
         image: safeToken.picture,
-        rememberMe: safeToken.rememberMe
+        rememberMe: safeToken.rememberMe,
+        role: safeToken.role,
+        active: safeToken.active
       };
 
       if (!session.user) {

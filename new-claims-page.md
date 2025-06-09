@@ -749,56 +749,91 @@ Add these tasks to the existing task list:
 ### Phase 6: Enhanced Claims Creation (Priority: High)
 
 #### 6.1 Database and Infrastructure
-- [ ] Update Prisma schema with new EDI fields
-- [ ] Create ClaimDraft model
-- [ ] Run database migrations
-- [ ] Update TypeScript types
+- [x] Update Prisma schema with new EDI fields
+- [x] Create ClaimDraft model
+- [x] Run database migrations
+- [x] Update TypeScript types
 
 #### 6.2 Create New Claim Page
-- [ ] Create /claims/new route
-- [ ] Implement page layout and sections
-- [ ] Add navigation from claims list
-- [ ] Style with Tailwind CSS
+- [x] Create /claims/new route
+- [x] Implement page layout and sections
+- [x] Add navigation from claims list
+- [x] Style with Tailwind CSS
 
 #### 6.3 Enhanced PDF Parsing
-- [ ] Refactor OCR logic to TypeScript
-- [ ] Add patient info extraction
-- [ ] Add provider info extraction
-- [ ] Create parse-pdf API endpoint
-- [ ] Integrate with file upload
+- [x] Refactor OCR logic to TypeScript
+- [x] Add patient info extraction
+- [x] Add provider info extraction
+- [x] Create parse-pdf API endpoint
+- [x] Integrate with file upload
 
 #### 6.4 Biomarker Table
-- [ ] Create BiomarkerTable component
-- [ ] Implement inline editing
-- [ ] Add batch operation buttons
-- [ ] Connect to code generators
-- [ ] Add charge calculations
+- [x] Create BiomarkerTable component
+- [x] Implement inline editing
+- [x] Add batch operation buttons
+- [x] Connect to code generators
+- [x] Add charge calculations
 
 #### 6.5 Form Validation
-- [ ] Create EDI validator
-- [ ] Implement real-time validation
-- [ ] Add validation UI feedback
-- [ ] Create status manager
-- [ ] Add validation summary
+- [x] Create EDI validator
+- [x] Implement real-time validation
+- [x] Add validation UI feedback
+- [x] Create status manager
+- [x] Add validation summary
 
 #### 6.6 EDI Integration
-- [ ] Update EDI generation
+- [x] Update EDI generation
 - [ ] Add preview functionality
-- [ ] Implement status updates
+- [x] Implement status updates
 - [ ] Add download options
 
 #### 6.7 Draft Management
-- [ ] Implement auto-save
-- [ ] Create drafts API
-- [ ] Add draft recovery
-- [ ] Show save status
+- [x] Implement auto-save
+- [x] Create drafts API
+- [x] Add draft recovery
+- [x] Show save status
 
 #### 6.8 Polish and Accessibility
-- [ ] Add loading states
-- [ ] Implement error boundaries
+- [x] Add loading states
+- [x] Implement error boundaries
 - [ ] Add keyboard navigation
 - [ ] Ensure ARIA compliance
 - [ ] Test responsive design
+
+### Phase 7: Claims System Enhancements (Priority: Medium)
+
+#### 7.1 Fix Routing Issues
+- [x] Fix Next.js routing conflicts between [id] and [claimId] parameters
+- [x] Standardize on one parameter name across the application
+- [x] Update all API routes to use consistent parameter naming
+
+#### 7.2 Enhanced Eligibility Checker
+- [ ] Implement real provider integrations
+- [x] Add support for real-time eligibility verification
+- [x] Implement caching mechanisms for frequent checks
+
+#### 7.3 EDI File Management
+- [x] Complete API route for EDI generation (/api/claims/generate-edi)
+- [x] Implement UI for EDI file status tracking
+- [x] Add download functionality for generated EDI files
+
+#### 7.4 Denial Pattern Tracking
+- [x] Implement DenialPredictor class with comprehensive risk analysis
+- [ ] Implement prevention rules for common denial reasons
+- [ ] Add frequency tracking for denial patterns
+- [ ] Create dashboard for monitoring denial trends
+
+#### 7.5 UI/UX Enhancements
+- [x] Improve Claims List view with better filtering and sorting
+- [x] Develop Insurance Manager interface
+- [ ] Enhance Claim Details view with more comprehensive information
+- [x] Add visual indicators for claim status and processing stage
+
+#### 7.6 TypeScript Safety Improvements
+- [x] Fix TypeScript errors in EnhancedClaimForm.tsx
+- [x] Update Biomarker interface to use required fields instead of optional ones
+- [x] Improve form state handling and biomarker selection
+- [x] Enhance UI rendering for biomarkers with proper type checks
 ```
 
 ## Summary of Key Enhancements
