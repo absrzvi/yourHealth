@@ -1,4 +1,0 @@
-name,value,unit,min,max,category,testDate,labName,confidence,flags
-Glucose,90,mg/dL,70,99,metabolic,2025-05-01,LabCorp,1.0,flag1;flag2
-Vitamin D,30,ng/mL,20,50,vitamin,2025-05-01,Quest,0.95,
-Glucose,100,mg/dL,70,99,metabolic,2025-05-01,LabCorp,1.0,
