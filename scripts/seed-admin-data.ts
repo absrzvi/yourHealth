@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, ClaimStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
