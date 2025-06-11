@@ -37,20 +37,23 @@ export function Navigation() {
             <Link href="/" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               Home
             </Link>
-            <Link href="/#how-it-works" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
+            <Link href="/how-it-works" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
               How it works
             </Link>
-            <Link href="#integrations" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
-              Integrations
+            <Link 
+              href="/claims" 
+              className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200"
+            >
+              Claims Management
             </Link>
             <Link 
               href="/providers" 
               className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200"
             >
-              AI Coach
+              AI Agents
             </Link>
-            <Link href="/approach" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
-              Our Approach
+            <Link href="/integrations" className="text-sm lg:text-base font-medium text-neutral-700 hover:text-primary transition-colors duration-200">
+              Integrations
             </Link>
             
             {status === 'authenticated' ? (
@@ -122,11 +125,11 @@ export function Navigation() {
               For Providers
             </Link>
             <Link 
-              href="/approach" 
+              href="/integrations" 
               className="block px-3 py-2 text-neutral-700 hover:text-primary"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Our Approach
+              Integrations
             </Link>
             {status === 'authenticated' ? (
               <>
@@ -145,8 +148,8 @@ export function Navigation() {
               </>
             ) : (
               <>
-                <Link href="/auth/login" className="block px-3 py-2 text-neutral-700 hover:text-primary">
-                  Login
+                <Link href="/integrations" className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary rounded-md">
+                  Integrations
                 </Link>
                 <Link href="/register" className="block px-3 py-2 text-secondary font-semibold">
                   Get Started
