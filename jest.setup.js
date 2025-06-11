@@ -1,12 +1,10 @@
-// Add TextEncoder and TextDecoder polyfills first
-const util = require('util');
-global.TextEncoder = util.TextEncoder;
-global.TextDecoder = util.TextDecoder;
+// TextEncoder and TextDecoder polyfills are now in jest.polyfills.js
 
 // Import testing library matchers
 import '@testing-library/jest-dom';
 
 // Mock Next.js router
+/* eslint-disable no-undef */
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockPrefetch = jest.fn();
@@ -46,20 +44,26 @@ jest.mock('next-auth/react', () => ({
 }));
 
 // Mock next/head
+/* eslint-disable @typescript-eslint/no-var-requires */
 jest.mock('next/head', () => {
   const React = require('react');
+  // eslint-disable-next-line react/prop-types
   return function Head(props) {
     return React.createElement(React.Fragment, null, props.children);
   };
 });
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 // Mock next/link
+/* eslint-disable @typescript-eslint/no-var-requires */
 jest.mock('next/link', () => {
   const React = require('react');
+  // eslint-disable-next-line react/prop-types
   return function MockLink(props) {
     return React.createElement('a', { ...props, href: props.href }, props.children);
   };
 });
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -95,14 +99,6 @@ afterAll(() => {
   // Cleanup after all tests
   jest.restoreAllMocks();
 });
+/* eslint-enable no-undef */
 
-// @ts-ignore
-import { ReadableStream } from 'web-streams-polyfill';
-// @ts-ignore
-if (!globalThis.ReadableStream) globalThis.ReadableStream = ReadableStream;
-// @ts-ignore
-import { Request, Response } from 'undici';
-// @ts-ignore
-if (!globalThis.Request) globalThis.Request = Request;
-// @ts-ignore
-if (!globalThis.Response) globalThis.Response = Response;
+// Web API polyfills are now in jest.polyfills.js

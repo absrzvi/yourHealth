@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2015",
+    "moduleResolution": "NodeNext",
+    "outDir": "../../dist/billing-agent",
+    "skipLibCheck": true
+  },
+  "include": [
+    "./**/*.ts"
+  ]
+}

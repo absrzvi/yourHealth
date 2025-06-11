@@ -11,6 +11,8 @@ interface AuthToken {
   iat?: number;
   jti?: string;
   rememberMe?: boolean; // Added for Remember Me functionality
+  role?: string; // User role (ADMIN or USER)
+  active?: boolean; // User active status
 }
 
 // Add debug logging in development
@@ -31,6 +33,12 @@ export async function middleware(request: NextRequest) {
     '/_error',
     '/ai-coach', // Added AI Coach to public paths
     '/demo-home' // Add the new demo home page here
+  ]
+  
+  // Admin routes that require ADMIN role
+  const adminPaths = [
+    '/admin',
+    '/api/admin'
   ]
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path))
   
@@ -113,11 +121,14 @@ export async function middleware(request: NextRequest) {
                               userIdentifierFromToken && 
                               (!storedSessionId || storedSessionId !== userIdentifierFromToken);
     
-    // Log what would have happened with the normal logic
-    const wouldInvalidate = token.rememberMe === false && 
-                           !isPublicPath && 
-                           userIdentifierFromToken && 
-                           (!storedSessionId || storedSessionId !== userIdentifierFromToken);
+    // Debug check for session validation
+    debug('Session validation check:', { 
+      rememberMe: token.rememberMe,
+      isPublicPath,
+      userIdentifierFromToken,
+      storedSessionId,
+      hasValidSession: storedSessionId === userIdentifierFromToken
+    });
     
     debug('Session validation:', { 
       isExpired, 
@@ -215,6 +226,33 @@ export async function middleware(request: NextRequest) {
     debug('Redirecting to login:', loginUrl.toString())
     return NextResponse.redirect(loginUrl)
   }
+  
+  // Check for admin routes access
+  const isAdminPath = adminPaths.some(path => pathname.startsWith(path))
+  if (isAdminPath && token.role !== 'ADMIN') {
+    debug('Non-admin user attempting to access admin route:', pathname)
+    // Redirect to dashboard with access denied message
+    const dashboardUrl = new URL('/dashboard', request.url)
+    dashboardUrl.searchParams.set('error', 'AccessDenied')
+    return NextResponse.redirect(dashboardUrl)
+  }
+  
+  // Check if user is active
+  if (token.active === false) {
+    debug('Inactive user attempting to access protected route:', pathname)
+    // Clear session and redirect to login
+    const loginUrl = new URL('/auth/login', request.url)
+    loginUrl.searchParams.set('error', 'AccountInactive')
+    
+    const response = NextResponse.redirect(loginUrl)
+    // Determine session token cookie name based on environment
+    const sessionTokenCookieName = process.env.NODE_ENV === 'production' 
+      ? '__Secure-next-auth.session-token' 
+      : 'next-auth.session-token'
+    
+    response.cookies.delete(sessionTokenCookieName)
+    return response
+  }
 
   // Check token expiration
   if (token?.exp) {
@@ -286,6 +324,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon\.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }

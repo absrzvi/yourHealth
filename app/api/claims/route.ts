@@ -1,9 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { validateClaimInput } from '@/lib/claims/validation';
+import { validateClaimInput, ClaimLineInput } from '@/lib/claims/validation';
 import { ClaimStatus } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+
+/**
+ * Helper function to get a specific claim by ID
+ * Ensures the claim belongs to the requesting user
+ */
+async function getClaimById(claimId: string, userId: string) {
+  try {
+    const claim = await prisma.claim.findFirst({
+      where: {
+        id: claimId,
+        userId: userId // Security check: ensure claim belongs to user
+      },
+      include: {
+        claimLines: {
+          orderBy: {
+            lineNumber: 'asc'
+          }
+        },
+        claimEvents: {
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        insurancePlan: true,
+        eligibilityCheck: true,
+        report: {
+          select: {
+            id: true,
+            type: true,
+            fileName: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+    
+    if (!claim) {
+      return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
+    }
+    
+    logger.info(`Retrieved claim ${claimId} for user ${userId}`);
+    return NextResponse.json(claim);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Error retrieving claim: ${errorMessage}`);
+    return NextResponse.json({ error: 'Failed to retrieve claim', details: errorMessage }, { status: 500 });
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,11 +65,16 @@ export async function GET(req: NextRequest) {
     // Get user ID from session
     const userId = session.user.id;
     
-    const url = new URL(req.url!);
+    // Check if a specific claim ID is requested
+    const claimId = req.nextUrl.searchParams.get("id");
+    if (claimId) {
+      return await getClaimById(claimId, userId);
+    }
+    
     const status = req.nextUrl.searchParams.get("status");
     
     // Base where clause always includes the user ID for security
-    let where: any = { userId };
+    const where: Record<string, unknown> = { userId };
     
     // Add status filter if provided
     if (status && Object.values(ClaimStatus).includes(status as ClaimStatus)) {
@@ -41,7 +95,9 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(claims);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch claims', details: error }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Error fetching claims: ${errorMessage}`);
+    return NextResponse.json({ error: 'Failed to fetch claims', details: errorMessage }, { status: 500 });
   }
 }
 
@@ -57,20 +113,17 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id;
     
     const data = await req.json();
-    // Defensive validation for required fields
-    const requiredFields = ['claimNumber', 'totalCharge', 'status', 'insurancePlanId'];
-    const missingFields = requiredFields.filter(f => !data[f]);
-    if (missingFields.length > 0) {
-      return NextResponse.json({ error: `Missing required fields: ${missingFields.join(', ')}` }, { status: 400 });
-    }
     
-    // Validate that insurancePlanId is not empty string
-    if (typeof data.insurancePlanId !== 'string' || !data.insurancePlanId.trim()) {
-      return NextResponse.json({ error: `Invalid insurancePlanId: must be a non-empty string` }, { status: 400 });
-    }
-    // Validate status is a valid ClaimStatus
-    if (!Object.values(ClaimStatus).includes(data.status)) {
-      return NextResponse.json({ error: `Invalid status value: ${data.status}` }, { status: 400 });
+    // Add userId to the data for validation
+    data.userId = userId;
+    
+    // Perform comprehensive validation using the enhanced validation function
+    const validationErrors = validateClaimInput(data);
+    if (validationErrors.length > 0) {
+      return NextResponse.json({ 
+        error: 'Validation failed', 
+        details: validationErrors 
+      }, { status: 400 });
     }
     
     // Verify the insurance plan belongs to the authenticated user
@@ -86,11 +139,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Insurance plan not found or does not belong to this user' }, { status: 404 });
       }
     } catch (verifyError) {
-      console.error('Error verifying insurance plan:', verifyError);
-      return NextResponse.json({ error: 'Failed to verify insurance plan', details: verifyError }, { status: 500 });
+      const errorMessage = verifyError instanceof Error ? verifyError.message : String(verifyError);
+      logger.error(`Error verifying insurance plan: ${errorMessage}`);
+      return NextResponse.json({ error: 'Failed to verify insurance plan', details: errorMessage }, { status: 500 });
     }
     
-    // Build data object with proper relations
+    // Process claim lines if they exist
+    let claimLines;
+    if (data.claimLines && Array.isArray(data.claimLines) && data.claimLines.length > 0) {
+      // Ensure each claim line has a line number
+      claimLines = data.claimLines.map((line: ClaimLineInput, index: number) => ({
+        ...line,
+        lineNumber: line.lineNumber || index + 1,
+        // Ensure service date is properly formatted
+        serviceDate: line.serviceDate ? new Date(line.serviceDate) : new Date()
+      }));
+    }
+    
+    // Define the claim data with proper typing to satisfy TypeScript
+    // Using Prisma's expected structure for claim creation
     const claimData: any = {
       user: {
         connect: {
@@ -107,19 +174,26 @@ export async function POST(req: NextRequest) {
       },
     };
     
-    // Optional fields
-    if (data.claimLines && Array.isArray(data.claimLines) && data.claimLines.length > 0) {
-      claimData.claimLines = { create: data.claimLines };
+    // Add claim lines if they exist
+    if (claimLines && claimLines.length > 0) {
+      claimData.claimLines = { create: claimLines };
     }
+    
+    // Add optional fields
     if (data.reportId) claimData.reportId = data.reportId;
+    if (data.patientId) claimData.patientId = data.patientId;
+    if (data.providerNpi) claimData.providerNpi = data.providerNpi;
+    if (data.billingProviderNpi) claimData.billingProviderNpi = data.billingProviderNpi;
+    if (data.diagnosisCodes) claimData.diagnosisCodes = data.diagnosisCodes;
+    if (data.submissionDate) claimData.submissionDate = new Date(data.submissionDate);
     
     // Log the data we're about to use for claim creation (sensitive data redacted for logs)
-    console.log('Creating claim with data:', {
-      userId: userId,
-      hasInsurancePlanConnect: !!claimData.insurancePlan,
-      claimNumber: claimData.claimNumber,
-      status: claimData.status,
-      totalCharge: claimData.totalCharge
+    logger.info('Creating claim', {
+      userId,
+      claimNumber: data.claimNumber,
+      status: data.status,
+      totalCharge: data.totalCharge,
+      claimLinesCount: claimLines?.length || 0
     });
     
     let claim;
@@ -138,30 +212,41 @@ export async function POST(req: NextRequest) {
       await prisma.claimEvent.create({
         data: {
           eventType: 'claim_created',
-          eventData: { claimNumber: claim.claimNumber },
+          eventData: { 
+            claimNumber: claim.claimNumber,
+            source: 'api',
+            timestamp: new Date().toISOString()
+          },
           claimId: claim.id,
         },
       });
-    } catch (createError: any) {
-      console.error('Error creating claim:', createError);
+      
+      logger.info(`Claim created successfully: ${claim.claimNumber}`);
+    } catch (createError) {
+      const error = createError as { code?: string; message?: string };
+      const errorMessage = error.message || 'Unknown database error';
+      logger.error(`Error creating claim: ${errorMessage}`, { code: error.code });
       
       // Check for specific database errors
-      if (createError.code) {
+      if (error.code) {
         // Handle specific Prisma error codes
-        if (createError.code === 'P2025') {
+        if (error.code === 'P2025') {
           return NextResponse.json({ error: 'Record not found - likely the insurance plan does not exist' }, { status: 404 });
-        } else if (createError.code === 'P2003') {
+        } else if (error.code === 'P2003') {
           return NextResponse.json({ error: 'Foreign key constraint failed - check that the insurance plan ID is valid' }, { status: 400 });
         }
       }
       
       return NextResponse.json({ 
         error: 'Failed to create claim', 
-        details: createError.message || 'Unknown database error' 
+        details: errorMessage
       }, { status: 500 });
     }
+    
     return NextResponse.json(claim);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create claim', details: error }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Unexpected error in claims POST: ${errorMessage}`);
+    return NextResponse.json({ error: 'Failed to create claim', details: errorMessage }, { status: 500 });
   }
 } 

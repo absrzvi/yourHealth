@@ -1,0 +1,15 @@
+﻿SAMPLE MEDICAL CLAIM
+
+Patient: John Smith
+Provider: Dr. Jane Doe
+NPI: 1234567890
+Specimen ID: SP12345
+
+Collection Date: 01/15/2023
+Report Date: 01/20/2023
+
+Test Results:
+Cholesterol: 180 mg/dL (Reference Range: <200)
+Glucose: 95 mg/dL (70-100)
+HDL: 55 mg/dL (>40)
+LDL: 110 mg/dL (<130)

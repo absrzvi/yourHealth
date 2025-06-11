@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { FileText, Upload, Loader2, Trash2, RefreshCw } from "lucide-react";
+import { FileText, Upload, Loader2, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import { format, subDays } from "date-fns";
+import { useSearchParams } from "next/navigation";
 
 import { AIWelcome } from "@/components/dashboard/AIWelcome";
 import { HealthMetrics } from "@/components/dashboard/HealthMetrics";
@@ -32,6 +33,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const searchParams = useSearchParams();
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(new Date(), 30),
     to: new Date(),
@@ -45,6 +48,14 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // Check for error parameters in URL
+    const error = searchParams.get('error');
+    if (error === 'AccessDenied') {
+      setErrorMessage('Access denied. You do not have permission to view that page.');
+    } else if (error === 'AccountInactive') {
+      setErrorMessage('Your account is inactive. Please contact an administrator.');
+    }
+    
     if (!session?.user?.id) return;
     fetch(`/api/reports?userId=${session.user.id}`)
       .then(res => res.json())
@@ -52,7 +63,7 @@ export default function DashboardPage() {
         setReports(data.reports || []);
         setLoading(false);
       });
-  }, [session]);
+  }, [session, searchParams]);
 
   if (status === "loading" || loading) return <div className="text-center py-12">Loading dashboard...</div>;
   if (!session || !session.user) return <div className="text-center py-12 text-red-600">You must be logged in to view your dashboard.</div>;
@@ -81,6 +92,13 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8 bg-background text-foreground">
+      {errorMessage && (
+        <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-lg flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-red-700">{errorMessage}</p>
+        </div>
+      )}
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-2">

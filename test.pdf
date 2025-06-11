@@ -1,0 +1,11 @@
+Patient Name: John Smith
+DOB: 01/15/1980
+Provider: Dr. Jane Wilson
+Provider NPI: 1234567890
+Specimen ID: SP12345
+Collection Date: 06/01/2025
+Biomarker: Glucose
+Value: 95
+Unit: mg/dL
+Reference Range: 70-99
+Status: Normal

@@ -26,13 +26,6 @@ export function ClaimsList() {
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
   const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
-  const [form, setForm] = useState({ 
-    claimNumber: '', 
-    totalCharge: '', 
-    status: 'DRAFT',
-    insurancePlanId: ''
-  });
-  const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [editClaimId, setEditClaimId] = useState<string | null>(null);
@@ -71,29 +64,8 @@ export function ClaimsList() {
     }
   }
 
-  // Fetch insurance plans for the dropdown
-  const fetchInsurancePlans = async () => {
-    setLoadingPlans(true);
-    try {
-      const res = await fetch('/api/insurance-plans');
-      if (!res.ok) throw new Error('Failed to fetch insurance plans');
-      const data = await res.json();
-      setInsurancePlans(data);
-      
-      // If we have plans, set the first one as default
-      if (data.length > 0) {
-        setForm(prev => ({ ...prev, insurancePlanId: data[0].id }));
-      }
-    } catch (err: any) {
-      console.error('Error loading insurance plans:', err.message);
-    } finally {
-      setLoadingPlans(false);
-    }
-  };
-
   useEffect(() => {
     fetchClaims();
-    fetchInsurancePlans();
   }, []);
 
   // Status transition map for the legend
@@ -116,42 +88,6 @@ export function ClaimsList() {
     'PAID': 'bg-green-300'
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormLoading(true);
-    setFormError(null);
-    setFormSuccess(null);
-    try {
-      const res = await fetch('/api/claims', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          claimNumber: form.claimNumber,
-          totalCharge: parseFloat(form.totalCharge),
-          status: form.status,
-          insurancePlanId: form.insurancePlanId,
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to create claim');
-      setFormSuccess('Claim created successfully!');
-      // Reset form but keep the selected insurance plan
-      setForm(prev => ({ 
-        claimNumber: '', 
-        totalCharge: '', 
-        status: 'DRAFT',
-        insurancePlanId: prev.insurancePlanId 
-      }));
-      await fetchClaims();
-    } catch (err: any) {
-      setFormError(err.message || 'Unknown error');
-    } finally {
-      setFormLoading(false);
-    }
-  };
 
   const startEdit = (claim: Claim) => {
     setEditClaimId(claim.id);
@@ -332,105 +268,6 @@ export function ClaimsList() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Claims List</h2>
-      <form onSubmit={handleFormSubmit} className="mb-8 p-4 border rounded bg-gray-50 flex flex-col gap-4 max-w-xl">
-        <div>
-          <label className="block font-medium mb-1">Claim Number</label>
-          <input
-            type="text"
-            name="claimNumber"
-            value={form.claimNumber}
-            onChange={handleFormChange}
-            className="border px-2 py-1 rounded w-full"
-            required
-          />
-        </div>
-        <div>
-          <label className="block font-medium mb-1">Total Charge</label>
-          <input
-            type="number"
-            name="totalCharge"
-            value={form.totalCharge}
-            onChange={handleFormChange}
-            className="border px-2 py-1 rounded w-full"
-            required
-            min="0"
-            step="0.01"
-          />
-        </div>
-        <div>
-          <label className="block font-medium mb-1">Status</label>
-          <select
-            name="status"
-            value={form.status}
-            onChange={handleFormChange}
-            className="border px-2 py-1 rounded w-full"
-          >
-            <option value="DRAFT">DRAFT</option>
-            <option value="READY">READY</option>
-            <option value="SUBMITTED">SUBMITTED</option>
-            <option value="ACCEPTED">ACCEPTED</option>
-            <option value="REJECTED">REJECTED</option>
-            <option value="DENIED">DENIED</option>
-            <option value="PARTIALLY_PAID">PARTIALLY PAID</option>
-            <option value="PAID">PAID</option>
-            <option value="APPEALED">APPEALED</option>
-          </select>
-        </div>
-        <div>
-          <label className="block font-medium mb-1">Insurance Plan <span className="text-red-600">*</span></label>
-          {loadingPlans ? (
-            <div className="text-gray-500 py-1">Loading plans...</div>
-          ) : insurancePlans.length === 0 ? (
-            <div className="text-red-600 py-1">No insurance plans available. Please add an insurance plan first.</div>
-          ) : (
-            <select
-              name="insurancePlanId"
-              value={form.insurancePlanId}
-              onChange={handleFormChange}
-              className="border px-2 py-1 rounded w-full"
-              required
-            >
-              <option value="">-- Select Insurance Plan --</option>
-              {insurancePlans.map(plan => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.payerName} - {plan.planType} - Member ID: {plan.memberId}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded" disabled={formLoading}>
-          {formLoading ? 'Creating...' : 'Create Claim'}
-        </button>
-      </form>
-
-      {/* Status Transition Legend */}
-      <div className="mt-6 border border-red-500 p-4 rounded-md">
-        <h3 className="text-lg font-semibold mb-2">Claim Status Workflow</h3>
-        <p className="text-sm mb-3">Claims must follow this workflow. You can only change to an allowed next status.</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Object.entries(statusTransitionMap).map(([status, transitions]) => (
-            <div key={status} className={`p-3 rounded-md ${statusColorMap[status as keyof typeof statusColorMap]}`}>
-              <div className="font-medium">{status}</div>
-              <div className="text-sm mt-1">
-                {transitions.length > 0 ? (
-                  <>
-                    <span className="font-medium">Can transition to:</span>
-                    <ul className="list-disc list-inside">
-                      {transitions.map(nextStatus => (
-                        <li key={nextStatus}>{nextStatus}</li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <span className="italic">Terminal status - no further transitions</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {formError && <div className="text-red-600 mt-2">{formError}</div>}
       {formSuccess && <div className="text-green-600 mt-2">{formSuccess}</div>}
