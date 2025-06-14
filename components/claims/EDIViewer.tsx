@@ -1,194 +1,192 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Loader2, FileDown, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Loader2, Download, AlertCircle, FileText, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { toast } from 'react-hot-toast';
 
 interface EDIViewerProps {
   isOpen: boolean;
   onClose: () => void;
   claimId: string | null;
-  claimNumber: string | null;
+  claimNumber: string;
 }
 
 export function EDIViewer({ isOpen, onClose, claimId, claimNumber }: EDIViewerProps) {
-  const [ediContent, setEdiContent] = useState<string | null>(null);
-  const [formattedEdiContent, setFormattedEdiContent] = useState<string | null>(null);
+  const [ediContent, setEdiContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch EDI content when dialog opens
-  React.useEffect(() => {
-    if (isOpen && claimId) {
-      fetchEDIContent();
-    } else {
-      // Reset state when dialog closes
-      setEdiContent(null);
-      setFormattedEdiContent(null);
-      setError(null);
-    }
-  }, [isOpen, claimId]);
+  // Format EDI content for display
+  const formatEDIContent = (content: string): string => {
+    if (!content) return '';
+    // Basic formatting for display - replace segment terminators with newlines
+    return content.replace(/\~/g, '~\n');
+  };
 
-  const fetchEDIContent = async () => {
-    if (!claimId) return;
-    
+  // Fetch EDI content when dialog opens or when retry is requested
+  const fetchEDIContent = useCallback(async () => {
+    if (!isOpen || !claimId) {
+      setEdiContent('');
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
-      const res = await fetch(`/api/claims/${claimId}/edi`);
+      const response = await fetch(`/api/claims/${claimId}/edi`);
       
-      if (!res.ok) {
-        const errorData = await res.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to fetch EDI content');
       }
       
-      const data = await res.json();
-      setEdiContent(data.ediContent);
-      
-      // Format EDI content for better readability
-      if (data.ediContent) {
-        const formatted = data.ediContent
-          .replace(/~/g, '~\n')  // Add newline after each segment
-          .replace(/\*/g, '*  '); // Add spaces after each element separator for readability
-        setFormattedEdiContent(formatted);
-      }
-    } catch (err: any) {
+      const data = await response.json();
+      setEdiContent(data.content || JSON.stringify(data, null, 2));
+      toast.success('EDI content loaded successfully');
+    } catch (err) {
       console.error('Error fetching EDI content:', err);
-      setError(`Failed to load EDI content: ${err.message || 'Unknown error'}. Please try generating a new EDI file.`);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load EDI content';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  }, [isOpen, claimId]);
+
+  // Initial fetch when dialog opens
+  useEffect(() => {
+    if (isOpen && claimId) {
+      fetchEDIContent();
+    }
+  }, [isOpen, claimId, fetchEDIContent]);
+
+  const handleDownload = () => {
+    if (!ediContent) return;
+    
+    try {
+      const blob = new Blob([ediContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `claim-${claimNumber || claimId || 'edi'}.edi`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('EDI file downloaded successfully');
+    } catch (err) {
+      console.error('Error downloading EDI:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download EDI';
+      toast.error(errorMessage);
     }
   };
   
-  const generateEDI = async () => {
-    if (!claimId) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const res = await fetch(`/api/claims/${claimId}/generate-edi`, {
-        method: 'POST'
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to generate EDI');
-      }
-      
-      const data = await res.json();
-      setEdiContent(data.ediContent);
-      
-      // Format EDI content for better readability
-      if (data.ediContent) {
-        const formatted = data.ediContent
-          .replace(/~/g, '~\n')  // Add newline after each segment
-          .replace(/\*/g, '*  '); // Add spaces after each element separator for readability
-        setFormattedEdiContent(formatted);
-      }
-    } catch (err: any) {
-      console.error('Error generating EDI:', err);
-      setError(`Failed to generate EDI content: ${err.message || 'Unknown error'}. Please check if the claim has all required data including a valid insurance plan.`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const downloadEDI = () => {
-    if (!ediContent || !claimNumber) return;
-    
-    const blob = new Blob([ediContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    
-    a.href = url;
-    a.download = `Claim-${claimNumber}-EDI.837`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
+  if (!isOpen) return null;
+  
   return (
-    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-hidden flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
-            EDI 837 Healthcare Claim File {claimNumber && `- Claim #${claimNumber}`}
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {claimNumber ? `EDI for Claim #${claimNumber}` : 'EDI Viewer'}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-grow overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-auto bg-gray-50 p-4 rounded-md relative">
           {loading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2">Loading EDI content...</span>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-10">
-              <div className="text-red-500 mb-4">{error}</div>
-              <Button onClick={generateEDI} variant="outline">
-                Generate EDI
-              </Button>
+            <div className="flex flex-col items-center justify-center h-40 text-red-600 p-4 text-center">
+              <AlertCircle className="h-10 w-10 mb-3 text-red-500" />
+              <p className="mb-4 font-medium">Failed to load EDI content</p>
+              <p className="text-sm text-red-700 mb-4">{error}</p>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={fetchEDIContent}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  Retry
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={onClose}
+                  disabled={loading}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           ) : !ediContent ? (
-            <div className="flex flex-col items-center justify-center py-10">
-              <p className="mb-4">No EDI content found for this claim.</p>
-              <Button onClick={generateEDI} className="bg-blue-600 hover:bg-blue-700">
-                Generate EDI
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+              <FileText className="h-10 w-10 mb-2 opacity-50" />
+              <p className="mb-4">No EDI content available</p>
+              <Button 
+                onClick={fetchEDIContent} 
+                variant="outline" 
+                className="flex items-center gap-2"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Refresh
               </Button>
             </div>
           ) : (
-            <Tabs defaultValue="formatted" className="flex-1 flex flex-col overflow-hidden">
-              <TabsList className="justify-start">
-                <TabsTrigger value="formatted">Formatted</TabsTrigger>
-                <TabsTrigger value="raw">Raw</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="formatted" className="flex-1 overflow-hidden flex flex-col mt-2">
-                <div className="border rounded p-4 bg-gray-50 overflow-auto flex-1 font-mono text-sm whitespace-pre">
-                  {formattedEdiContent}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="raw" className="flex-1 overflow-hidden flex flex-col mt-2">
-                <div className="border rounded p-4 bg-gray-50 overflow-auto flex-1 font-mono text-sm">
-                  {ediContent}
-                </div>
-              </TabsContent>
-            </Tabs>
+            <div className="relative">
+              <div className="absolute top-2 right-2 z-10 flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownload}
+                  className="h-8 px-3 text-xs"
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Download
+                </Button>
+              </div>
+              <pre className="whitespace-pre-wrap font-mono text-sm bg-white p-4 rounded border">
+                {formatEDIContent(ediContent)}
+              </pre>
+            </div>
           )}
         </div>
 
-        <DialogFooter className="flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            {ediContent && `${ediContent.split('~').length - 1} segments`}
+        <div className="flex justify-between items-center pt-4 border-t">
+          <div className="text-sm text-muted-foreground">
+            {claimId && `Claim ID: ${claimId}`}
+            {claimNumber && claimNumber !== 'undefined' && ` • #${claimNumber}`}
           </div>
           <div className="flex gap-2">
-            <Button onClick={onClose} variant="outline">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              disabled={loading}
+            >
               Close
             </Button>
             {ediContent && (
-              <a
-                href={`data:text/plain;charset=utf-8,${encodeURIComponent(ediContent)}`}
-                download={`claim-edi-${claimNumber || claimId}.txt`}
+              <Button 
+                onClick={handleDownload}
+                disabled={loading}
+                className="flex items-center gap-2"
               >
-                <Button className="flex gap-2 items-center">
-                  <FileDown size={16} /> Download EDI File
-                </Button>
-              </a>
+                <Download className="h-4 w-4" />
+                Download EDI
+              </Button>
             )}
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

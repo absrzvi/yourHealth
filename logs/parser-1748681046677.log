@@ -1,18 +1,0 @@
-2025-05-31T08:44:06.678Z - BloodTestParser initialized with 1557 characters
-2025-05-31T08:44:06.680Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
-2025-05-31T08:44:06.682Z - Starting blood test report parsing
-2025-05-31T08:44:06.684Z - Step 1: Preprocessing content
-2025-05-31T08:44:06.689Z - Step 2: Parsing document sections
-2025-05-31T08:44:06.695Z - Step 3: Extracting metadata
-2025-05-31T08:44:06.697Z - Extracting metadata from content
-2025-05-31T08:44:06.701Z - Extracted patient info: {"age":"65"}
-2025-05-31T08:44:06.706Z - Extracted lab info: {}
-2025-05-31T08:44:06.709Z - Step 4: Extracting biomarkers
-2025-05-31T08:44:06.713Z - Starting biomarker extraction
-2025-05-31T08:44:06.719Z - Extracted 1 potential biomarkers
-2025-05-31T08:44:06.722Z - Step 5: Extracting clinical remarks
-2025-05-31T08:44:06.725Z - Starting remarks extraction
-2025-05-31T08:44:06.732Z - Error extracting remarks: Cannot read properties of undefined (reading 'length')
-2025-05-31T08:44:06.735Z - Step 6: Validating results
-2025-05-31T08:44:06.740Z - Step 7: Preparing final result
-2025-05-31T08:44:06.743Z - Parsing completed successfully. Found 1 biomarkers and 0 remarks.

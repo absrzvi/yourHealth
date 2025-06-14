@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "cleanup-1",
+      "title": "Project Analysis Phase",
+      "description": "Conduct initial project analysis and create file inventory",
+      "status": "pending",
+      "priority": "high",
+      "category": "cleanup",
+      "subtasks": [
+        {
+          "id": "cleanup-1.1",
+          "title": "Create file inventory",
+          "description": "Generate comprehensive list of all files with metadata",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-1.2",
+          "title": "Document project structure",
+          "description": "Create documentation of current project structure and organization",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-1.3",
+          "title": "Identify file types and purposes",
+          "description": "Categorize all files by type and document their purposes",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "cleanup-2",
+      "title": "Dependency Mapping",
+      "description": "Create comprehensive dependency graph and identify unused files",
+      "status": "pending",
+      "priority": "high",
+      "category": "cleanup",
+      "dependsOn": ["cleanup-1"],
+      "subtasks": [
+        {
+          "id": "cleanup-2.1",
+          "title": "Generate import/export graph",
+          "description": "Create visualization of all module dependencies",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-2.2",
+          "title": "Map entry points",
+          "description": "Identify and document all application entry points",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-2.3",
+          "title": "Identify orphaned files",
+          "description": "Find files not imported or used by any other files",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "cleanup-3",
+      "title": "Safe Removal Identification",
+      "description": "Categorize files for potential removal and create backup",
+      "status": "pending",
+      "priority": "high",
+      "category": "cleanup",
+      "dependsOn": ["cleanup-2"],
+      "subtasks": [
+        {
+          "id": "cleanup-3.1",
+          "title": "Categorize files for removal",
+          "description": "Mark files as safe to remove, verify before removal, or never remove",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-3.2",
+          "title": "Create pre-removal backup",
+          "description": "Back up the entire project before making any changes",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-3.3",
+          "title": "Generate removal plan",
+          "description": "Create detailed plan for file removal in batches",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "cleanup-4",
+      "title": "Implementation Phase",
+      "description": "Execute the cleanup process in controlled batches",
+      "status": "pending",
+      "priority": "high",
+      "category": "cleanup",
+      "dependsOn": ["cleanup-3"],
+      "subtasks": [
+        {
+          "id": "cleanup-4.1",
+          "title": "Set up version control safety",
+          "description": "Ensure git is clean and create backup branch",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-4.2",
+          "title": "Implement batch removal",
+          "description": "Remove files in small, testable batches",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-4.3",
+          "title": "Create rollback procedures",
+          "description": "Document how to restore removed files if needed",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "cleanup-5",
+      "title": "Verification & Testing",
+      "description": "Verify application functionality after cleanup",
+      "status": "pending",
+      "priority": "high",
+      "category": "cleanup",
+      "dependsOn": ["cleanup-4"],
+      "subtasks": [
+        {
+          "id": "cleanup-5.1",
+          "title": "Test build process",
+          "description": "Run full build to ensure no broken imports or references",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-5.2",
+          "title": "Verify application functionality",
+          "description": "Test key application routes and features",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-5.3",
+          "title": "Document cleanup results",
+          "description": "Create report of changes made and space saved",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "cleanup-6",
+      "title": "Emergency Recovery Plan",
+      "description": "Document procedures for recovering from cleanup issues",
+      "status": "pending",
+      "priority": "high",
+      "category": "documentation",
+      "subtasks": [
+        {
+          "id": "cleanup-6.1",
+          "title": "Document file recovery process",
+          "description": "Create step-by-step guide for restoring files from backup",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-6.2",
+          "title": "Create rollback commands",
+          "description": "Document specific git commands for undoing changes",
+          "status": "pending"
+        },
+        {
+          "id": "cleanup-6.3",
+          "title": "Maintain deletion log",
+          "description": "Keep timestamped record of all file deletions",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}

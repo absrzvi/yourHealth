@@ -37,6 +37,10 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/__tests__/setup.ts',
   ],
+  // Handle ES modules in node_modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose|@panva/hkdf|@panva/oidc-provider-adapter|@panva/oidc-provider-db-adapter|@panva/oidc-provider|@panva/oidc-provider/|@panva/oidc-provider/.*|@panva/oidc-provider-db-adapter/.*|@panva/oidc-provider-adapter/.*|@panva/hkdf/.*)/)',
+  ],
   transform: {
     // Use swc for faster transpilation
     '^.+\\.(js|jsx|ts|tsx)$': ['@swc/jest', {
@@ -45,6 +49,8 @@ const customJestConfig = {
           syntax: 'typescript',
           tsx: true,
           jsx: true,
+          dynamicImport: true,
+          modules: true,
         },
         transform: {
           react: {

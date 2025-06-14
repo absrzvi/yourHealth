@@ -1,74 +1,0 @@
-2025-05-31T13:53:00.961Z - BloodTestParser initialized with 2281 characters
-2025-05-31T13:53:00.967Z - Content preview: SRO RS  ‘Sample: 20-Apr-2025 HDAIC (Glycosylated Hemoglobin)  Remarks:  Methadology Note:  Sample: 20-Apr-2025 Total Bilirubin Direct Bilirubin  Alkaline Phosphatase (ALP)  ALT/SGPT  Aspartate Aminotransferase (AST/SGOT)  Gamma - Glutamyl Transferase (GGT)  KARACHI BRANCH he Bi...
-2025-05-31T13:53:00.972Z - Starting blood test report parsing
-2025-05-31T13:53:00.976Z - Raw OCR Text (BloodTestParser Start - First 500 chars):
-SRO RS
-
-‘Sample: 20-Apr-2025
-HDAIC (Glycosylated Hemoglobin)
-
-Remarks:
-
-Methadology
-Note:
-
-Sample: 20-Apr-2025
-Total Bilirubin
-Direct Bilirubin
-
-Alkaline Phosphatase (ALP)
-
-ALT/SGPT
-
-Aspartate Aminotransferase (AST/SGOT)
-
-Gamma - Glutamyl Transferase (GGT)
-
-KARACHI BRANCH he Bix als
-Precinct 19, Phase 1, Bahria Town Karachi eel SSB aes) 5a V4 Ce
-111.111 284 111 111 284
-LABORATORY REPORT
-MR.NO : 010-038-232 NAME __: AMMAR RIZWIS/O HASSAN ABBAS RIZWI SEX: M
-REF BY ADDRES...
-2025-05-31T13:53:00.980Z - Step 1: Normalizing OCR text
-2025-05-31T13:53:01.148Z - Text normalized from 2281 to 2184 chars
-2025-05-31T13:53:01.157Z - Normalized OCR Text (After OcrNormalizer.normalize - First 500 chars):
-SRO RS
-‘Sample: 20-Apr-2025
-HDAIC (Glycosylated Hemoglobin)
-Remarks:
-Methadology
-Note:
-Sample: 20-Apr-2025
-Total Bilirubin
-Direct Bilirubin
-Alkaline Phosphatase (ALP)
-ALT/SGPT
-Aspartate Aminotransferase (AST/SGOT)
-Gamma - Glutamyl Transferase (GGT)
-KARACHI BRANCH he Bix als
-Precinct 19, Phase 1, Bahria Town Karachi eel SSB aes) 5 a V 4 Ce
-111.111 284 111 111 284
-MR.NO: 010-038-232 NAME __: AMMAR RIZWIS/O HASSAN ABBAS RIZWI SEX: M
-REF BY ADDRES = VILLA 370 PRCNT 281 K AGE 35 Y 03 Mo 280
-s CONTACT...
-2025-05-31T13:53:01.162Z - Step 2: Preprocessing content
-2025-05-31T13:53:01.171Z - Step 3: Parsing document sections
-2025-05-31T13:53:01.187Z - Step 4: Extracting metadata
-2025-05-31T13:53:01.192Z - Extracting metadata from content
-2025-05-31T13:53:01.207Z - Extracted patient info: {"gender":"M","age":"35"}
-2025-05-31T13:53:01.217Z - Extracted lab info: {"name":"le Results","accessionNumber":"ording"}
-2025-05-31T13:53:01.224Z - Step 5: Extracting biomarkers
-2025-05-31T13:53:01.232Z - Extracting biomarkers
-2025-05-31T13:53:01.468Z - Traditional extractor found 4 biomarkers
-2025-05-31T13:53:01.472Z - Normalizing biomarker objects
-2025-05-31T13:53:01.902Z - Normalized biomarker name: "The D-10 (BIORAD) is an automated HbAc system that utilizes gold standard ion-exchange HPLC technology. HAIc level isan indicator of blood GLUCOSE levels over the previous" → "GLUCOSE"
-2025-05-31T13:53:01.906Z - Normalized traditional biomarkers: 4 remaining
-2025-05-31T13:53:01.939Z - Generic extractor found 9 biomarkers
-2025-05-31T13:53:01.941Z - Normalizing biomarker objects
-2025-05-31T13:53:02.848Z - Normalized generic biomarkers: 9 remaining
-2025-05-31T13:53:02.870Z - Validated generic biomarkers: 3 remaining after dictionary validation
-2025-05-31T13:53:02.873Z - Combined and deduped 7 to 4 biomarkers
-2025-05-31T13:53:02.877Z - Extracted 4 potential biomarkers
-2025-05-31T13:53:02.880Z - Step 6: Extracting clinical remarks
-2025-05-31T13:53:02.883Z - Starting remarks extraction (BloodTestParser)

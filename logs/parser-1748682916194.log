@@ -1,28 +1,0 @@
-2025-05-31T09:15:16.194Z - BloodTestParser initialized with 1557 characters
-2025-05-31T09:15:16.196Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
-2025-05-31T09:15:16.196Z - Starting blood test report parsing
-2025-05-31T09:15:16.197Z - Step 1: Normalizing OCR text
-2025-05-31T09:15:16.199Z - Error: Failed to parse blood test report - this.removeNonDataElements is not a function
-2025-05-31T09:15:16.202Z - Stack trace: TypeError: this.removeNonDataElements is not a function
-    at OcrNormalizer.normalize (webpack-internal:///(rsc)/./lib/parsers/ocrNormalizer.ts:24:27)
-    at BloodTestParser.parse (webpack-internal:///(rsc)/./lib/parsers/bloodTestParser.ts:98:97)
-    at POST (webpack-internal:///(rsc)/./app/api/upload/process/route.ts:192:41)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at async C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:63809
-    at async eU.execute (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:53964)
-    at async eU.handle (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:65062)
-    at async doRender (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1333:42)
-    at async cacheEntry.responseCache.get.routeKind (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1555:28)
-    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1463:28)
-    at async DevServer.renderPageComponent (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1856:24)
-    at async DevServer.renderToResponseImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1894:32)
-    at async DevServer.pipeImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:911:25)
-    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\next-server.js:271:17)
-    at async DevServer.handleRequestImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:807:17)
-    at async C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\dev\next-dev-server.js:331:20
-    at async Span.traceAsyncFn (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\trace\trace.js:151:20)
-    at async DevServer.handleRequest (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\dev\next-dev-server.js:328:24)
-    at async invokeRender (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\router-server.js:163:21)
-    at async handleRequest (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\router-server.js:342:24)
-    at async requestHandlerImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\router-server.js:366:13)
-    at async Server.requestListener (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\start-server.js:140:13)

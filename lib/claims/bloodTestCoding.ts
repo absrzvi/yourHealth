@@ -8,6 +8,12 @@ import { BIOMARKER_DICTIONARY } from "../parsers/biomarkerDictionary";
 import { logger } from "@/lib/logger";
 import { Biomarker } from "@prisma/client";
 
+interface CPTCode {
+  code: string;
+  description: string;
+  charge: number;
+}
+
 // Define blood test panel types
 export enum BloodTestPanel {
   BASIC_METABOLIC = "BASIC_METABOLIC",
@@ -197,8 +203,25 @@ export function identifyBloodTestPanels(biomarkers: string[]): BloodTestPanel[] 
  * @param biomarkers Array of biomarker objects or names
  * @returns Array of CPT code objects with code, description, and diagnoses
  */
-export function generateBloodTestCPTCodes(biomarkers: (Biomarker | string)[]) {
+export function generateBloodTestCPTCodes(biomarkers: (Biomarker | string)[]): CPTCode[] {
+  // Default charge for individual tests
+  const DEFAULT_INDIVIDUAL_CHARGE = 49.99;
+  
   try {
+    // Default charges for different panel types
+    const PANEL_CHARGES: Record<string, number> = {
+      '80048': 45.00,  // Basic Metabolic Panel
+      '80053': 65.00,  // Comprehensive Metabolic Panel
+      '85025': 35.00,  // Complete Blood Count with Differential
+      '80061': 55.00,  // Lipid Panel
+      '80076': 75.00,  // Hepatic Function Panel
+      '80055': 85.00,  // Thyroid Panel
+      '83036': 65.00,  // Hemoglobin A1C
+      '83550': 95.00,  // Iron Panel
+      '82306': 75.00,  // Vitamin D
+      '80050': 150.00, // General Health Panel
+    };
+
     // Extract biomarker names
     const biomarkerNames = biomarkers.map(b => 
       typeof b === 'string' ? b : b.name
@@ -207,54 +230,60 @@ export function generateBloodTestCPTCodes(biomarkers: (Biomarker | string)[]) {
     // Identify panels
     const panels = identifyBloodTestPanels(biomarkerNames);
     
-    // Get CPT codes for panels
-    const panelCodes = panels.map(panel => ({
-      code: PANEL_DEFINITIONS[panel].cptCode,
-      description: PANEL_DEFINITIONS[panel].description
-    }));
-    
-    // Find biomarkers not covered by panels
-    const coveredBiomarkers = new Set<string>();
-    panels.forEach(panel => {
-      PANEL_DEFINITIONS[panel].requiredBiomarkers.forEach(biomarker => {
-        coveredBiomarkers.add(biomarker.toLowerCase());
-      });
+    // Get CPT codes for panels with charges
+    const panelCodes = panels.map(panel => {
+      const panelDef = PANEL_DEFINITIONS[panel];
+      return {
+        code: panelDef.cptCode,
+        description: panelDef.description,
+        charge: PANEL_CHARGES[panelDef.cptCode] || 75.00 // Default charge if not found
+      };
     });
     
-    // Get individual biomarker codes for those not in panels
+    // Get individual CPT codes for biomarkers not covered by panels
     const individualCodes = biomarkerNames
       .filter(name => {
-        const standardName = Object.values(BIOMARKER_DICTIONARY).find(def => 
-          def.standardName.toLowerCase() === name.toLowerCase() ||
-          def.aliases.some(alias => alias.toLowerCase() === name.toLowerCase())
-        )?.standardName;
-        
-        return standardName && 
-               !coveredBiomarkers.has(standardName.toLowerCase()) && 
-               INDIVIDUAL_BIOMARKER_CODES[standardName];
+        // Skip if this biomarker is covered by any panel
+        return !panels.some(panel => 
+          PANEL_DEFINITIONS[panel].requiredBiomarkers.includes(name)
+        );
       })
       .map(name => {
-        const standardName = Object.values(BIOMARKER_DICTIONARY).find(def => 
-          def.standardName.toLowerCase() === name.toLowerCase() ||
-          def.aliases.some(alias => alias.toLowerCase() === name.toLowerCase())
-        )?.standardName;
+        // Find standard name from dictionary
+        const standardName = Object.keys(BIOMARKER_DICTIONARY).find(key => 
+          key.toLowerCase() === name.toLowerCase() || 
+          BIOMARKER_DICTIONARY[key as keyof typeof BIOMARKER_DICTIONARY].aliases
+            .some((alias: string) => alias.toLowerCase() === name.toLowerCase())
+        );
         
-        if (standardName && INDIVIDUAL_BIOMARKER_CODES[standardName]) {
+        if (standardName && INDIVIDUAL_BIOMARKER_CODES[standardName as keyof typeof INDIVIDUAL_BIOMARKER_CODES]) {
           return {
-            code: INDIVIDUAL_BIOMARKER_CODES[standardName].code,
-            description: INDIVIDUAL_BIOMARKER_CODES[standardName].description
+            code: INDIVIDUAL_BIOMARKER_CODES[standardName as keyof typeof INDIVIDUAL_BIOMARKER_CODES].code,
+            description: INDIVIDUAL_BIOMARKER_CODES[standardName as keyof typeof INDIVIDUAL_BIOMARKER_CODES].description,
+            charge: DEFAULT_INDIVIDUAL_CHARGE
           };
         }
         return null;
       })
-      .filter(Boolean) as { code: string, description: string }[];
+      .filter((code): code is CPTCode => code !== null);
     
-    // Combine panel and individual codes
-    return [...panelCodes, ...individualCodes];
+    // If no panels matched, return individual codes for all biomarkers with default charge
+    if (panelCodes.length === 0) {
+      return individualCodes.map(code => ({
+        ...code,
+        charge: code.charge || DEFAULT_INDIVIDUAL_CHARGE
+      }));
+    }
+    
+    // Otherwise return combined panels and individual codes
+    return [...panelCodes, ...individualCodes].map(code => ({
+      ...code,
+      charge: code.charge || DEFAULT_INDIVIDUAL_CHARGE
+    }));
   } catch (error) {
     logger.error(`Error in generateBloodTestCPTCodes: ${error}`);
     // Return a default code in case of error
-    return [{ code: "80050", description: "General Health Panel" }];
+    return [{ code: "80050", description: "General Health Panel", charge: DEFAULT_INDIVIDUAL_CHARGE }];
   }
 }
 

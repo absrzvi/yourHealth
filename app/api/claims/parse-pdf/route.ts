@@ -1,6 +1,4 @@
-git config --global credential.helper store
-git pullgit config --global credential.helper store
-git pullimport { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PDFParseResult } from '@/src/lib/claims/types/claims.types';

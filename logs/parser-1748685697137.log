@@ -1,53 +1,0 @@
-2025-05-31T10:01:37.137Z - BloodTestParser initialized with 1557 characters
-2025-05-31T10:01:37.139Z - Content preview: BAHRIA TOWN INTERNATIONAL HOSPITAL test S KARACHI BRANCH  Precinct 19, Phase 1, Bahria Town Karac 1111 284 111 111284 LABORATORY REPORT MR.NO : 010-009-549 NAME _: SYED HASSAN ABBAS RIZVI SIO SYED RAZA ALI RIZVI SEX tM REFBY : ADDRESS : VILLA#I7 STREET#31 SPORTS CITY AGE 65Y 04Mo 030 CONTAC...
-2025-05-31T10:01:37.140Z - Starting blood test report parsing
-2025-05-31T10:01:37.142Z - Step 1: Normalizing OCR text
-2025-05-31T10:01:37.154Z - Text normalized from 1557 to 1328 chars
-2025-05-31T10:01:37.156Z - Step 2: Preprocessing content
-2025-05-31T10:01:37.162Z - Step 3: Parsing document sections
-2025-05-31T10:01:37.170Z - Step 4: Extracting metadata
-2025-05-31T10:01:37.172Z - Extracting metadata from content
-2025-05-31T10:01:37.175Z - Extracted patient info: {"age":"65"}
-2025-05-31T10:01:37.177Z - Extracted lab info: {}
-2025-05-31T10:01:37.179Z - Step 5: Extracting biomarkers
-2025-05-31T10:01:37.181Z - Extracting biomarkers
-2025-05-31T10:01:37.185Z - Traditional extractor found 1 biomarkers
-2025-05-31T10:01:37.188Z - Normalizing biomarker objects
-2025-05-31T10:01:37.197Z - Normalized biomarker name: "REF 8 Y: V 1 LLA#1 7 5 TREET#3 1 5 P 0 RT 5 C 1 TY AGE 65 Y 0 4 M 0 0 3 0 C 0 NTACT: 0 3 0 40 1 2 0 82 5 810 CHEM 15 TRY 1 nvestigati 0 n Va 1 ues Reference Ranges * Last Avai 1 ab 1 e Resu 1 ts CREAT 1 N 1 NE (5 erum) 5 amp 1 e: 1 5-Apr-2 0 2 5 CREAT 1 N 1 NE (5 erum) 1" → "REF B Y: V I LLA#I S TREET# I S P O RT S C I TY AGE S Y O M O O O C O
-NTACT:
-O O O I O B S I CHEM I TRY I nvestigati O n Va I ues Reference Ranges * Last Avai I ab I e Resu I ts CREATININE (S erum) S amp I e: I S-Apr- O S CREATININE (S erum) I"
-2025-05-31T10:01:37.200Z - Normalized traditional biomarkers: 1 remaining
-2025-05-31T10:01:37.208Z - Generic extractor found 0 biomarkers
-2025-05-31T10:01:37.209Z - Normalizing biomarker objects
-2025-05-31T10:01:37.212Z - Normalized generic biomarkers: 0 remaining
-2025-05-31T10:01:37.217Z - Combined and deduped 1 to 1 biomarkers
-2025-05-31T10:01:37.221Z - Extracted 1 potential biomarkers
-2025-05-31T10:01:37.225Z - Step 6: Extracting clinical remarks
-2025-05-31T10:01:37.227Z - Starting remarks extraction
-2025-05-31T10:01:37.235Z - No remarks were extracted
-2025-05-31T10:01:37.241Z - Error extracting remarks: Cannot read properties of undefined (reading 'length')
-2025-05-31T10:01:37.245Z - Step 7: Validating results
-2025-05-31T10:01:37.253Z - Step 8: Preparing final result
-2025-05-31T10:01:37.258Z - Error: Failed to parse blood test report - Cannot read properties of undefined (reading 'length')
-2025-05-31T10:01:37.267Z - Stack trace: TypeError: Cannot read properties of undefined (reading 'length')
-    at BloodTestParser.parse (webpack-internal:///(rsc)/./lib/parsers/bloodTestParser.ts:144:42)
-    at POST (webpack-internal:///(rsc)/./app/api/upload/process/route.ts:192:41)
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at async C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:63809
-    at async eU.execute (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:53964)
-    at async eU.handle (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:65062)
-    at async doRender (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1333:42)
-    at async cacheEntry.responseCache.get.routeKind (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1555:28)
-    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1463:28)
-    at async DevServer.renderPageComponent (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1856:24)
-    at async DevServer.renderToResponseImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:1894:32)
-    at async DevServer.pipeImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:911:25)
-    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\next-server.js:271:17)
-    at async DevServer.handleRequestImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\base-server.js:807:17)
-    at async C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\dev\next-dev-server.js:331:20
-    at async Span.traceAsyncFn (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\trace\trace.js:151:20)
-    at async DevServer.handleRequest (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\dev\next-dev-server.js:328:24)
-    at async invokeRender (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\router-server.js:163:21)
-    at async handleRequest (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\router-server.js:342:24)
-    at async requestHandlerImpl (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\router-server.js:366:13)
-    at async Server.requestListener (C:\Users\AbbasRizvi\CascadeProjects\for-your-health-mvp\node_modules\next\dist\server\lib\start-server.js:140:13)
